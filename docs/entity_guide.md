@@ -295,7 +295,8 @@ document:
 # env_beamfollow
 >This entity allows you to attach a beam to another entity that will follow this entity, leaving a fading
 >trail along it's path. The trails will fade out over the time specified in the entity one after the other,
->from back to the current position.
+>from back to the current position. Once all active segments have faded out, the beam effect is removed
+>completely.
 
  - Keyvalues:
    - "Name": Name of this entity.
@@ -305,7 +306,6 @@ document:
    - "Duration": The lifetime of each individual segment. Segments fade out completely after this time.
    - "Beam width": Width of the beam created.
    - "Sprite": Sprite to use for the beam trail effect.
-   - "Noise": Amount of noise in the beam effect.
    - "Attachment": If the target entity is a VBM type entity, then if you specify a non-zero attachment, 
    the beam will follow that attachment on the entity.
 
@@ -351,6 +351,23 @@ document:
    - "Name": Name of this entity.
    - "Angles": Specifies the direction to shoot the blood particles in.
    
+# env_blackandwhite
+>This entity was added by valina354, which adds the ability to turn the screen progressively into a more
+>grayscale version. The strength value controls how strong the effect is, with 1.0 being completely black 
+>and white.
+   
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "Effect strength": The strength of the aberration. Best values are in the 0-16 range.
+   - "Global trigger mode": If the "Global" flag is set, then this determines how triggering this entity will affect the currently set black and white effect.
+     - "Toggle": The global black and white effect will be toggled based on current state. 
+     - "On": The global black and white effect will be turned on regardless of it's current state. 
+     - "Off": The global black and white effect will be turned off regardless of it's current state. 
+	 
+ - Spawn flags:
+   - "Start on": The black and white effect will be enabled by default.
+   - "Global": If set, the black and white effect will be carried across levels instead of being present only on the level where the env_blackandwhite is present.
+
 # env_blackhole
 >Creates a black hole effect, complete with a shader effect that distorts the light around it like a real
 >black hole would. It can also pull in objects, particles, client-side temporary entities, killing them. If
@@ -377,9 +394,14 @@ document:
    - "Name": Name of this entity.
    - "Blur fade": The fade time of the individual blur frames, set to a higher value to have a slower fade, 
    or to a low amount for a faster fade.
- 
+   - "Global trigger mode": If the "Global" flag is set, then this determines how triggering this entity will affect the currently set blur effect.
+     - "Toggle": The global blur effect will be toggled based on current state. 
+     - "On": The global blur effect will be turned on regardless of it's current state. 
+     - "Off": The global blur effect will be turned off regardless of it's current state. 
+	 
  - Spawn flags:
    - "Start on": The blur will be enabled by default.
+   - "Global": If set, the blur effect will be carried across levels instead of being present only on the level where the env_blur is present.
    
 # env_bubbles
 >A brush-based entity, env_bubbles will spawn bubble trails within it's volume that will rise to the height
@@ -414,6 +436,22 @@ document:
 
  - Keyvalues:
    - "Size": Choose from a different set of resolutions to use for the cubemap.
+   
+# env_chromatic
+>This entity was added by valina354, and it adds a simple chromatic aberration effect to the game when it's
+>turned on. The strength of the aberration can be controlled by the strength cvar.
+
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "Chromatic Aberration Strength": The strength of the aberration. Best values are in the 0-16 range.
+   - "Global trigger mode": If the "Global" flag is set, then this determines how triggering this entity will affect the currently set chromatic aberration effect.
+     - "Toggle": The global chromatic aberration effect will be toggled based on current state. 
+     - "On": The global chromatic aberration effect will be turned on regardless of it's current state. 
+     - "Off": The global chromatic aberration effect will be turned off regardless of it's current state. 
+	 
+ - Spawn flags:
+   - "Start on": The chromatic aberration will be enabled by default.
+   - "Global": If set, the chromatic aberration effect will be carried across levels instead of being present only on the level where the env_chromatic is present.
    
 # env_decal
 >The engine's version of infodecal, this entity allows you to spawn a specific decal, or a random one from
@@ -661,6 +699,18 @@ document:
    - "Sprite Name": Path to the sprite to use.
    - "Scale": Scale factor to be applied to the sprite.
    
+# env_hudpickupmsg
+>This entity allows you to display an item pickup message just like those used for ammo and weapon pickups,
+>which show up on the right side of the HUD.
+   
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "Target": Entity to trigger upon being triggered.
+   - "Message to Display": The message string to display.
+   
+ - Spawnflags:
+   - "Play Once": Entity can only be triggered once, after which it'll remove itself.
+   
 # env_ladder
 >This entity allows you to place a ladder into the game, that uses first-person animations to provide a more
 >realistic ladder climbing experience. You need to place the origin of the ladder directly near the wall
@@ -835,6 +885,25 @@ document:
    - "No fire pass": This entity will not trigger "Fire on Pass" targets marked in path_corner entities when
    passing one.
    - "Start On": The entity will start moving on spawn.
+   
+# env_overlay
+>This entity allows you to put an overlay over the screen with specific rendering effects. The overlay's
+>transparency can be set, or it can be set to be alpha masked. The overlay can also be set to pulsate when
+>it is blended. The texture is picked by the user, and the engine will pick an overlay texture based in the
+>ratio of the screen. You can set the layer index based on the "Overlay index" parameter, which will also
+>define the order in which the effects are added ontop of eachother.
+
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "Mode": If set to "Set Overlay", the overlay effect will be applied. Otherwise if set to "Clear Overlay", any overlay effects on the given layer will be cleared.
+   - "Overlay index": This defines the order of overlays, and how they will be added ontop of eachother.
+   - "Texture name": Path to the texture file to use. The final part of the texture file's name can be the ratio, so a texture named "overlay_16_9.tga" will be used for widescreen resolution, while "overlay_4_3.tga" will be used for standard resolutions. The engine will choose the proper texture based on the naming, but if no such files exist, it'll just use the original filename name specified in the entity.
+   - "Effect": Apply a special effect to the overlay. Currently only "Pulsate" is supported.
+   - "Render Alpha": The base alpha value of the overlay.
+   - "Render Color": The color of the overlay.
+   - "Effect speed multiplier": Controls the speed of the effect applied.
+   - "Effect minimum alpha": Defines the minimum alpha the effect can get to at it's minimum.
+   - "Effect fade in/out time": Determines whether, and how fast the overlay fades in when set, or fades out when cleared.
    
 # env_particle_system
 >The particle system entity allows you to spawn particle effects defined by a system or cluster script. The
@@ -1147,6 +1216,25 @@ document:
    - "Target": The entity to sync up.
    - "Sync target": The entity to sync the entity specified in "Target" to.
    
+# env_vignette
+>Coded by valina354, this post-processing effect adds a tunnel vision-like effect to the screen, where
+>with increasing radius more and more of the screen is occupied by a circular black outline. The fuzzy-
+>-ness of this outline is determined by the strength setting.
+
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "Effect strength": The strength of the effect. It should be less than the "radius value".
+   - "Vignette radius": This is the radius of the effect, in the 0-1 range. A value of 0.5 will occupy 
+   half of the screen, while a value of 0.9 will occupy 90% of it.
+   - "Global trigger mode": If the "Global" flag is set, then this determines how triggering this entity will affect the currently set vignette effect.
+     - "Toggle": The global vignette effect will be toggled based on current state. 
+     - "On": The global vignette effect will be turned on regardless of it's current state. 
+     - "Off": The global vignette effect will be turned off regardless of it's current state. 
+	 
+ - Spawn flags:
+   - "Start on": The vignette effect will be enabled by default.
+   - "Global": If set, the black and white effect will be carried across levels instead of being present only on the level where the env_vignette is present.
+
 # envpos_sky
 >This entity marks the position of the 3D sky's skybox dome, where your skybox objects are. This entity
 >can also function like a train entity, and move around in the skybox dome. It is to be used in conjuction
@@ -2645,13 +2733,22 @@ Body of text explaining the objective<br /><br />
 >light sources, please refer to the env_dlight entity.
 
  - Keyvalues:
+   - "Name": Name of this entity.
    - "Brightness": Defines the color of the light and the brightness. First three elements are the color,
    with values from 0 to 255. The fourth element is the intensity of the light source.
+   - "Appearence": Check the "Shared keyvalues" section for more on this.
+   - "Interpolate Custom Appearence": If set, the "Custom Appearance" will have it's values interpolated.
+   - "Custom appearence framerate": Specify the framerate of the custom appearence.
+   - "Custom Appearance": Specify a custom appearence, from letter a to z, which specify the light
+   strength at a given frame.
    - "ZHLT Fade": Multiplies the light value without affecting distances at which the light shines.
    - "ZHLT Falloff": Set the light intensity falloff model used.
      - "Default": Linear light falloff.
 	 - "Inverse Linear"
 	 - "Inverse Square"
+	 
+ - Spawn flags:
+   - "Initially dark": The light will be in an off state until triggered to be on.
 	 
 # light_spot
 >A spotlight light source that will shine at it's target or at the specified angles, acting as a spotlight
@@ -2662,6 +2759,13 @@ Body of text explaining the objective<br /><br />
  - Keyvalues:
    - "Target": The entity to aim the spotlight at if specified. This will override "Angles".
    - "Angles": Defines the direction in which the spotlight will shine.
+   - "Brightness": Defines the color of the light and the brightness. First three elements are the color,
+   with values from 0 to 255. The fourth element is the intensity of the light source.
+   - "Appearence": Check the "Shared keyvalues" section for more on this.
+   - "Interpolate Custom Appearence": If set, the "Custom Appearance" will have it's values interpolated.
+   - "Custom appearence framerate": Specify the framerate of the custom appearence.
+   - "Custom Appearance": Specify a custom appearence, from letter a to z, which specify the light
+   strength at a given frame.
    - "ZHLT Fade": Multiplies the light value without affecting distances at which the light shines.
    - "ZHLT Falloff": Set the light intensity falloff model used.
      - "Default": Linear light falloff.
@@ -2671,18 +2775,51 @@ Body of text explaining the objective<br /><br />
    - "Outer (fading) angle": Between the inner angle and this angle, light values will fade out the closer
    the lit area is to the outer angle of the spotlight.
    - "Pitch": This overrides the pitch value in Angles. A pitch value of -90 is straight down, a value of
-   90 is straight up.
-   - "Brightness": Defines the color of the light and the brightness. First three elements are the color,
-   with values from 0 to 255. The fourth element is the intensity of the light source.
    - "Is Sky": This will cause the spotlight to act like a light_environment, with lighting projected from
    the sky brushes instead of projecting any light itself.
 
+ - Spawn flags:
+   - "Initially dark": The light will be in an off state until triggered to be on.
+
+# math_counter
+>This entity, coded by valina354, allows you to perform various math functions that then will be checked
+>against the min/max values specified in the entity. If the value passes either of the boundaries, the
+>entity will trigger it's target.
+
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "Start value": The initial value stored by the entity.
+   - "Increment value on On trigger": This value will be added, subtracted, divided or multiplied by when
+   using the "Off" trigger mode.
+   - "Increment value on Off trigger": This value will be added, subtracted, divided or multiplied by when
+   using the "On" trigger mode.
+   - "Increment value on Toggle trigger": This value will be added, subtracted, divided or multiplied by 
+   when using the "Toggle" trigger mode. 
+   - "Maximum value": Max value to reach before before triggering target.
+   - "Minimum value": Minimum value to reach before triggering target.
+   - "Target": Entity to trigger upon reaching min/max.
+   - "Operation on Off trigger": The operation to perform on off trigger mode.
+     - Addition: Adds the increment value to the current value.
+	 - Subtraction: Subtracts from the current value the increment value.
+	 - Division: Divides the current value by the increment value.
+	 - Multiplication: Multiplies the current value by the increment value.
+   - "Operation on On trigger": The operation to perform on off trigger mode(see "Operation on Off trigger"
+   for the options.
+   - "Operation on Toggle trigger": The operation to perform on toggle trigger mode(see "Operation on Off 
+   trigger" for the options.
+   
+ - Spawn flags:
+   - "Reset On Use": Resets the value to the initial "Start value" when the boundary has been reached and
+   the target was triggered.
+   - "Trigger On Max": Trigger target when reaching max boundary.
+   - "Trigger On Min": Trigger target when reaching min boundary.
+   
 # night_light
->A simple point light source used by HLRAD to calculate lighting, but this only works with "-nightmode" set
->in the HLRAD launch arguments, and will only be visible in night mode. For more info, check the
->game_daystage entity. This entity is removed on spawn,  and can only contribute to static lighting, 
->meaning it cannot be switched on and off. For switchable/ >animated light sources, please refer to the 
->env_dlight entity.
+>A simple point light source used by HLRAD to calculate lighting, but this only works with "-daystage 
+>nightmode" set in the HLRAD launch arguments, and will only be visible in night mode. For more info, 
+>check the game_daystage entity. This entity is removed on spawn,  and can only contribute to static
+>lighting, meaning it cannot be switched on and off. For switchable/ >animated light sources, please 
+>refer to the env_dlight entity.
 
  - Keyvalues:
    - "Brightness": Defines the color of the light and the brightness. First three elements are the color,

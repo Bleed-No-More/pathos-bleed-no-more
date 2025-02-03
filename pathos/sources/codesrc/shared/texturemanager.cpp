@@ -12,9 +12,11 @@ All Rights Reserved.
 #include "common.h"
 #include "texturemanager.h"
 #include "r_glextf.h"
+#include "crc32.h"
 
 #include "tga.h"
 #include "dds.h"
+#include "bmp.h"
 
 #ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY
 #define GL_MAX_TEXTURE_MAX_ANISOTROPY 0x84FF
@@ -33,6 +35,16 @@ const Uint32 CTextureManager::ANISOTROPY_OFF_VALUE = 1;
 
 // Texture manager instance
 CTextureManager* CTextureManager::g_pInstance = nullptr;
+
+// Extensions of the texture formats used
+const Char* CTextureManager::TEXTURE_FORMAT_EXTENSIONS[] = 
+{
+	"",
+	"tga",
+	"dds",
+	"bmp",
+	""
+};
 
 //=============================================
 // @brief Constructor
@@ -82,12 +94,12 @@ void CTextureManager::Init( void )
 void CTextureManager::ReloadResources( void )
 {
 	// Reload all textures
-	if(!m_texturesList.empty())
+	if(!m_texturesMap.empty())
 	{
-		m_texturesList.begin();
-		while(!m_texturesList.end())
+		TexturesMap_t::iterator itTexture = m_texturesMap.begin();
+		while(itTexture != m_texturesMap.end())
 		{
-			en_texture_t* ptexture = m_texturesList.get();
+			en_texture_t* ptexture = itTexture->second;
 			if(ptexture->needsload && ptexture->format != TX_FORMAT_MEMORY)
 			{
 				// Load from the disc again
@@ -96,25 +108,29 @@ void CTextureManager::ReloadResources( void )
 			else if(ptexture->format == TX_FORMAT_MEMORY)
 			{
 				// Find any material files referring to this texture
-				m_materialsList.begin();
-				while(!m_materialsList.end())
+				MaterialsMap_t::iterator itMaterial = m_materialsMap.begin();
+				while(itMaterial != m_materialsMap.end())
 				{
-					en_material_t* pmaterial = m_materialsList.get();
+					en_material_t* pmaterial = itMaterial->second;
 					for(Uint32 i = 0; i < NB_MT_TX; i++)
 					{
 						if(pmaterial->ptextures[i] == ptexture)
 							pmaterial->ptextures[i] = nullptr;
 					}
 
-					m_materialsList.next();
+					itMaterial++;
 				}
 
 				// Remove textures that were loaded from memory
-				m_texturesList.remove(m_texturesList.get_link());
-				delete ptexture;
+				TexturesMap_t::iterator itRemove = itTexture;
+				itTexture++;
+
+				delete itRemove->second;
+				m_texturesMap.erase(itRemove);
+				continue;
 			}
 
-			m_texturesList.next();
+			itTexture++;
 		}
 	}
 }
@@ -126,46 +142,47 @@ void CTextureManager::ReloadResources( void )
 void CTextureManager::Shutdown( void )
 {
 	// Delete all allocations
-	if(!m_allocsList.empty())
+	if(!m_allocsMap.empty())
 	{
-		m_allocsList.begin();
-		while(!m_allocsList.end())
+		AllocMap_t::iterator it = m_allocsMap.begin();
+		while(it != m_allocsMap.end())
 		{
-			en_texalloc_t* palloc = m_allocsList.get();
+			en_texalloc_t* palloc = it->second;
 			glDeleteTextures(1, &palloc->gl_index);
 			delete palloc;
 
-			m_allocsList.next();
+			it++;
 		}
-		m_allocsList.clear();
+		m_allocsMap.clear();
 	}
 
 	// Delete all materials
-	if(!m_materialsList.empty())
+	if(!m_materialsMap.empty())
 	{
-		m_materialsList.begin();
-		while(!m_materialsList.end())
+		MaterialsMap_t::iterator it = m_materialsMap.begin();
+		while(it != m_materialsMap.end())
 		{
-			delete m_materialsList.get();
-			m_materialsList.next();
+			delete it->second;
+			it++;
 		}
-		m_materialsList.clear();
+
+		m_materialsMap.clear();
 	}
 
 	// Delete aliases
-	if(!m_aliasMappingsList.empty())
-		m_aliasMappingsList.clear();
+	if(!m_aliasMappingsMap.empty())
+		m_aliasMappingsMap.clear();
 
 	// Delete all textures
-	if(!m_texturesList.empty())
+	if(!m_texturesMap.empty())
 	{
-		m_texturesList.begin();
-		while(!m_texturesList.end())
+		TexturesMap_t::iterator it = m_texturesMap.begin();
+		while(it != m_texturesMap.end())
 		{
-			delete m_texturesList.get();
-			m_texturesList.next();
+			delete it->second;
+			it++;
 		}
-		m_texturesList.clear();
+		m_texturesMap.clear();
 	}
 }
 
@@ -189,20 +206,20 @@ void CTextureManager::UpdateAnisotropySettings( Float cvarValue )
 	if(!m_currentAnisotropyValue)
 		m_currentAnisotropyValue = ANISOTROPY_OFF_VALUE;
 
-	if(!m_texturesList.empty())
+	if(!m_texturesMap.empty())
 	{
 		// Set value for each texture
-		m_texturesList.begin();
-		while(!m_texturesList.end())
+		TexturesMap_t::iterator it = m_texturesMap.begin();
+		while(it != m_texturesMap.end())
 		{
-			en_texture_t* ptexture = m_texturesList.get();
+			en_texture_t* ptexture = it->second;
 			if(ptexture->palloc && !(ptexture->flags & (TX_FL_NOMIPMAPS|TX_FL_RECTANGLE)))
 			{
 				glBindTexture(GL_TEXTURE_2D, ptexture->palloc->gl_index);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, m_currentAnisotropyValue);
 			}
 
-			m_texturesList.next();
+			it++;
 		}
 
 		glBindTexture(GL_TEXTURE_2D, 0);
@@ -223,7 +240,7 @@ en_texalloc_t* CTextureManager::GenTextureIndex( rs_level_t level )
 	glGenTextures(1, &pnew->gl_index);
 
 	// Add it to the list
-	m_allocsList.add(pnew);
+	m_allocsMap.insert(std::pair<GLuint, en_texalloc_t*>(pnew->gl_index, pnew));
 	return pnew;
 }
 
@@ -232,10 +249,12 @@ en_texalloc_t* CTextureManager::GenTextureIndex( rs_level_t level )
 //
 // @return Allocation texture object
 //=============================================
-en_texture_t* CTextureManager::AllocTexture( void )
+en_texture_t* CTextureManager::AllocTexture( const HashResourceTypeKey_t& key )
 {
+	// Create the entry and add it to the map
 	en_texture_t* ptexture = new en_texture_t();
-	m_texturesList.add(ptexture);
+	std::pair<TexturesMap_t::iterator, bool> result = m_texturesMap.insert(pair<HashResourceTypeKey_t, en_texture_t*>(key,ptexture));
+	assert(result.second == true);
 
 	return ptexture;
 }
@@ -249,24 +268,27 @@ en_texture_t* CTextureManager::AllocTexture( void )
 void CTextureManager::DeleteBinds( rs_level_t level )
 {
 	// Delete all objects on this level
-	if(!m_allocsList.empty())
+	if(m_allocsMap.empty())
+		return;
+
+	AllocMap_t::iterator it = m_allocsMap.begin();
+	while(it != m_allocsMap.end())
 	{
-		m_allocsList.begin();
-		while(!m_allocsList.end())
+		en_texalloc_t* palloc = it->second;
+
+		if(palloc->level == level)
 		{
-			AllocList_t::link_t* plink = m_allocsList.get_link();
-			en_texalloc_t* palloc = plink->_val;
+			glDeleteTextures(1, &palloc->gl_index);
 
-			if(palloc->level == level)
-			{
-				glDeleteTextures(1, &palloc->gl_index);
+			delete palloc;
+			AllocMap_t::iterator itRemove = it;
+			it++;
 
-				delete palloc;
-				m_allocsList.remove(plink);
-			}
-
-			m_allocsList.next();
+			m_allocsMap.erase(itRemove);
+			continue;
 		}
+		
+		it++;
 	}
 }
 
@@ -277,36 +299,48 @@ void CTextureManager::DeleteBinds( rs_level_t level )
 //=============================================
 void CTextureManager::DeleteMaterials( rs_level_t level )
 {
-	// Delete all textures
-	if(!m_materialsList.empty())
+	// Delete all materials
+	if(!m_materialsMap.empty())
 	{
-		m_materialsList.begin();
-		while(!m_materialsList.end())
+		MaterialsMap_t::iterator it = m_materialsMap.begin();
+		while(it != m_materialsMap.end())
 		{
-			MaterialsList_t::link_t* plink = m_materialsList.get_link();
-			en_material_t* pmaterial = plink->_val;
+			en_material_t* pmaterial = it->second;
 
 			if(pmaterial->level == level)
 			{
-				delete plink->_val;
-				m_materialsList.remove(plink);
+				delete pmaterial;
+				MaterialsMap_t::iterator itRemove = it;
+				it++;
+
+				m_materialsMap.erase(itRemove);
+				continue;
 			}
 
-			m_materialsList.next();
+			it++;
 		}
 	}
 
-	// Delete from alias mappings as well
-	if(!m_aliasMappingsList.empty())
-	{
-		m_aliasMappingsList.begin();
-		while(!m_aliasMappingsList.end())
-		{
-			const alias_mapping_t& mapping = m_aliasMappingsList.get();
-			if(level == mapping.level)
-				m_aliasMappingsList.remove(m_aliasMappingsList.get_link());
+	if(level == RS_WINDOW_LEVEL)
+		m_pDummyMaterial = nullptr;
 
-			m_aliasMappingsList.next();
+	// Delete from alias mappings as well
+	if(!m_aliasMappingsMap.empty())
+	{
+		AliasMap_t::iterator it = m_aliasMappingsMap.begin();
+		while(it != m_aliasMappingsMap.end())
+		{
+			const alias_mapping_t& mapping = it->second;
+			if(level == mapping.level)
+			{
+				AliasMap_t::iterator itRemove = it;
+				it++;
+
+				m_aliasMappingsMap.erase(itRemove);
+				continue;
+			}
+
+			it++;
 		}
 	}
 
@@ -323,17 +357,16 @@ void CTextureManager::DeleteMaterials( rs_level_t level )
 void CTextureManager::DeleteTextures( rs_level_t level, bool keepentry )
 {
 	// Delete all textures
-	if(!m_texturesList.empty())
+	if(!m_texturesMap.empty())
 	{
-		m_texturesList.begin();
-		while(!m_texturesList.end())
+		TexturesMap_t::iterator it = m_texturesMap.begin();
+		while(it != m_texturesMap.end())
 		{
-			TexturesList_t::link_t* plink = m_texturesList.get_link();
-			en_texture_t* ptexture = plink->_val;
+			en_texture_t* ptexture = it->second;
 
 			if(ptexture->palloc && ptexture->level == level)
 			{
-				m_allocsList.remove(ptexture->palloc);
+				m_allocsMap.erase(ptexture->palloc->gl_index);
 				glDeleteTextures(1, &ptexture->palloc->gl_index);
 				delete ptexture->palloc;
 
@@ -343,13 +376,20 @@ void CTextureManager::DeleteTextures( rs_level_t level, bool keepentry )
 
 			if(!keepentry && ptexture->level == level)
 			{
-				delete plink->_val;
-				m_texturesList.remove(plink);
+				TexturesMap_t::iterator itRemove = it;
+				it++;
+
+				delete ptexture;
+				m_texturesMap.erase(itRemove);
+				continue;
 			}
 
-			m_texturesList.next();
+			it++;
 		}
 	}
+
+	if(level == RS_WINDOW_LEVEL && !keepentry)
+		m_pDummyTexture = nullptr;
 
 	// Delete any non-texture file binds
 	DeleteBinds(level);
@@ -363,30 +403,29 @@ void CTextureManager::DeleteTextures( rs_level_t level, bool keepentry )
 void CTextureManager::DeleteTexture( const Char *pstrFilename )
 {
 	// Delete the texture
-	if(m_texturesList.empty())
+	if(m_texturesMap.empty())
 		return;
 
-	m_texturesList.begin();
-	while(!m_texturesList.end())
+	TexturesMap_t::iterator it = m_texturesMap.begin();
+	while(it != m_texturesMap.end())
 	{
-		TexturesList_t::link_t* plink = m_texturesList.get_link();
-		en_texture_t* ptexture = plink->_val;
+		en_texture_t* ptexture = it->second;
 
 		if(!qstrcmp(pstrFilename, ptexture->filepath))
 		{
 			if(ptexture->palloc)
 			{
-				m_allocsList.remove(ptexture->palloc);
+				m_allocsMap.erase(ptexture->palloc->gl_index);
 				glDeleteTextures(1, &ptexture->palloc->gl_index);
 				delete ptexture->palloc;
 			}
 
-			delete plink->_val;
-			m_texturesList.remove(plink);
+			delete ptexture;
+			m_texturesMap.erase(it);
 			break;
 		}
 
-		m_texturesList.next();
+		it++;
 	}
 }
 
@@ -397,18 +436,22 @@ void CTextureManager::DeleteTexture( const Char *pstrFilename )
 //=============================================
 void CTextureManager::DeleteTexture( en_texture_t* ptexture )
 {
-	// Delete the texture
-	if(m_texturesList.empty())
+	if(m_texturesMap.empty())
+		return;
+
+	HashResourceTypeKey_t key(ptexture->filepath.c_str(), ptexture->level);
+	TexturesMap_t::iterator it = m_texturesMap.find(key);
+	if(it == m_texturesMap.end())
 		return;
 
 	if(ptexture->palloc)
 	{
-		m_allocsList.remove(ptexture->palloc);
+		m_allocsMap.erase(ptexture->palloc->gl_index);
 		glDeleteTextures(1, &ptexture->palloc->gl_index);
 		delete ptexture->palloc;
 	}	
 
-	m_texturesList.remove(ptexture);
+	m_texturesMap.erase(it);
 	delete ptexture;
 }
 
@@ -418,25 +461,24 @@ void CTextureManager::DeleteTexture( en_texture_t* ptexture )
 //=============================================
 void CTextureManager::DeleteAllocation( en_texalloc_t* palloc )
 {
-	if(m_allocsList.empty())
+	if(m_allocsMap.empty())
 		return;
 
 	// Do not allow removal on allocations tied to textures
-	m_texturesList.begin();
-	while(!m_texturesList.end())
+	TexturesMap_t::iterator it = m_texturesMap.begin();
+	while(it != m_texturesMap.end())
 	{
-		en_texture_t* ptexture = m_texturesList.get();
+		en_texture_t* ptexture = it->second;
 		if(ptexture && ptexture->palloc == palloc)
 		{
 			m_printFunction("%s - Allocation is tied to a texture, not deleted.\n", __FUNCTION__);
 			return;
 		}
 
-		m_texturesList.next();
+		it++;
 	}
 
-	m_allocsList.remove(palloc);
-
+	m_allocsMap.erase(palloc->gl_index);
 	glDeleteTextures(1, &palloc->gl_index);
 	delete palloc;
 }
@@ -452,6 +494,8 @@ void CTextureManager::CreateDummyTexture( void )
 
 	byte *pdata = new byte[dataSize];
 	memset(pdata, 0, sizeof(byte)*dataSize);
+
+	HashResourceTypeKey_t key("dummy", RS_WINDOW_LEVEL);
 
 	// This is based after the Quake code
 	byte* pdest = pdata;
@@ -478,7 +522,7 @@ void CTextureManager::CreateDummyTexture( void )
 
 	if(!m_pDummyTexture)
 	{
-		m_pDummyTexture = AllocTexture();
+		m_pDummyTexture = AllocTexture(key);
 
 		m_pDummyTexture->filepath = "dummy";
 		m_pDummyTexture->bpp = 4;
@@ -504,24 +548,26 @@ void CTextureManager::CreateDummyTexture( void )
 	delete[] pdata;
 
 	// Create the dummy material object
-	en_material_t* pdummymaterial = new en_material_t();
+	if(!m_pDummyMaterial)
+	{
+		m_pDummyMaterial = new en_material_t();
+		m_pDummyMaterial->alpha = 1.0;
+		m_pDummyMaterial->dt_scalex = 0;
+		m_pDummyMaterial->dt_scaley = 0;
+		m_pDummyMaterial->filepath = "dummy";
+		m_pDummyMaterial->int_height = 16;
+		m_pDummyMaterial->int_width = 16;
+		m_pDummyMaterial->level = RS_WINDOW_LEVEL;
+	}
 
-	pdummymaterial->alpha = 1.0;
-	pdummymaterial->dt_scalex = 0;
-	pdummymaterial->dt_scaley = 0;
-	pdummymaterial->filepath = "dummy";
-	pdummymaterial->int_height = 16;
-	pdummymaterial->int_width = 16;
-	pdummymaterial->level = RS_WINDOW_LEVEL;
-	pdummymaterial->index = m_materialsList.size();
+	m_pDummyMaterial->index = m_materialsIndexPtrArray.size();
+	m_pDummyMaterial->ptextures[MT_TX_DIFFUSE] = m_pDummyTexture;
 
-	pdummymaterial->ptextures[MT_TX_DIFFUSE] = m_pDummyTexture;
-
-	m_pDummyMaterial = pdummymaterial;
-	m_materialsList.radd(pdummymaterial);
+	if(m_materialsMap.find(key) == m_materialsMap.end())
+		m_materialsMap.insert(std::pair<HashResourceTypeKey_t, en_material_t*>(key, m_pDummyMaterial));
 
 	// Add it to the index list
-	m_materialsIndexPtrArray.push_back(pdummymaterial);
+	m_materialsIndexPtrArray.push_back(m_pDummyMaterial);
 }
 
 //=============================================
@@ -531,10 +577,20 @@ void CTextureManager::CreateDummyTexture( void )
 //=============================================
 texture_format_t CTextureManager::GetFormat( const Char* pstrFilename )
 {
-	if(!qstrcicmp(pstrFilename + qstrlen(pstrFilename) - 3, "tga"))
+	CString filename(pstrFilename);
+	Int32 dotpos = filename.find(0, ".");
+	if(dotpos == CString::CSTRING_NO_POSITION)
+		return TX_FORMAT_UNDEFINED;
+
+	Uint32 extensionlength = filename.length() - (dotpos + 1);
+	CString extension(filename.c_str() + (dotpos+1), extensionlength);
+
+	if(!qstrcicmp(extension, "tga"))
 		return TX_FORMAT_TGA;
-	else if(!qstrcicmp(pstrFilename + qstrlen(pstrFilename) - 3, "dds"))
+	else if(!qstrcicmp(extension, "dds"))
 		return TX_FORMAT_DDS;
+	else if (!qstrcicmp(extension, "bmp"))
+		return TX_FORMAT_BMP;
 	else
 		return TX_FORMAT_UNDEFINED;
 }
@@ -556,6 +612,8 @@ mt_texture_t CTextureManager::GetTextureType( const Char* pstrTypename )
 		return MT_TX_SPECULAR;
 	else if(!qstrcmp(pstrTypename, "luminance"))
 		return MT_TX_LUMINANCE;
+	else if (!qstrcmp(pstrTypename, "ao"))
+		return MT_TX_AO;
 	else
 		return MT_TX_UNKNOWN;
 }
@@ -654,7 +712,7 @@ en_material_t* CTextureManager::LoadMaterialScript( const Char* pstrFilename, rs
 		// Set basic info
 		pmaterial->filepath = pstrFilename;
 		pmaterial->level = level;
-		pmaterial->index = m_materialsList.size();
+		pmaterial->index = m_materialsIndexPtrArray.size();
 
 		// Set defaults
 		pmaterial->alpha = 1.0;
@@ -875,7 +933,7 @@ en_material_t* CTextureManager::LoadMaterialScript( const Char* pstrFilename, rs
 
 	if(isaliasscript)
 	{
-		// Load alias script, but prevent infinite recursion
+		// Load alias script target, but prevent infinite recursion
 		pmaterial = LoadMaterialScript(aliasscriptpath, level, prompt, true);
 		if(!pmaterial)
 			return nullptr;
@@ -886,7 +944,8 @@ en_material_t* CTextureManager::LoadMaterialScript( const Char* pstrFilename, rs
 		mapping.pmaterialfile = pmaterial;
 		mapping.level = level;
 
-		m_aliasMappingsList.radd(mapping);
+		HashResourceTypeKey_t key(aliasscriptpath, level);
+		m_aliasMappingsMap.insert(std::pair<HashResourceTypeKey_t, alias_mapping_t>(key, mapping));
 		return pmaterial;
 	}
 
@@ -924,10 +983,63 @@ en_material_t* CTextureManager::LoadMaterialScript( const Char* pstrFilename, rs
 
 	// Add it to the index list
 	m_materialsIndexPtrArray.push_back(pmaterial);
+
 	// Add this to the list
-	m_materialsList.radd(pmaterial);
+	HashResourceTypeKey_t key(pstrFilename, level);
+	m_materialsMap.insert(std::pair<HashResourceTypeKey_t, en_material_t*>(key, pmaterial));
 
 	return pmaterial;
+}
+
+//=============================================
+// @brief Loads a texture file of any format and returns the output format and file dataptr
+//
+// @param pstrFileName Filename to load
+// @param outFormat Output variable for the texture format
+// @return Pointer to file data
+//=============================================
+const byte* CTextureManager::LoadFile( const Char* pstrFileName, texture_format_t& outFormat )
+{
+	const byte* pfile = m_fileFuncs.pfnLoadFile(pstrFileName, nullptr);
+	outFormat = GetFormat(pstrFileName);
+
+	if(pfile)
+		return pfile;
+
+	CString basefilename(pstrFileName);
+	Int32 dotpos = basefilename.find(0, ".");
+	if(dotpos != CString::CSTRING_NO_POSITION)
+	{
+		Uint32 nberase = basefilename.length() - dotpos;
+		basefilename.erase(dotpos, nberase);
+	}
+
+	Int32 triedFormats = (1<<(Int32)outFormat);
+	for(Uint32 i = 0; i < NB_TEXTURE_FORMATS; i++)
+	{
+		// Don't bother with non-file based formats
+		if(!qstrlen(TEXTURE_FORMAT_EXTENSIONS[i]))
+			continue;
+
+		Int32 bitflag = (1<<i);
+		if(triedFormats & bitflag)
+			continue;
+
+		CString filename;
+		filename << basefilename << "." << TEXTURE_FORMAT_EXTENSIONS[i];
+
+		pfile = m_fileFuncs.pfnLoadFile(filename.c_str(), nullptr);
+		if(pfile)
+		{
+			outFormat = static_cast<texture_format_t>(i);
+			return pfile;
+		}
+
+		triedFormats |= bitflag;
+	}
+
+	outFormat = TX_FORMAT_UNDEFINED;
+	return nullptr;
 }
 
 //=============================================
@@ -977,27 +1089,15 @@ en_texture_t* CTextureManager::LoadTexture( const Char* pstrFilename, rs_level_t
 		filePath = pstrFilename;
 
 	// Load the file
-	const byte* pfile = m_fileFuncs.pfnLoadFile(filePath.c_str(), nullptr);
+	texture_format_t format = TX_FORMAT_UNDEFINED;
+	const byte* pfile = LoadFile(filePath.c_str(), format);
 	if(!pfile)
 	{
-		// If it's a DDS, try looking for TGA
-		if(filePath.find(0, ".dds") != -1 || filePath.find(0, ".DDS") != -1)
-		{
-			filePath.erase(filePath.length()-3, 3);
-			filePath << "tga";
-
-			pfile = m_fileFuncs.pfnLoadFile(filePath.c_str(), nullptr);
-		}
-
-		if(!pfile)
-		{
-			m_printErrorFunction("Failed to load texture '%s'.\n", filePath.c_str());
-			return nullptr;
-		}
+		m_printErrorFunction("Failed to load texture '%s'.\n", filePath.c_str());
+		return nullptr;
 	}
 
-	// Determine the format
-	texture_format_t format = GetFormat(filePath.c_str());
+	// Check the format
 	if(format == TX_FORMAT_UNDEFINED)
 	{
 		m_printErrorFunction("Unknown or unsupported file format for '%s'\n", pstrFilename);
@@ -1022,6 +1122,15 @@ en_texture_t* CTextureManager::LoadTexture( const Char* pstrFilename, rs_level_t
 			return nullptr;
 		}
 	}
+	else if (format == TX_FORMAT_BMP) 
+	{
+		if (!BMP_Load(pstrFilename, pfile, pdata, width, height, bpp, datasize, compression, m_printErrorFunction)) 
+		{
+			m_printErrorFunction("Failed to load BMP image file '%s'.\n", pstrFilename);
+			m_fileFuncs.pfnFreeFile(pfile);
+			return nullptr;
+		}
+	}
 	else
 	{
 		// Shouldn't happen
@@ -1034,8 +1143,9 @@ en_texture_t* CTextureManager::LoadTexture( const Char* pstrFilename, rs_level_t
 	m_fileFuncs.pfnFreeFile(pfile);
 
 	// Allocate a new texture if it's not already present
+	HashResourceTypeKey_t key(pstrFilename, level);
 	if(!ptexture)
-		ptexture = AllocTexture();
+		ptexture = AllocTexture(key);
 
 	ptexture->width = width;
 	ptexture->height = height;
@@ -1147,8 +1257,9 @@ en_texture_t* CTextureManager::LoadFromMemory( const Char* pstrTextureName, rs_l
 		return ptexture;
 
 	// Allocate a new texture if it's not already present
+	HashResourceTypeKey_t key(pstrTextureName, level);
 	if(!ptexture)
-		ptexture = AllocTexture();
+		ptexture = AllocTexture(key);
 
 	ptexture->width = width;
 	ptexture->height = height;
@@ -1227,17 +1338,13 @@ en_texture_t* CTextureManager::LoadFromMemory( const Char* pstrTextureName, rs_l
 //=============================================
 en_texture_t* CTextureManager::FindTexture( const Char* pstrFilename, rs_level_t level )
 {
-	m_texturesList.begin();
-	while(!m_texturesList.end())
-	{
-		en_texture_t* ptexture = m_texturesList.get();
-		if(ptexture->level == level && !qstrcmp(pstrFilename, ptexture->filepath))
-			return ptexture;
+	HashResourceTypeKey_t key(pstrFilename, level);
 
-		m_texturesList.next();
-	}
-
-	return nullptr;
+	TexturesMap_t::iterator it = m_texturesMap.find(key);
+	if(it == m_texturesMap.end())
+		return nullptr;
+	else
+		return it->second;
 }
 
 //=============================================
@@ -1249,26 +1356,14 @@ en_texture_t* CTextureManager::FindTexture( const Char* pstrFilename, rs_level_t
 //=============================================
 en_material_t* CTextureManager::FindMaterialScript( const Char* pstrFilename, rs_level_t level )
 {
-	m_materialsList.begin();
-	while(!m_materialsList.end())
-	{
-		en_material_t* pmaterial = m_materialsList.get();
-		if(pmaterial->level == level && !qstrcicmp(pstrFilename, pmaterial->filepath))
-			return pmaterial;
+	HashResourceTypeKey_t key(pstrFilename, level);
+	MaterialsMap_t::iterator itMaterial = m_materialsMap.find(key);
+	if(itMaterial != m_materialsMap.end())
+		return itMaterial->second;
 
-		m_materialsList.next();
-	}
-
-	// Look in alias list too
-	m_aliasMappingsList.begin();
-	while(!m_aliasMappingsList.end())
-	{
-		alias_mapping_t& mapping = m_aliasMappingsList.get();
-		if(mapping.level == level && !qstrcicmp(pstrFilename, mapping.filename))
-			return mapping.pmaterialfile;
-
-		m_aliasMappingsList.next();
-	}
+	AliasMap_t::iterator itAlias = m_aliasMappingsMap.find(key);
+	if(itAlias != m_aliasMappingsMap.end())
+		return itAlias->second.pmaterialfile;
 
 	return nullptr;
 }
@@ -1368,7 +1463,8 @@ en_texture_t* CTextureManager::LoadPallettedTexture( const Char* pstrFilename, r
 	delete[] pcol2;
 
 	// Create entry
-	ptexture = new en_texture_t();
+	HashResourceTypeKey_t key(pstrFilename, level);
+	ptexture = AllocTexture(key);
 	ptexture->bpp = 4;
 	ptexture->compression = TX_COMPRESSION_NONE;
 	ptexture->filepath = pstrFilename;
@@ -1379,7 +1475,6 @@ en_texture_t* CTextureManager::LoadPallettedTexture( const Char* pstrFilename, r
 	ptexture->needsload = false;
 	ptexture->palloc = GenTextureIndex(level);
 	ptexture->flags = flags;
-	m_texturesList.add(ptexture);
 
 	glBindTexture(GL_TEXTURE_2D, ptexture->palloc->gl_index); 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, outwidth, outheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
@@ -1418,17 +1513,17 @@ void CTextureManager::ResetMaterialsIndexArray( void )
 		m_materialsIndexPtrArray.clear();
 	
 	// Allocate new size
-	m_materialsIndexPtrArray.resize(m_materialsList.size());
+	m_materialsIndexPtrArray.resize(m_materialsMap.size());
 
 	Int32 index = 0;
-	m_materialsList.begin();
-	while(!m_materialsList.end())
+	MaterialsMap_t::iterator it = m_materialsMap.begin();
+	while(it != m_materialsMap.end())
 	{
-		en_material_t* pmaterial = m_materialsList.get();
+		en_material_t* pmaterial = it->second;
 		m_materialsIndexPtrArray[index] = pmaterial;
 		pmaterial->index = index;
 
-		m_materialsList.next();
+		it++;
 	}
 }
 
@@ -1605,6 +1700,9 @@ void CTextureManager::WritePMFFile( en_material_t* pmaterial )
 
 	if(pmaterial->ptextures[MT_TX_LUMINANCE])
 		data << "\t$texture luminance " << pmaterial->ptextures[MT_TX_LUMINANCE]->filepath << NEWLINE;
+	
+	if (pmaterial->ptextures[MT_TX_AO])
+		data << "\t$texture ao " << pmaterial->ptextures[MT_TX_AO]->filepath << NEWLINE;
 
 	data << "}" << NEWLINE;
 

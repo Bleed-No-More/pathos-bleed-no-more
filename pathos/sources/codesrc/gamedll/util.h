@@ -13,6 +13,7 @@ All Rights Reserved.
 #include "snd_shared.h"
 #include "beam_shared.h"
 #include "trace.h"
+#include "tracer.h"
 
 enum part_script_type_t;
 enum flextypes_t;
@@ -52,6 +53,7 @@ namespace Util
 	extern void EntityConDPrintf( const edict_t* pentity, const Char *fmt, ... );
 	extern void CreateParticles( const Char* pstrscriptname, const Vector& origin, const Vector& direction, part_script_type_t type );
 	extern void CreateParticles( const Char* pstrscriptname, const Vector& origin, const Vector& direction, part_script_type_t type, const edict_t* pentity, Uint32 attachment, Int32 id, Int32 boneindex = NO_POSITION, Int32 attachflags = PARTICLE_ATTACH_NONE );
+	extern void CreateTracer( const Vector& origin, const Vector& velocity, const Vector& color, Float alpha, Float width, Float length, Float life, tracer_type_t type );
 	extern void PrecacheEntity( const Char* pstrClassname );
 	extern void ShowMessage( const Char* pmsgname, CBaseEntity* pPlayer );
 	extern void ShowMessageAllPlayers( const Char* pmsgname );
@@ -152,8 +154,8 @@ namespace Util
 	extern void CreateBeamCylinder( const Vector& startpos, const Vector& endpos, const Char* pstrSpriteName, Uint32 startframe, Float framerate, Float life, Float width, Float amplitude, Float brightness, Float speed, Float noisespeed, Float r, Float g, Float b, Int32 flags = FL_BEAM_NONE );
 	extern void CreateBeamCylinder( const Vector& startpos, const Vector& endpos, Int32 modelindex, Uint32 startframe, Float framerate, Float life, Float width, Float amplitude, Float brightness, Float speed, Float noisespeed, Float r, Float g, Float b, Int32 flags = FL_BEAM_NONE );
 	extern void CreateBeamOfType( beam_types_t type, const Vector& startpos, const Vector& endpos, Int32 modelindex, Uint32 startframe, Float framerate, Float life, Float width, Float amplitude, Float brightness, Float speed, Float noisespeed, Float r, Float g, Float b, Int32 flags = FL_BEAM_NONE );
-	extern void CreateBeamFollow( const CBaseEntity* pentity, Int32 attachment, const Char* pstrSpriteName, Float life, Float width, Float amplitude, Float brightness, Float r, Float g, Float b );
-	extern void CreateBeamFollow( const CBaseEntity* pentity, Int32 attachment, Int32 modelindex, Float life, Float width, Float amplitude, Float brightness, Float r, Float g, Float b );
+	extern void CreateBeamFollow( const CBaseEntity* pentity, Int32 attachment, const Char* pstrSpriteName, Float life, Float width, Float brightness, Float r, Float g, Float b );
+	extern void CreateBeamFollow( const CBaseEntity* pentity, Int32 attachment, Int32 modelindex, Float life, Float width, Float brightness, Float r, Float g, Float b );
 	extern void CreateBeamRing( const CBaseEntity* pstartentity, const CBaseEntity* pendentity, Int32 attachment1, Int32 attachment2, const Char* pstrSpriteName, Uint32 startframe, Float framerate, Float life, Float width, Float amplitude, Float brightness, Float speed, Float noisespeed, Float r, Float g, Float b, Int32 flags = FL_BEAM_NONE );
 	extern void CreateBeamRing( const CBaseEntity* pstartentity, const CBaseEntity* pendentity, Int32 attachment1, Int32 attachment2, Int32 modelindex, Uint32 startframe, Float framerate, Float life, Float width, Float amplitude, Float brightness, Float speed, Float noisespeed, Float r, Float g, Float b, Int32 flags = FL_BEAM_NONE );
 	extern void KillEntityBeams( const CBaseEntity* pentity );

@@ -265,4 +265,21 @@ struct dpbspv2leaf_t
 
 	byte ambient_level[PBSPV2_NUM_AMBIENTS];
 };
+
+struct dpbspv2lmapdata_t
+{
+	dpbspv2lmapdata_t():
+		compression(0),
+		compressionlevel(0),
+		dataoffset(0),
+		datasize(0),
+		noncompressedsize(0)
+	{}
+
+	Int32 compression;
+	Int32 compressionlevel;
+	Int32 dataoffset;
+	Int32 datasize;
+	Int32 noncompressedsize;
+};
 #endif //PBSPV2FILE_H

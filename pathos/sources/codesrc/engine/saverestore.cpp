@@ -911,6 +911,9 @@ bool CSaveRestore::CreateSaveFile( const Char* baseName, savefile_type_t type, c
 	m_saveStringBlocksBuffer.resize(BUFFER_ALLOC_SIZE);
 	m_numSaveStringBlocks = 0;
 
+	if(!m_savedStringPositionMap.empty())
+		m_savedStringPositionMap.clear();
+
 	m_savedStringsArray.resize(STRING_ARRAY_ALLOC_SIZE);
 	m_numSavedStrings = 0;
 
@@ -1144,6 +1147,9 @@ bool CSaveRestore::CreateSaveFile( const Char* baseName, savefile_type_t type, c
 	m_saveStringBlocksBuffer.clear();
 	m_numSaveStringBlocks = 0;
 
+	if(!m_savedStringPositionMap.empty())
+		m_savedStringPositionMap.clear();
+
 	if(m_pStringBuffer)
 	{
 		// Save string buffer to output
@@ -1303,7 +1309,7 @@ bool CSaveRestore::CreateSaveFile( const Char* baseName, savefile_type_t type, c
 
 	// Try putting it in writer thread queue
 	bool threadresult = false;
-	bool incremental = (filename.find(0, "%number%") != -1) ? true : false;
+	bool incremental = (filename.find(0, "%number%") != CString::CSTRING_NO_POSITION) ? true : false;
 
 	// Try saving with file writer thread if quick or auto
 	if(type == SAVE_QUICK || type == SAVE_AUTO)
@@ -1320,7 +1326,7 @@ bool CSaveRestore::CreateSaveFile( const Char* baseName, savefile_type_t type, c
 			{
 				finaloutputname = filename;
 				Int32 pos = finaloutputname.find(0, "%number%");
-				if(pos == -1)
+				if(pos == CString::CSTRING_NO_POSITION)
 				{
 					delete[] pbuffer;
 					return false;
@@ -1429,27 +1435,16 @@ save_block_t& CSaveRestore::SaveToStringBuffer( const Char* pstrstring )
 	Uint32 length = qstrlen(pstrstring);
 
 	// Only save string if it has an actual length
-	Int32 stringBufferOffset = -1;
+	Int32 stringBufferOffset = NO_POSITION;
 	if(length || m_isTransitionSave)
 	{
-		// Try and find an existing block
-		for(Uint32 i = 0; i < m_numSavedStrings; i++)
+		StringPositionMap_t::iterator it = m_savedStringPositionMap.find(pstrstring);
+		if(it != m_savedStringPositionMap.end())
 		{
-			saved_string_t& savedString = m_savedStringsArray[i];
-			if(length != savedString.length)
-				continue;
-
-			// Compare the values
-			const Char* pbufferstring = reinterpret_cast<const Char*>(m_pStringBuffer + savedString.offset);
-			if(!qstrncmp(pbufferstring, pstrstring, savedString.length))
-			{
-				stringBufferOffset = savedString.offset;
-				break;
-			}
+			saved_string_t& savedString = m_savedStringsArray[it->second];
+			stringBufferOffset = savedString.offset;
 		}
-
-		// Save into buffer if not found
-		if(stringBufferOffset == -1)
+		else
 		{
 			// Expand buffer if required
 			if((m_stringBufferUsage + length) >= m_stringBufferSize)
@@ -1468,15 +1463,20 @@ save_block_t& CSaveRestore::SaveToStringBuffer( const Char* pstrstring )
 				m_savedStringsArray.resize(m_savedStringsArray.size() + STRING_ARRAY_ALLOC_SIZE);
 
 			// Save to fast lookup array too
-			saved_string_t& savedString = m_savedStringsArray[m_numSavedStrings];
+			Int32 insertPosition = m_numSavedStrings;
+			m_numSavedStrings++;
+
+			saved_string_t& savedString = m_savedStringsArray[insertPosition];
 			savedString.offset = stringBufferOffset;
 			savedString.length = length;
-			m_numSavedStrings++;
 
 			// Copy to buffer
 			byte* pdest = m_pStringBuffer + stringBufferOffset;
 			memcpy(pdest, pstrstring, sizeof(byte)*length);
 			m_saveBufferSize += sizeof(byte)*length;
+
+			// Add it to the map
+			m_savedStringPositionMap.insert(std::pair<CString,Int32>(pstrstring, insertPosition));
 		}
 	}
 

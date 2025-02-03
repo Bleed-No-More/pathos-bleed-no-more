@@ -11,7 +11,7 @@ All Rights Reserved.
 #define SV_SHARED_H
 
 #define MAX_CLIENTS				32		// Max connected clients
-#define MAX_VISIBLE_ENTITIES	4096	// Max entities visible for a client
+#define MAX_VISIBLE_ENTITIES	2048	// Max entities visible for a client
 #define DEFAULT_MAX_EDICTS		4096	// Default max edict number
 
 // Net update flags for specific entity property types

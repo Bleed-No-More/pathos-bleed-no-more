@@ -26,6 +26,7 @@ All Rights Reserved.
 #include "enginestate.h"
 #include "commands.h"
 #include "bsp_shared.h"
+#include "crc32.h"
 
 // Object declaration
 CModelCache gModelCache;
@@ -134,6 +135,7 @@ void CModelCache::ClearCache( void )
 	}
 
 	m_modelCacheArray.clear();
+	m_modelNameMap.clear();
 }
 
 //=============================================
@@ -170,6 +172,11 @@ cache_model_t* CModelCache::LoadModel( const Char* pstrFilename )
 	}
 
 	FL_FreeFile(pfile);
+
+	// Add to the map
+	if(pmodel)
+		m_modelNameMap.insert(std::pair<CString, Uint32>(pstrFilename, pmodel->cacheindex-1));
+
 	return pmodel;
 }
 //=============================================
@@ -228,7 +235,7 @@ cache_model_t* CModelCache::LoadVBMModel( const Char* pstrFilename, const byte* 
 	// Now load the VBM file
 	CString filepath = pstrFilename;
 	Uint32 begin = filepath.find(0, ".mdl");
-	if(begin != -1)
+	if(begin != CString::CSTRING_NO_POSITION)
 		filepath.erase(begin, 4);
 	filepath << ".vbm";
 
@@ -364,6 +371,9 @@ cache_model_t* CModelCache::LoadBSPModel( const Char* pstrFilename, const byte* 
 	if(!pmodel)
 		return nullptr;
 
+	// Set up everything else
+	BSP_MakeHullZero((*pmodel));
+
 	// Setup the submodels too
 	SetupBSPSubmodels(*pmodel, pstrFilename);
 
@@ -375,6 +385,18 @@ cache_model_t* CModelCache::LoadBSPModel( const Char* pstrFilename, const byte* 
 	cache_model_t* pcache = m_modelCacheArray[0];
 	pmodel = pcache->getBrushmodel();
 	BSP_SetupPAS((*pmodel));
+
+	pmodel->lightmaplayercount = 0;
+	for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
+	{
+		if(!pmodel->plightdata[i])
+			break;
+
+		pmodel->lightmaplayercount++;
+	}
+
+	// Set sampling data
+	BSP_SetSamplingLightData(*pmodel);
 
 	return pcache;
 }
@@ -403,6 +425,7 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 		pnewmodel->ppasdata = model.ppasdata;
 		pnewmodel->pasdatasize = model.pasdatasize;
 		pnewmodel->lightdatasize = model.lightdatasize;
+		pnewmodel->lightmaplayercount = model.lightmaplayercount;
 		pnewmodel->pclipnodes = model.pclipnodes;
 		pnewmodel->numclipnodes = model.numclipnodes;
 		pnewmodel->pedges = model.pedges;
@@ -432,7 +455,10 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 		for(Uint32 j = 0 ; j < NB_SURF_LIGHTMAP_LAYERS; j++)
 		{
 			pnewmodel->plightdata[j] = model.plightdata[j];
-			pnewmodel->pbaselightdata[j] = model.pbaselightdata[j];
+			pnewmodel->plightdata_original[j] = model.plightdata_original[j];
+			pnewmodel->original_lightdatasizes[j] = model.original_lightdatasizes[j];
+			pnewmodel->original_compressiontype[j] = model.original_compressiontype[j];
+			pnewmodel->original_compressionlevel[j] = model.original_compressionlevel[j];
 		}
 
 		pnewmodel->hulls[0].firstclipnode = psubmodel->headnode[0];
@@ -493,16 +519,11 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 //=============================================
 cache_model_t* CModelCache::FindModelByName( const Char* pstrFilename )
 {
-	if(m_modelCacheArray.empty())
+	ModelNameMapType_t::iterator it = m_modelNameMap.find(pstrFilename);
+	if(it != m_modelNameMap.end())
+		return m_modelCacheArray[it->second];
+	else
 		return nullptr;
-
-	for(Uint32 i = 0; i < m_modelCacheArray.size(); i++)
-	{
-		if(!qstrcmp(m_modelCacheArray[i]->name, pstrFilename))
-			return m_modelCacheArray[i];
-	}
-
-	return nullptr;
 }
 
 //=============================================

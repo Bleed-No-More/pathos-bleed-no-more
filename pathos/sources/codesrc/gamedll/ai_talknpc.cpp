@@ -500,7 +500,8 @@ CTalkNPC::CTalkNPC( edict_t* pedict ):
 	m_voicePitch(PITCH_NORM),
 	m_nextUseTime(0),
 	m_useSentenceGroup(NO_STRING_VALUE),
-	m_unFollowSentenceGroup(NO_STRING_VALUE)
+	m_unFollowSentenceGroup(NO_STRING_VALUE),
+	m_eyeBoneIndex(NO_POSITION)
 {
 }
 
@@ -510,6 +511,17 @@ CTalkNPC::CTalkNPC( edict_t* pedict ):
 //=============================================
 CTalkNPC::~CTalkNPC( void )
 {
+}
+
+//=============================================
+// @brief Sets extra model info after setting the model
+//
+//=============================================
+void CTalkNPC::PostModelSet( void )
+{
+	m_eyeBoneIndex = GetBoneIndex(EYE_CENTER_BONE_NAME);
+
+	CSquadNPC::Precache();
 }
 
 //=============================================
@@ -736,7 +748,7 @@ void CTalkNPC::PlayScriptedSentence( const Char* pstrSentenceName, Float duratio
 
 	// Make us face the talk target
 	if(m_talkTargetEntity && m_npcState != NPC_STATE_SCRIPT)
-		SetIdealYaw(m_talkTargetEntity->GetEyePosition());
+		SetIdealYaw(m_talkTargetEntity->GetEyePosition(true, true));
 
 	CSquadNPC::PlayScriptedSentence(pstrSentenceName, duration, volume, attenuation, timeOffset, subtitleOnlyInRadius, isConcurrent, pListener, pPlayer);
 }
@@ -947,7 +959,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 				CBaseEntity* pPlayer = Util::GetHostPlayer();
 				if(pPlayer)
 				{
-					Vector eyePosition = pPlayer->GetEyePosition(true);
+					Vector eyePosition = pPlayer->GetEyePosition(true, true);
 					IdleHeadTurn(&eyePosition);
 				}
 			}
@@ -999,7 +1011,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 
 			SetIdealYaw(pPlayer->GetOrigin());
 
-			Vector eyePosition = pPlayer->GetEyePosition(true);
+			Vector eyePosition = pPlayer->GetEyePosition(true, true);
 			IdleHeadTurn(&eyePosition);
 			if(g_pGameVars->time > m_waitFinishedTime && GetYawDifference() < IDEALYAW_DIFF_TRESHOLD)
 				SetTaskCompleted();
@@ -1009,7 +1021,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 		{
 			if(!IsMoving() && IsTalking() && m_talkTargetEntity)
 			{
-				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true);
+				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true, true);
 				IdleHeadTurn(&eyePosition);
 			}
 			else
@@ -1020,7 +1032,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 		{
 			if(IsTalking() && m_talkTargetEntity)
 			{
-				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true);
+				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true, true);
 				IdleHeadTurn(&eyePosition);
 			}
 			else
@@ -1042,7 +1054,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 		{
 			if(IsTalking() && m_talkTargetEntity)
 			{
-				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true);
+				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true, true);
 				IdleHeadTurn(&eyePosition);
 			}
 			else
@@ -1124,13 +1136,20 @@ Int32 CTalkNPC::GetIdealActivity( void )
 // @brief Returns the view position
 //
 //=============================================
-Vector CTalkNPC::GetEyePosition( bool addlean ) const
+Vector CTalkNPC::GetEyePosition( bool addlean, bool usebone ) const
 {
-	Vector bonePosition;
-	if(!gd_engfuncs.pfnGetBonePositionByName(m_pEdict, EYE_CENTER_BONE_NAME, bonePosition))
-		bonePosition = CSquadNPC::GetEyePosition(addlean);
+	if(usebone && m_eyeBoneIndex != NO_POSITION)
+	{
+		Vector bonePosition;
+		if(!gd_engfuncs.pfnGetBonePositionByIndex(m_pEdict, m_eyeBoneIndex, bonePosition))
+			bonePosition = CSquadNPC::GetEyePosition(addlean);
 
-	return bonePosition;
+		return bonePosition;
+	}
+	else
+	{
+		return CSquadNPC::GetEyePosition(addlean);
+	}
 }
 
 //=============================================
@@ -1391,7 +1410,7 @@ void CTalkNPC::IdleHeadTurn( const Vector* pTarget )
 		return;
 	}
 
-	Vector bonePosition = GetEyePosition();
+	Vector bonePosition = GetEyePosition(false, true);
 	Float yaw = Util::VectorToYaw((*pTarget) - bonePosition) - m_pState->angles[YAW];
 	if(yaw > 180.0f)
 		yaw -= 360.0f;

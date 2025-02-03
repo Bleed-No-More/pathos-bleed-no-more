@@ -28,6 +28,7 @@ All Rights Reserved.
 #include "timedamage.h"
 #include "ai_militianpc.h"
 #include "lightenvironment.h"
+#include "tracer.h"
 
 // Path to impact effects script
 static const Char MATERIAL_DEFINITIONS_SCRIPT_PATH[] = "scripts/materialdefs.txt";
@@ -58,6 +59,9 @@ CSentencesFile* g_pSentencesFile = nullptr;
 static const Uint32 IMPACT_POSITION_MAX = 32;
 // Max penetrations by NPCs per frame
 static const Uint32 MAX_NPC_FRAME_PENETRATIONS = 8;
+
+// Smoke sprite precache index
+Int32 g_smokeSpriteIndex = NO_PRECACHE;
 
 // Counter for penetrations by NPCs
 Uint32 g_nbNPCPenetrations = 0;
@@ -404,7 +408,7 @@ void PrecacheGenericResources( void )
 	gd_engfuncs.pfnPrecacheParticleScript("concrete_impact_cluster.txt", PART_SCRIPT_CLUSTER);
 	gd_engfuncs.pfnPrecacheParticleScript("cluster_impact_metal.txt", PART_SCRIPT_CLUSTER);
 	gd_engfuncs.pfnPrecacheParticleScript("carpet_impact_cluster.txt", PART_SCRIPT_CLUSTER);
-	gd_engfuncs.pfnPrecacheParticleScript("cluster_impact_metal.txt", PART_SCRIPT_CLUSTER);
+	gd_engfuncs.pfnPrecacheParticleScript("cluster_impact_ricochet.txt", PART_SCRIPT_CLUSTER);
 
 	// Precache frequently used groups
 	gd_engfuncs.pfnPrecacheDecalGroup("scorch");
@@ -421,6 +425,8 @@ void PrecacheGenericResources( void )
 
 	gd_engfuncs.pfnPrecacheDecal("bloodbigsplat");
 	gd_engfuncs.pfnPrecacheDecal("bloodbigsplat2");
+
+	g_smokeSpriteIndex = gd_engfuncs.pfnPrecacheModel("sprites/smoke.spr");
 
 	if(g_pCvarNPCDebug->GetValue() >= 1)
 	{
@@ -635,7 +641,7 @@ bool ShootTrace( const Vector& gunPosition, const Vector& endPos, const Vector& 
 		Util::TraceModel(pTraceModel, gunPosition, endPos, true, HULL_POINT, tr);
 	else
 		Util::TraceLine(gunPosition, endPos, false, true, false, true, isRicochetShot ? nullptr : pAttacker->GetEdict(), tr);
-		
+
 	// Don't bother if we hit nothing
 	if(tr.noHit())
 		return false;
@@ -749,6 +755,50 @@ bool ShootTrace( const Vector& gunPosition, const Vector& endPos, const Vector& 
 // @brief
 //
 //=============================================
+void SpawnTracer( const Vector& gunTracePosition, const Vector& tracerEndPos, CBaseEntity* pAttacker, const Vector& aimForward, const Vector& aimRight, const Vector& aimUp, bool adjustPosition, bool mirrorTracer )
+{
+	// Base position is gun position
+	Vector tracerOrigin = gunTracePosition;
+
+	// Do special adjustments for player fired bullets
+	if(pAttacker->IsPlayer() && adjustPosition)
+	{
+		tracerOrigin += Vector(0, 0, -2)*aimUp+aimForward*16;
+		tracerOrigin += aimRight*2 * (mirrorTracer ? -1 : 1);
+	}
+
+	Vector dirVector = (tracerEndPos - tracerOrigin);
+	Float dirLength = dirVector.Length();
+	dirVector.Normalize();
+
+	Float tracerSpeed;
+	if(pAttacker->IsPlayer())
+	{
+		const Float tracerDistMax = 2048;
+		const Float tracerSpeedMin = 1200;
+		const Float tracerDistMin = 256;
+
+		Float fraction = (dirLength-tracerDistMin)/(tracerDistMax-tracerDistMin);
+		fraction = clamp(fraction, 0.0, 1.0);
+
+		tracerSpeed = (1.0 - fraction) * tracerSpeedMin + fraction * tracerDistMax;
+	}
+	else
+	{
+		// NPCs use the original 6000 speed
+		tracerSpeed = 6000;
+	}
+
+	Float lifetime = dirLength / tracerSpeed;
+	Vector velocity = dirVector * tracerSpeed;
+
+	Util::CreateTracer(tracerOrigin, velocity, Vector(204, 204, 102), 255, 4, 2, lifetime, TRACER_NORMAL);
+}
+
+//=============================================
+// @brief
+//
+//=============================================
 void FireBullets( Uint32 nbshots, 
 	const Vector& gunPosition, 
 	const Vector& aimForward, 
@@ -760,7 +810,8 @@ void FireBullets( Uint32 nbshots,
 	Int32 tracerFrequency, 
 	Float damage, 
 	CBaseEntity* pAttacker,
-	CBaseEntity* pWeapon )
+	CBaseEntity* pWeapon,
+	bool mirrorTracer )
 {
 	// For tracking tracer counts
 	static Int32 tracerCount = 0;
@@ -819,25 +870,18 @@ void FireBullets( Uint32 nbshots,
 		gunTracePosition = gunPosition;
 		endPos = gunTracePosition + shootDirection*distance;
 
+		trace_t tr;
+		bool shootResult = ShootTrace(gunTracePosition, endPos, shootDirection, pAttacker, pAttacker, pWeapon, damage, 1.0, shotDmgFlags, bulletType, hitgroup, tr, impactPositions, numImpactPositions, false, false, nullptr);
+
 		// Spawn the tracer
 		if(tracerFrequency != 0)
 		{
 			tracerCount++;
 			if((tracerCount % tracerFrequency) == 0)
-			{
-				// Base position is gun position
-				Vector tracerOrigin = gunTracePosition;
-
-				// Do special adjustments for player fired bullets
-				if(pAttacker->IsPlayer())
-					tracerOrigin += Vector(0, 0, -4)+aimRight*2+aimForward*16;
-
-				Util::CreateParticles("bullet_tracer.txt", tracerOrigin, shootDirection, PART_SCRIPT_SYSTEM);
-			}
+				SpawnTracer(gunTracePosition, tr.endpos, pAttacker, aimForward, aimRight, aimUp, true, mirrorTracer);
 		}
 
-		trace_t tr;
-		if(ShootTrace(gunTracePosition, endPos, shootDirection, pAttacker, pAttacker, pWeapon, damage, 1.0, shotDmgFlags, bulletType, hitgroup, tr, impactPositions, numImpactPositions, false, false, nullptr))
+		if(shootResult)
 		{
 			// Number of ricochets
 			Uint32 numRicochets = 0;
@@ -856,14 +900,9 @@ void FireBullets( Uint32 nbshots,
 				if(pAttacker->IsNPC())
 				{
 					if(g_nbNPCPenetrations >= MAX_NPC_FRAME_PENETRATIONS)
-					{
-						// Do not allow too many NPC penetration shots, for performance
-						break;
-					}
+						break; // Do not allow too many NPC penetration shots, for performance
 					else
-					{
 						g_nbNPCPenetrations++;
-					}
 				}
 
 				// Only penetrate brushmodels, world or npcs
@@ -888,11 +927,9 @@ void FireBullets( Uint32 nbshots,
 					// Check if penetration is allowed
 					if(pmaterial->flags & TX_FL_NO_PENETRATION)
 					{
-						if(pmaterial->flags & TX_FL_BULLETPROOF)
-						{
-							// Spawn bullet if set to bulletproof
+						// Spawn bullet if set to bulletproof
+						if(pmaterial->flags & TX_FL_BULLETPROOF && pHitEntity->GetEffectFlags() & EF_STATICENTITY)
 							CreateBulletProofImpactModel(tr.endpos, shootDirection, bulletType);
-						}
 
 						break;
 					}
@@ -966,11 +1003,15 @@ void FireBullets( Uint32 nbshots,
 
 							// Add ricochet and tracer effect
 							Util::Ricochet(tr.endpos, tr.plane.normal, false);
-							Util::CreateParticles("bullet_tracer.txt", startPosition, shootDirection, PART_SCRIPT_SYSTEM);
-
-							if (!ShootTrace(startPosition, endPos, shootDirection, pAttacker,
+							
+							shootResult = ShootTrace(startPosition, endPos, shootDirection, pAttacker,
 								pAttacker, pWeapon, damage, dmgMultiplier, shotDmgFlags, bulletType,
-								hitgroup, tr, impactPositions, numImpactPositions, numPenetrations > 0 ? true : false, true, nullptr))
+								hitgroup, tr, impactPositions, numImpactPositions, numPenetrations > 0 ? true : false, true, nullptr);
+
+							// Spawn a tracer before checking anything
+							SpawnTracer(startPosition, tr.endpos, pAttacker, ZERO_VECTOR, ZERO_VECTOR, ZERO_VECTOR, false, false);
+
+							if (!shootResult)
 								break;
 
 							numRicochets++;
@@ -1066,7 +1107,13 @@ void FireBullets( Uint32 nbshots,
 						if (pPenetrationInfo->damagefalloff < 1.0)
 							dmgMultiplier *= pPenetrationInfo->damagefalloff;
 
-						if (!ShootTrace(startPosition, endPos, shootDirection, pAttacker, pAttacker, pWeapon, damage, dmgMultiplier, shotDmgFlags, bulletType, hitgroup, tr, impactPositions, numImpactPositions, true, false, nullptr))
+						shootResult = ShootTrace(startPosition, endPos, shootDirection, pAttacker, pAttacker, pWeapon, damage, dmgMultiplier, shotDmgFlags, 
+							bulletType, hitgroup, tr, impactPositions, numImpactPositions, true, false, nullptr);
+
+						// Spawn a tracer before checking anything
+						SpawnTracer(startPosition, tr.endpos, pAttacker, ZERO_VECTOR, ZERO_VECTOR, ZERO_VECTOR, false, false);
+
+						if (!shootResult)
 							break;
 
 						// Increase penetration count

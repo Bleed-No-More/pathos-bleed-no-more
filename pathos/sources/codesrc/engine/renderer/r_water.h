@@ -17,6 +17,22 @@ struct cl_entity_t;
 struct ref_params_t;
 struct en_texture_t;
 
+struct cl_water_style_batch_t
+{
+	Uint32 start_index;
+	Uint32 num_indexes;
+};
+
+struct cl_water_style_batches_t
+{
+	cl_water_style_batches_t():
+		styleindex(NO_POSITION)
+	{}
+
+	CArray<cl_water_style_batch_t> batches[MAX_SURFACE_STYLES];
+	Int32 styleindex;
+};
+
 struct cl_water_t
 {
 	cl_water_t():
@@ -30,13 +46,18 @@ struct cl_water_t
 		start_index(0),
 		num_indexes(0),
 		renderpassidx(0),
-		plightmap_texture(nullptr),
-		plightmap_diffuse_texture(nullptr),
-		plightmap_lightvecs_texture(nullptr),
-		lightmaptexturewidth(0),
-		lightmaptextureheight(0),
 		settingsindex(0)
-		{}
+	{
+		for(Uint32 j = 0; j < MAX_SURFACE_STYLES; j++)
+		{
+			plightmap_textures[j] = nullptr;
+			plightmap_diffuse_textures[j] = nullptr;
+			plightmap_lightvecs_textures[j] = nullptr;
+
+			lightmaptexturewidths[j] = 0;
+			lightmaptextureheights[j] = 0;
+		}
+	}
 
 	Uint32 index;
 	cl_entity_t *pentity;
@@ -58,12 +79,14 @@ struct cl_water_t
 
 	Uint32 renderpassidx;
 
-	en_texalloc_t* plightmap_texture;
-	en_texalloc_t* plightmap_diffuse_texture;
-	en_texalloc_t* plightmap_lightvecs_texture;
+	CArray<cl_water_style_batches_t> stylebatches;
 
-	Uint32 lightmaptexturewidth;
-	Uint32 lightmaptextureheight;
+	en_texalloc_t* plightmap_textures[MAX_SURFACE_STYLES];
+	en_texalloc_t* plightmap_diffuse_textures[MAX_SURFACE_STYLES];
+	en_texalloc_t* plightmap_lightvecs_textures[MAX_SURFACE_STYLES];
+
+	Uint32 lightmaptexturewidths[MAX_SURFACE_STYLES];
+	Uint32 lightmaptextureheights[MAX_SURFACE_STYLES];
 
 	Int32 settingsindex;
 };
@@ -86,7 +109,8 @@ struct water_settings_t
 		phongexponent(0),
 		refractonly(false),
 		cheaprefraction(false),
-		pnormalmap(nullptr)
+		pnormalmap(nullptr),
+		pflowmap(nullptr)
 		{}
 
 	fog_settings_t fogparams;
@@ -102,11 +126,13 @@ struct water_settings_t
 	Float lightstrength;
 	Float specularstrength;
 	Float wavefresnelstrength;
+	Float flowmapspeed;
 	Float phongexponent;
 	bool refractonly;
 	bool cheaprefraction;
-
+	
 	en_texture_t* pnormalmap;
+	en_texture_t* pflowmap;
 };
 
 struct water_vertex_t
@@ -119,15 +145,15 @@ struct water_vertex_t
 		memset(pad, 0, sizeof(pad));
 	}
 
-	vec4_t origin;
-	Vector normal;
-	Vector tangent;
-	Vector binormal;
+	vec4_t origin; // 16
+	Vector normal; // 28
+	Vector tangent; // 40
+	Vector binormal; // 52
 
-	Float texcoords[2];
-	Float lightcoords[2];
+	Float texcoords[2]; // 60
+	Float lightcoords[MAX_SURFACE_STYLES][2]; // 92
 
-	byte pad[28];
+	byte pad[4];
 };
 
 struct water_attribs
@@ -140,6 +166,7 @@ struct water_attribs
 		a_texcoords(CGLSLShader::PROPERTY_UNAVAILABLE),
 		a_lightcoords(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_normalmap(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_flowmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_lightmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_refract(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_reflect(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -161,10 +188,14 @@ struct water_attribs
 		u_phongexponent(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_modelview(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_projection(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_flowspeed(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_stylestrength(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_side(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_fog(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_rectrefract(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_specular(CGLSLShader::PROPERTY_UNAVAILABLE)
+		d_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
+		d_flowmap(CGLSLShader::PROPERTY_UNAVAILABLE),
+		d_lightonly(CGLSLShader::PROPERTY_UNAVAILABLE)
 		{}
 
 	Int32 a_origin;
@@ -175,6 +206,7 @@ struct water_attribs
 	Int32 a_lightcoords;
 
 	Int32 u_normalmap;
+	Int32 u_flowmap;
 	Int32 u_lightmap;
 	Int32 u_refract;
 	Int32 u_reflect;
@@ -198,6 +230,8 @@ struct water_attribs
 	Int32 u_specularstrength;
 	Int32 u_phongexponent;
 	Int32 u_wavefresnelstrength;
+	Int32 u_flowspeed;
+	Int32 u_stylestrength;
 
 	Int32 u_modelview;
 	Int32 u_projection;
@@ -206,6 +240,8 @@ struct water_attribs
 	Int32 d_fog;
 	Int32 d_rectrefract;
 	Int32 d_specular;
+	Int32 d_flowmap;
+	Int32 d_lightonly;
 };
 
 /*
@@ -223,6 +259,13 @@ public:
 		WATER_QUALITY_NO_REFLECT_REFRACT = 0,
 		WATER_QUALITY_NO_REFLECT,
 		WATER_QUALITY_FULL
+	};
+
+	// Water side
+	enum water_side_t
+	{
+		WATERSURF_SIDE_UNDER = 0,
+		WATERSURF_SIDE_ABOVE
 	};
 
 public:

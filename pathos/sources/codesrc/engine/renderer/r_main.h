@@ -280,6 +280,7 @@ struct renderer_state_t
 		validateshaders(false),
 		msaa(false),
 		fboblitsupported(false),
+		hasdaystagedata(false),
 		pvisbuffer(nullptr),
 		psecondaryvisbuffer(nullptr),
 		ploadbackground(nullptr),
@@ -369,6 +370,8 @@ struct renderer_state_t
 	bool msaa;
 	// true if fbo blit is supported
 	bool fboblitsupported;
+	// true if we have relevant daystage data
+	bool hasdaystagedata;
 
 	// day stage
 	daystage_t daystage;
@@ -487,7 +490,7 @@ extern void R_InitRenderInterface( r_interface_t &renderFuncs );
 extern void R_Bind2DTexture( Int32 texture, Uint32 id, bool force = false );
 extern void R_BindRectangleTexture( Int32 texture, Uint32 id, bool force = false );
 extern void R_BindCubemapTexture( Int32 texture, Uint32 id, bool force = false );
-extern void R_ClearBinds( void );
+extern void R_ClearBinds( Uint32 firstUnit = 0 );
 
 extern bool R_DrawScene( void );
 extern bool R_DrawInterface( void );
@@ -555,6 +558,8 @@ extern void R_AddShaderForLoading( CGLSLShader* pShader );
 extern bool R_PerformPendingShaderLoads( void );
 extern Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultcolor );
 
+extern void R_SetLightmapTexture( Uint32 glindex, Uint32 width, Uint32 height, bool isvectormap, color32_t* pdata, Uint32& resultsize );
+
 extern void Cmd_PasteDecal( void );
 extern void Cmd_CreateSprite( void );
 extern void Cmd_CreateDynamicLight( void );
@@ -589,6 +594,7 @@ extern void Cmd_EFX_BeamVaporTrail( void );
 extern void Cmd_EFX_BeamPoints( void );
 extern void Cmd_EFX_BeamRing( void );
 extern void Cmd_EFX_CreateParticle( void );
+extern void Cmd_EFX_CreateTracer( void );
 
 extern void Cmd_BSPToSMD_Lightmap( void );
 extern void Cmd_BSPToSMD_Textures( void );
@@ -600,5 +606,6 @@ extern void Cmd_SetTextureMaterialType( void );
 extern void Cmd_ShowListMaterial( void );
 
 extern void Cmd_LoadAllParticleScripts( void );
+extern void Cmd_ExportALD( void );
 
 #endif //R_MAIN_H

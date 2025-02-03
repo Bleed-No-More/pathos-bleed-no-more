@@ -32,8 +32,10 @@ public:
 		FL_REVERBLESS			= (1<<9),
 		FL_NO_OCCLUSION			= (1<<10),
 		FL_DIM_OTHERS			= (1<<11),
-		FL_MUTE_OTHERS			= (1<<12)
+		FL_MUTE_OTHERS			= (1<<12),
+		FL_SUB_ONLY_IN_RADIUS	= (1<<13)
 	};
+
 public:
 	explicit CAmbientGeneric( edict_t* pedict );
 	virtual ~CAmbientGeneric( void );
@@ -73,6 +75,7 @@ private:
 
 	Float m_pitchFadeInTime;
 	Float m_pitchFadeOutTime;
+	Float m_soundDuration;
 
 	Double m_beginTime;
 	Double m_turnoffBeginTime;
@@ -80,5 +83,7 @@ private:
 
 	string_t m_emitterEntityName;
 	CEntityHandle m_emitterEntity;
+
+	string_t m_emitSoundName;
 };
 #endif //AMBIENTGENERIC_H

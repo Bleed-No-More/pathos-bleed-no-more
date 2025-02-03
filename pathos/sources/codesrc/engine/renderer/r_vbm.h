@@ -228,6 +228,7 @@ struct vbm_attribs
 		u_rectangle(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_spectexture(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_lumtexture(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_aotexture(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_normalmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_sky_ambient(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_sky_diffuse(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -247,6 +248,7 @@ struct vbm_attribs
 		d_flexes(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_luminance(CGLSLShader::PROPERTY_UNAVAILABLE),
+		d_ao(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_bumpmapping(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_numdlights(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_use_ubo(CGLSLShader::PROPERTY_UNAVAILABLE)
@@ -293,6 +295,7 @@ struct vbm_attribs
 	Int32 u_rectangle;
 	Int32 u_spectexture;
 	Int32 u_lumtexture;
+	Int32 u_aotexture;
 	Int32 u_normalmap;
 
 	Int32 u_sky_ambient;
@@ -321,6 +324,7 @@ struct vbm_attribs
 	Int32 d_flexes;
 	Int32 d_specular;
 	Int32 d_luminance;
+	Int32 d_ao;
 	Int32 d_bumpmapping;
 	Int32 d_numdlights;
 	Int32 d_use_ubo;
@@ -463,9 +467,9 @@ private:
 	// Updates currently fetched light values
 	void UpdateLightValues( void );
 	// Sets up model lighting
-	void SetupLighting( void );
+	void SetupLighting( Int32 flags );
 	// Compare light values with light info
-	bool CompareLightValues( Vector* pambientlightvalues, Vector* pdiffuselightvalues, const Vector& lightdir, entity_lightinfo_t& lightinfo );
+	bool CompareLightValues( const Vector* pambientlightvalues, const Vector* pdiffuselightvalues, const Vector& lightdir, const byte* plightstyles );
 
 	// Gets model lights
 	void GetModelLights( void );
@@ -560,7 +564,7 @@ private:
 	// Builds the VBO
 	void BuildVBO( void );
 	// Adds a VBM file to the VBO object
-	void AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm );
+	void AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, vbm_glvertex_t* pvertexbuffer, Uint32* pindexbuffer, Uint32& vertexoffset, Uint32& indexoffset );
 
 private:
 	// Toggles rendering of models
@@ -644,6 +648,12 @@ private:
 	entity_extrainfo_t *m_pExtraInfo;
 	// Entity alpha used for rendering
 	Float m_renderAlpha;
+	// Global light vector used for rendering
+	Vector m_renderLightVector;
+	// Global ambient color used for rendering
+	Vector m_renderAmbientColor;
+	// Global diffuse color used for rendering
+	Vector m_renderDiffuseColor;
 
 private:
 	// Entity absolute mins
@@ -663,7 +673,9 @@ private:
 
 private:
 	// Lighting information for entity
-	entity_lightinfo_t m_lightingInfo;
+	entity_lightinfo_t* m_pLightingInfo;
+	// Lighting information for entity
+	entity_lightinfo_t m_localLightingInfo;
 
 	// Model lights array
 	mlightinfo_t m_modelLights[MAX_ENT_MLIGHTS];

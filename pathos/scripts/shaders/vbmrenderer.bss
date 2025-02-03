@@ -1,4 +1,5 @@
 $global_determinator shadertype 0 17
+$global_determinator ao 0 1
 $global_determinator bumpmapping 0 1
 $global_determinator numdlights 0 4
 $global_determinator dlight0_shadow 0 1
@@ -267,6 +268,10 @@ $invalid_state 2 numdlights 1 4 num_lights 1 6
 $invalid_state 2 numdlights 1 4 alphatest 1 1
 $invalid_state 1 shadertype 4 4
 $invalid_state 1 shadertype 6 6
+$invalid_state 2 ao 1 1 shadertype 7 12
+$invalid_state 2 ao 1 1 shadertype 14 14
+$invalid_state 2 ao 1 1 shadertype 16 17
+$invalid_state 1 use_ubo 1 1
 
 $begin
 $branch use_ubo == 1
@@ -303,6 +308,11 @@ uniform sampler2D lumtexture;
 $end
 
 uniform sampler2D normalmap;
+
+$branch ao == 1
+$begin
+uniform sampler2D aomaptex;
+$end
 
 uniform vec4 color;
 
@@ -937,22 +947,6 @@ void main()
 		specularColor.xyz = AddSpecularLight(specularColor.xyz, lightColor.w, mlight_color);
 	$end
 	
-	// Normal single pass rendering
-	$branch shadertype == 0 || shadertype == 1
-	$begin
-		finalColor = clamp(finalColor, 0.0, 1.0); // To prevent multipass inconsistencies
-		vec4 textureColor = texture(texture0, ps_texcoord1);
-		finalColor = finalColor*textureColor + specularColor;
-		finalColor.xyz *= 2;
-		finalColor = finalColor*color;
-	$end
-	
-	// Lighting without textures but with alpha
-	$branch shadertype == 2
-	$begin
-		finalColor.w = texture(texture0, ps_texcoord1).w;
-	$end
-	
 	// Dynamic light passes
 	$branch shadertype == 3
 	$begin
@@ -1105,6 +1099,29 @@ void main()
 		$end
 	$end
 	
+	$branch ao == 1 && shadertype != 3 && shadertype != 5
+	$begin
+		vec3 aocolor = texture(aomaptex, ps_texcoord1).xyz;
+		finalColor.xyz *= aocolor;
+		specularColor.xyz *= aocolor;
+	$end	
+	
+	// Normal single pass rendering
+	$branch shadertype == 0 || shadertype == 1
+	$begin
+		finalColor = clamp(finalColor, 0.0, 1.0); // To prevent multipass inconsistencies
+		vec4 textureColor = texture(texture0, ps_texcoord1);
+		finalColor = finalColor*textureColor + specularColor;
+		finalColor.xyz *= 2;
+		finalColor = finalColor*color;
+	$end
+	
+	// Lighting without textures but with alpha
+	$branch shadertype == 2
+	$begin
+		finalColor.w = texture(texture0, ps_texcoord1).w;
+	$end
+	
 	// Caustics
 	$branch shadertype == 7
 	$begin
@@ -1170,6 +1187,7 @@ void main()
 	$begin
 		finalColor = texture(texture0, ps_texcoord1)*color;
 	$end
+	
 	// Texture with alpha holes for decals
 	$branch shadertype == 16 || shadertype == 17
 	$begin

@@ -16,8 +16,12 @@ struct decalgroupentry_t;
 struct tempentity_t;
 struct mlight_t;
 struct beam_t;
+struct tracer_t;
 
 enum beam_types_t;
+enum overlay_rendermode_t;
+enum overlay_effect_t;
+enum tracer_type_t;
 
 struct cl_efxapi_t
 {
@@ -50,6 +54,12 @@ struct cl_efxapi_t
 
 	// Post process
 	void					(*pfnSetMotionBlur)( bool active, Float blurfade, bool override );
+	void					(*pfnSetVignette)(bool active, Float strength, Float radius);
+	void					(*pfnSetFilmGrain)(bool active, Float strength);
+	void					(*pfnSetBlackAndWhite)(bool active, Float strength);
+	void					(*pfnSetChromatic)(bool active, Float strength);
+	void					(*pfnSetScreenOverlay)( Int32 layerindex, const Char* pstrtexturename, overlay_rendermode_t rendermode, const Vector& rendercolor, Float renderamt, overlay_effect_t effect, Float effectspeed, Float effectminalpha, Float fadetime );
+	void					(*pfnClearScreenOverlay)( Int32 layerindex, Float fadetime );
 	void					(*pfnSetFade)( Uint32 layerindex, Float duration, Float holdtime, Int32 flags, const color24_t& color, byte alpha, Float timeoffset );
 	void					(*pfnSetGaussianBlur)( bool active, Float alpha );
 
@@ -61,6 +71,7 @@ struct cl_efxapi_t
 	void					(*pfnSphereModel)( const Vector& origin, Float speed, Float life, Uint32 num, Uint32 modelindex, Float buoyancy, Float waterfriction, Int32 sound );
 	tempentity_t*			(*pfnTempModel)( const Vector& origin, const Vector& velocity, const Vector& angles, Float life, Uint32 modelindex, Int32 sound, Float buoyancy, Float waterfriction, Int32 flags );
 	tempentity_t*			(*pfnTempSprite)( const Vector& origin, const Vector& velocity, Float scale, Uint32 modelindex, Int32 rendermode, Int32 renderfx, Float alpha, Float life, Int32 sound, Int32 flags );
+	tracer_t*				(*pfnCreateTracer)( const Vector& origin, const Vector& velocity, const Vector& color, Float alpha, Float width, Float length, Float life, tracer_type_t type );
 
 	// Legacy particle effects
 	void					(*pfnParticleExplosion1)( const Vector& origin );

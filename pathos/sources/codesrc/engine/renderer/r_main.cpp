@@ -71,8 +71,12 @@ All Rights Reserved.
 #include "r_sky.h"
 #include "r_fbocache.h"
 #include "r_lightstyles.h"
+#include "r_tracers.h"
 
 #include "stepsound.h"
+#include "aldformat.h"
+#include "stb_dxt.h"
+#include "bsp_shared.h"
 
 // Global cvars
 CCVar* g_pCvarBumpMaps = nullptr;
@@ -105,6 +109,7 @@ CCVar* g_pCvarTraceGlow = nullptr;
 CCVar* g_pCvarBatchDynamicLights = nullptr;
 CCVar* g_pCvarOverdarkenTreshold = nullptr;
 CCVar* g_pCvarDumpLightmaps = nullptr;
+CCVar* g_pCvarLightmapCompression = nullptr;
 
 // Caustics texture list file path
 static const Char CAUSTICS_TEXTURE_FILE_PATH[] = "textures/general/caustics_textures.txt";
@@ -158,6 +163,13 @@ en_material_t* g_pMaterialShown = nullptr;
 // List of pending shaders to load
 CLinkedList<active_load_shader_t> g_pendingShadersList;
 
+// Lightmap compression modes
+enum lightmapcompression_t
+{
+	LM_COMPRESSION_NONE = 0,
+	LM_COMPRESSION_DXT1
+};
+
 //====================================
 //
 //====================================
@@ -194,8 +206,9 @@ bool R_Init( void )
 	g_pCvarBatchDynamicLights = gConsole.CreateCVar( CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_lightbatches", "0", "Controls whether light rendering is batched based on proximity and type of light." );
 	g_pCvarOverdarkenTreshold = gConsole.CreateCVar(CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_overdarken_treshold", "35", "Overdarkening treshold setting, default is 35." );
 	g_pCvarDumpLightmaps = gConsole.CreateCVar( CVAR_FLOAT, FL_CV_CLIENT, "r_lightmap_dumping", "0", "Toggle whether lightmap data should be exported to TGAs on level load." );
+	g_pCvarLightmapCompression = gConsole.CreateCVar( CVAR_FLOAT, FL_CV_CLIENT, "r_lightmap_compression", "0", "Controls whether lightmap data is compressed to the DXT1 format(Experimental)." );
 
-	gCommands.CreateCommand("r_exportald", ALD_ExportLightmaps, "Exports current lightmap info as nightstage light info");
+	gCommands.CreateCommand("r_exportald", Cmd_ExportALD, "Exports current lightmap info as nightstage light info");
 	gCommands.CreateCommand("r_detail_auto", Cmd_DetailAuto, "Generates detail texture entries for world textures without");
 	gCommands.CreateCommand("r_list_default_materials", Cmd_ListDefaultMaterials, "List world textures with default material types");
 	gCommands.CreateCommand("r_set_texture_material", Cmd_SetTextureMaterialType, "Set material type in list of default material types");
@@ -235,6 +248,7 @@ bool R_Init( void )
 	gCommands.CreateCommand("efx_beampoints", Cmd_EFX_BeamPoints, "Creates a beam between two points");
 	gCommands.CreateCommand("efx_beamring", Cmd_EFX_BeamRing, "Creates a beam ring between two entities");
 	gCommands.CreateCommand("efx_createparticle", Cmd_EFX_CreateParticle, "Creates a particle system in front of the view");
+	gCommands.CreateCommand("efx_createtracer", Cmd_EFX_CreateTracer, "Creates a tracer in front of the view");
 
 	gCommands.CreateCommand("r_bsp2smd_lm", Cmd_BSPToSMD_Lightmap, "Exports BSP geometry to smd with lightmap texcoords");
 	gCommands.CreateCommand("r_bsp2smd_tx", Cmd_BSPToSMD_Textures, "Exports BSP geometry to smd with regular texcoords");
@@ -307,6 +321,9 @@ bool R_Init( void )
 	if (!gFBOCache.Init())
 		return false;
 
+	if (!gTracers.Init())
+		return false;
+
 	// Init decal class
 	gDecals.Init();
 
@@ -337,6 +354,7 @@ void R_Shutdown( void )
 	gPortalManager.Shutdown();
 	gLensFlareRenderer.Shutdown();
 	gFBOCache.Shutdown();
+	gTracers.Shutdown();
 
 	CBasicDraw::DeleteInstance();
 }
@@ -459,6 +477,33 @@ bool R_InitGL( void )
 	rns.fboblitsupported = R_IsExtensionSupported("GL_EXT_framebuffer_blit");
 	rns.fboused = gWindow.AreFBOsEnabled();
 
+	// Restore full-size lightmap data
+	if(cls.cl_state == CLIENT_ACTIVE)
+	{
+		daystage_t loadstage;
+		if(rns.hasdaystagedata && rns.daystage != DAYSTAGE_NORMAL)
+			loadstage = rns.daystage;
+		else
+			loadstage = DAYSTAGE_NORMAL_RESTORE;
+
+		byte* pdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
+		if(ALD_Load(loadstage, pdatapointers))
+		{
+			for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
+			{
+				// All data was successfully set, so release original data
+				if (ens.pworld->plightdata[i])
+					delete[] ens.pworld->plightdata[i];
+
+				ens.pworld->plightdata[i] = reinterpret_cast<color24_t*>(pdatapointers[i]);
+			}
+		}
+		else
+		{
+			Con_EPrintf("%s - Failed to restore lightmap data from backup.\n", __FUNCTION__);
+		}
+	}
+
 	// Load any textures
 	R_LoadTextures();
 
@@ -566,6 +611,14 @@ bool R_InitGL( void )
 	if(!cls.dllfuncs.pfnGLInit())
 		return false;
 
+	if(cls.cl_state == CLIENT_ACTIVE)
+	{
+		// Set sampling data and release full-size data
+		BSP_ReserveWaterLighting();
+		BSP_SetSamplingLightData(*ens.pworld);
+		BSP_ReleaseLightmapData(*ens.pworld);
+	}
+
 	// Create query objects
 	R_InitQueryObjects();
 
@@ -632,6 +685,9 @@ bool R_LoadResources( void )
 	if(!gSkyRenderer.InitGame())
 		return false;
 
+	// This needs to be called before the BSP renderer inits
+	ALD_InitGame();
+
 	if(!gBSPRenderer.InitGame())
 		return false;
 
@@ -686,6 +742,16 @@ bool R_LoadResources( void )
 
 	if (!gFBOCache.InitGame())
 		return false;
+
+	if (!gTracers.InitGame())
+		return false;
+
+	// Release lightmap data
+	if(cls.cl_state == CLIENT_ACTIVE)
+	{
+		BSP_ReserveWaterLighting();
+		BSP_ReleaseLightmapData(*ens.pworld);
+	}
 
 	VID_DrawLoadingScreen("Renderer ready");
 
@@ -757,6 +823,7 @@ void R_ResetGame( void )
 	rns.isgameready = false;
 	rns.daystage = DAYSTAGE_NORMAL;
 	rns.numskipframes = 0;
+	rns.hasdaystagedata = false;
 
 	g_beamStartPosition.Clear();
 	g_pBeamStartEntity = nullptr;
@@ -770,8 +837,6 @@ void R_ResetGame( void )
 	rns.sky.skysize = 0;
 	rns.sky.local_origin = ZERO_VECTOR;
 	rns.sky.world_origin = ZERO_VECTOR;
-
-
 
 	// Clear this in particular
 	g_pRotLightSprite = nullptr;
@@ -798,8 +863,12 @@ void R_ResetGame( void )
 	gBlackHoleRenderer.ClearGame();
 	gLensFlareRenderer.ClearGame();
 	gFBOCache.ClearGame();
+	gTracers.ClearGame();
 
 	CTextureManager* pTextureManager = CTextureManager::GetInstance();
+
+	// Clean up the restore file if present
+	ALD_ClearGame();
 
 	// Tell texloader to release all game-level resources
 	pTextureManager->DeleteTextures(RS_GAME_LEVEL, false);
@@ -962,9 +1031,11 @@ void R_BindRectangleTexture( Int32 texture, Uint32 id, bool force )
 //====================================
 //
 //====================================
-void R_ClearBinds( void )
+void R_ClearBinds( Uint32 firstUnit )
 {
-	for(Uint32 i = 0; i < MAX_BOUND_TEXTURES; i++)
+	assert(firstUnit < MAX_BOUND_TEXTURES);
+
+	for(Uint32 i = firstUnit; i < MAX_BOUND_TEXTURES; i++)
 	{
 		if(rns.textures.texturebinds_2d[i] != 0)
 		{
@@ -975,7 +1046,7 @@ void R_ClearBinds( void )
 		rns.textures.texturebinds_2d[i] = 0;
 	}
 
-	for(Uint32 i = 0; i < MAX_BOUND_TEXTURES; i++)
+	for(Uint32 i = firstUnit; i < MAX_BOUND_TEXTURES; i++)
 	{
 		if(rns.textures.texturebinds_cube[i] != 0)
 		{
@@ -986,7 +1057,7 @@ void R_ClearBinds( void )
 		rns.textures.texturebinds_cube[i] = 0;
 	}
 
-	for(Uint32 i = 0; i < MAX_BOUND_TEXTURES; i++)
+	for(Uint32 i = firstUnit; i < MAX_BOUND_TEXTURES; i++)
 	{
 		if(rns.textures.texturebinds_rect[i] != 0)
 		{
@@ -1058,7 +1129,7 @@ void R_SetupView( const ref_params_t& params )
 	Math::AngleVectors(rns.view.v_angles, &rns.view.v_forward, &rns.view.v_right, &rns.view.v_up);
 
 	// Set frustum
-	if(!rns.monitorpass)
+	if(!rns.monitorpass && !rns.cubemapdraw)
 		rns.view.fov = R_GetRenderFOV(params.viewsize);
 	else
 		rns.view.fov = params.viewsize;
@@ -1109,12 +1180,14 @@ void R_SetProjectionMatrix( Float znear, Float fovY )
 	// Set in renderer info structure
 	rns.view.znear = znear;
 
-	if(rns.fog.settings.active && rns.fog.settings.affectsky && g_pCvarWireFrame->GetValue() <= 0)
+	if(rns.fog.settings.active 
+		&& rns.fog.settings.affectsky 
+		&& g_pCvarWireFrame->GetValue() <= 0)
 		rns.view.zfar = rns.fog.settings.end;
 	else
 		rns.view.zfar = g_pCvarFarZ->GetValue();
 
-	Float ratio = static_cast<Float>(rns.screenwidth)/ static_cast<Float>(rns.screenheight);
+	Float ratio = static_cast<Float>(rns.view.viewsize_x)/static_cast<Float>(rns.view.viewsize_y);
 	Float fovX = GetXFOVFromY(fovY, ratio * 0.75f);
 
 	Float width = 2*rns.view.znear*SDL_tan(fovX*M_PI/360.0f);
@@ -1947,6 +2020,9 @@ bool R_DrawNormal( void )
 			return false;		
 	}
 
+	// Set view frustum again after sky
+	R_SetFrustum(rns.view.frustum, rns.view.v_origin, rns.view.v_angles, rns.view.fov, rns.view.viewsize_x, rns.view.viewsize_y, true);
+
 	// Create cached decals
 	gDecals.CreateCached();
 
@@ -2071,6 +2147,10 @@ bool R_DrawTransparent( void )
 			if(!gBlackHoleRenderer.DrawBlackHoles())
 				return false;
 
+			// Draw tracers
+			if(!gTracers.DrawTracers())
+				return false;
+
 			if(rns.mainframe)
 			{
 				// Draw glow auras
@@ -2120,7 +2200,7 @@ bool R_Draw( const ref_params_t& params )
 		R_SetupView(params);
 	}
 
-	if(!rns.view.params.nodraw)
+	if(rns.mainframe && !rns.view.params.nodraw)
 	{
 		// Update ideal cubemap
 		gCubemaps.Update(params.v_origin);
@@ -2713,7 +2793,6 @@ bool R_Update( void )
 	// Update tempents
 	gTempEntities.UpdateTempEntities();
 
-
 	// Keep original list of unsorted visents
 	memcpy(rns.objects.pvisents_unsorted, rns.objects.pvisents, sizeof(cl_entity_t*)*rns.objects.numvisents);
 
@@ -2750,6 +2829,9 @@ bool R_Update( void )
 	
 	// Update beams
 	gBeamRenderer.Update();
+
+	// Update tracers
+	gTracers.Update();
 
 	return true;
 }
@@ -3054,7 +3136,7 @@ void R_LoadSprite( cache_model_t* pmodel )
 
 			CString name, basename;
 			Common::Basename(pmodel->name.c_str(), basename);
-			name << basename << static_cast<Int32>(frameindex) << ".spr";
+			name << "spr_" << pmodel->cacheindex << "_" << basename << static_cast<Int32>(frameindex) << ".spr";
 			frameindex++;
 
 			const color24_t* ppalette = reinterpret_cast<const color24_t*>(psprite->palette);
@@ -3074,7 +3156,7 @@ void R_LoadSprite( cache_model_t* pmodel )
 
 				CString name, basename;
 				Common::Basename(pmodel->name.c_str(), basename);
-				name << basename << static_cast<Int32>(frameindex) << ".spr";
+				name << "spr_" << pmodel->cacheindex << "_" << basename << static_cast<Int32>(frameindex) << ".spr";
 				frameindex++;
 
 				const color24_t* ppalette = reinterpret_cast<const color24_t*>(psprite->palette);
@@ -3355,7 +3437,7 @@ Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultco
 	Vector end = position - Vector(0, 0, 8192);
 
 	// Get lightstyle values array
-	CArray<Float>* pStyleValuesArray = gLightStyles.GetLightStyleValuesArray();
+	CArray<Float>* pStyleValuesArray = nullptr;
 
 	if(Mod_RecursiveLightPoint(ens.pworld, ens.pworld->pnodes, position, end, lightcolors, lightstyles))
 	{
@@ -3364,6 +3446,9 @@ Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultco
 		{
 			if(lightstyles[j] == NULL_LIGHTSTYLE_INDEX)
 				break;
+
+			if(!pStyleValuesArray)
+				pStyleValuesArray = gLightStyles.GetLightStyleValuesArray();
 
 			Float value = (*pStyleValuesArray)[lightstyles[j]];
 			Math::VectorMA(lcolor, value, lightcolors[j], lcolor);
@@ -3377,6 +3462,50 @@ Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultco
 		// Not a valid result
 		return defaultcolor;
 	}
+}
+
+//====================================
+//
+//====================================
+void R_SetLightmapTexture( Uint32 glindex, Uint32 width, Uint32 height, bool isvectormap, color32_t* pdata, Uint32& resultsize )
+{
+	lightmapcompression_t method;
+	if(!isvectormap && g_pCvarLightmapCompression->GetValue() >= 1
+		|| isvectormap && g_pCvarLightmapCompression->GetValue() >= 2)
+		method = LM_COMPRESSION_DXT1;
+	else
+		method = LM_COMPRESSION_NONE;
+
+	switch(method)
+	{
+	case LM_COMPRESSION_DXT1:
+		{
+			Uint32 imagedatasize = width*height*sizeof(color32_t);
+			Uint32 dxtdatasize = imagedatasize / 8;
+
+			byte* pdxtdata = new byte[dxtdatasize];
+			rygCompress(pdxtdata, reinterpret_cast<byte*>(pdata), width, height, false);
+
+			glBindTexture(GL_TEXTURE_2D, glindex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			gGLExtF.glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA_S3TC_DXT1_EXT, width, height, 0, dxtdatasize, pdxtdata);
+			delete[] pdxtdata;
+
+			resultsize = dxtdatasize;
+		}
+		break;
+	case LM_COMPRESSION_NONE:
+		{
+			glBindTexture(GL_TEXTURE_2D, glindex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pdata);
+			resultsize = width*height*sizeof(color32_t);
+		}
+		break;
+	}
+
 }
 
 //====================================
@@ -3576,7 +3705,7 @@ void Cmd_LoadModel( void )
 	}
 
 	CString strModel = gCommands.Cmd_Argv(1);
-	if(strModel.find(0, "bsp") != -1)
+	if(strModel.find(0, "bsp") != CString::CSTRING_NO_POSITION)
 	{
 		Con_Printf("%s - BSP files are not allowed to be loaded through this function.\n", __FUNCTION__);
 		return;
@@ -4505,6 +4634,62 @@ void Cmd_EFX_CreateParticle( void )
 //====================================
 //
 //====================================
+void Cmd_EFX_CreateTracer( void )
+{
+	if(!CL_IsGameActive())
+	{
+		Con_Printf("%s - No active game.\n", __FUNCTION__);
+		return;
+	}
+
+	if(gCommands.Cmd_Argc() < 10)
+	{
+		Con_Printf("efx_createtracer usage: efx_createtracer <color r(0-255)> <color g(0-255)> <color b(0-255)> <alpha value(0-255)> <width> <length> <velocity> <life> <type(0 = no gravity, 1 = default gravity, 2 = slow gravity)>\n");
+		return;
+	}
+
+	Vector color;
+	color[0] = SDL_atof(gCommands.Cmd_Argv(1)) / 255.0f;
+	color[1] = SDL_atof(gCommands.Cmd_Argv(2)) / 255.0f;
+	color[2] = SDL_atof(gCommands.Cmd_Argv(3)) / 255.0f;
+	Float alpha = SDL_atof(gCommands.Cmd_Argv(4)) / 255.0f;
+	Float width = SDL_atof(gCommands.Cmd_Argv(5));
+	Float length = SDL_atof(gCommands.Cmd_Argv(6));
+	Float velocity = SDL_atof(gCommands.Cmd_Argv(7));
+	Float life = SDL_atof(gCommands.Cmd_Argv(8));
+	Int32 type = SDL_atoi(gCommands.Cmd_Argv(9));
+
+	tracer_type_t ttype;
+	switch(type)
+	{
+	case 0:
+		ttype = TRACER_NORMAL;
+		break;
+	case 1:
+		ttype = TRACER_GRAVITY;
+		break;
+	case 2:
+		ttype = TRACER_SLOW_GRAVITY;
+		break;
+	default:
+		{
+			Con_Printf("efx_createtracer - Unknown tracer type %d specified.\n", type);
+			ttype = TRACER_NORMAL;
+		}
+		break;
+	}
+
+	// Calculate velocity
+	Vector vforward;
+	Math::AngleVectors(rns.view.v_angles, &vforward, nullptr, nullptr);
+	Math::VectorScale(vforward, velocity, vforward);
+
+	gTracers.CreateTracer(rns.view.v_origin, vforward, color, alpha, width, length, life, ttype); 
+}
+
+//====================================
+//
+//====================================
 void Cmd_BSPToSMD_Textures( void )
 {
 	if(!CL_IsGameActive() || !ens.pworld)
@@ -4526,10 +4711,18 @@ void Cmd_BSPToSMD_Textures( void )
 	CString levelname;
 	Common::Basename(ens.pworld->name.c_str(), levelname);
 	
+	CString folderpath;
+	folderpath << "dumps" << PATH_SLASH_CHAR << "bsp2smd_tx" << PATH_SLASH_CHAR << levelname << PATH_SLASH_CHAR;
+	if(!FL_CreateDirectory(folderpath.c_str()))
+	{
+		Con_Printf("%s - Could not create directory '%s'.\n", __FUNCTION__, folderpath.c_str());
+		return;
+	}
+
 	while(true)
 	{
 		filepath.clear();
-		filepath << "dumps" << PATH_SLASH_CHAR << "dump_" << levelname << "_" << fileidx << "_mesh_textures.smd";
+		filepath << folderpath << "dump_" << levelname << "_" << fileidx << "_mesh_textures.smd";
 
 		if(!FL_FileExists(filepath.c_str()))
 			break;
@@ -4538,7 +4731,7 @@ void Cmd_BSPToSMD_Textures( void )
 	}
 
 	filepath.clear();
-	filepath << ens.gamedir << PATH_SLASH_CHAR << "dumps" << PATH_SLASH_CHAR << "dump_" << levelname << "_" << fileidx << "_mesh_textures.smd";
+	filepath << ens.gamedir << PATH_SLASH_CHAR << folderpath << "dump_" << levelname << "_" << fileidx << "_mesh_textures.smd";
 
 	pf = fopen(filepath.c_str(), "w");
 	if(!pf)
@@ -4611,7 +4804,7 @@ void Cmd_BSPToSMD_Textures( void )
 			indexes[2] = 2;
 
 			// Export first triangle
-			fprintf(pf, "%s.bmp\n", psurf->ptexinfo->ptexture->name.c_str());
+			fprintf(pf, "%s.tga\n", psurf->ptexinfo->ptexture->name.c_str());
 			for(Uint32 k = 0; k < 3; k++)
 			{
 				fprintf(pf, "  0   %.4f  %.4f  %.4f  %.4f  %.4f  %.4f  %.4f  %.4f\n",
@@ -4626,7 +4819,7 @@ void Cmd_BSPToSMD_Textures( void )
 				indexes[1] = indexes[2];
 				indexes[2] = l;
 
-				fprintf(pf, "%s.bmp\n", psurf->ptexinfo->ptexture->name.c_str());
+				fprintf(pf, "%s.tga\n", psurf->ptexinfo->ptexture->name.c_str());
 				for(int m = 0; m < 3; m++)
 				{
 					fprintf(pf, "  0   %.4f  %.4f  %.4f  %.4f  %.4f  %.4f  %.4f  %.4f\n",
@@ -4686,10 +4879,18 @@ void Cmd_BSPToSMD_Lightmap( void )
 	CString levelname;
 	Common::Basename(ens.pworld->name.c_str(), levelname);
 	
+	CString folderpath;
+	folderpath << "dumps" << PATH_SLASH_CHAR << "bsp2smd_lm" << PATH_SLASH_CHAR << levelname << PATH_SLASH_CHAR;
+	if(!FL_CreateDirectory(folderpath.c_str()))
+	{
+		Con_Printf("%s - Could not create directory '%s'.\n", __FUNCTION__, folderpath.c_str());
+		return;
+	}
+
 	while(true)
 	{
 		filepath.clear();
-		filepath << "dumps" << PATH_SLASH_CHAR << "dump_" << levelname << "_" << fileidx << "_mesh_lightmap.smd";
+		filepath << folderpath << "dump_" << levelname << "_" << fileidx << "_mesh_lightmap.smd";
 
 		if(!FL_FileExists(filepath.c_str()))
 			break;
@@ -4698,7 +4899,7 @@ void Cmd_BSPToSMD_Lightmap( void )
 	}
 
 	filepath.clear();
-	filepath << ens.gamedir << PATH_SLASH_CHAR << "dumps" << PATH_SLASH_CHAR << "dump_" << levelname << "_" << fileidx << "_mesh_lightmap.smd";
+	filepath << ens.gamedir << PATH_SLASH_CHAR << folderpath << "dump_" << levelname << "_" << fileidx << "_mesh_lightmap.smd";
 
 	pf = fopen(filepath.c_str(), "w");
 	if(!pf)
@@ -4776,7 +4977,7 @@ void Cmd_BSPToSMD_Lightmap( void )
 			indexes[2] = 2;
 
 			// Export first triangle
-			fprintf(pf, "lightmap.bmp\n");
+			fprintf(pf, "lightmap.tga\n");
 			for(Uint32 k = 0; k < 3; k++)
 			{
 				fprintf(pf, "  0   %.4f  %.4f  %.4f  %.4f  %.4f  %.4f  %f  %f\n",
@@ -4791,7 +4992,7 @@ void Cmd_BSPToSMD_Lightmap( void )
 				indexes[1] = indexes[2];
 				indexes[2] = l;
 
-				fprintf(pf, "lightmap.bmp\n");
+				fprintf(pf, "lightmap.tga\n");
 				for(Uint32 m = 0; m < 3; m++)
 				{
 					fprintf(pf, "  0   %.4f  %.4f  %.4f  %.4f  %.4f  %.4f  %f  %f\n",
@@ -4809,6 +5010,19 @@ void Cmd_BSPToSMD_Lightmap( void )
 	fclose(pf);
 
 	Con_Printf("Exported %s.\n", filepath.c_str());
+
+	daystage_t loadstage;
+	if(rns.hasdaystagedata && rns.daystage != DAYSTAGE_NORMAL)
+		loadstage = rns.daystage;
+	else
+		loadstage = DAYSTAGE_NORMAL_RESTORE;
+
+	byte* pdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
+	if(!ALD_Load(loadstage, pdatapointers))
+	{
+		Con_EPrintf("%s - Failed to restore lightmap data from backup.\n", __FUNCTION__);
+		return;
+	}
 
 	// alloc lightmap data ptrs
 	Uint32 lightmapdatasize = 0;
@@ -4846,28 +5060,31 @@ void Cmd_BSPToSMD_Lightmap( void )
 		Uint32 size = xsize*ysize;
 
 		// Build the base lightmap
-		color24_t* psrc = psurface->psamples[SURF_LIGHTMAP_DEFAULT];
+		color24_t* psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_DEFAULT] + psurface->lightoffset);
 		R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, plightmap, styleIndex, lightmapWidth, false, false);
 		lightmapdatasize += size*sizeof(color32_t);
 
-		// Ambient lightmap
-		psrc = psurface->psamples[SURF_LIGHTMAP_AMBIENT];
-		R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, pambientlightmap, styleIndex, lightmapWidth, 0);
-		amblightdatasize += size*sizeof(color32_t);
+		if(pdatapointers[SURF_LIGHTMAP_AMBIENT] && pdatapointers[SURF_LIGHTMAP_DIFFUSE] && pdatapointers[SURF_LIGHTMAP_VECTORS])
+		{
+			// Ambient lightmap
+			psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_AMBIENT] + psurface->lightoffset);
+			R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, pambientlightmap, styleIndex, lightmapWidth, 0);
+			amblightdatasize += size*sizeof(color32_t);
 
-		// Diffuse lightmap
-		psrc = psurface->psamples[SURF_LIGHTMAP_DIFFUSE];
-		R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, pdiffuselightmap, styleIndex, lightmapWidth, 0);
-		diffuselightdatasize += size*sizeof(color32_t);
+			// Diffuse lightmap
+			psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_DIFFUSE] + psurface->lightoffset);
+			R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, pdiffuselightmap, styleIndex, lightmapWidth, 0);
+			diffuselightdatasize += size*sizeof(color32_t);
 
-		// Light vectors lightmap
-		psrc = psurface->psamples[SURF_LIGHTMAP_VECTORS];
-		R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, plightvecslightmap, styleIndex, lightmapWidth, 0, true);
-		lightvecsdatasize += size*sizeof(color32_t);
+			// Light vectors lightmap
+			psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_VECTORS] + psurface->lightoffset);
+			R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, plightvecslightmap, styleIndex, lightmapWidth, 0, true);
+			lightvecsdatasize += size*sizeof(color32_t);
+		}
 	}
 
 	CString lightmapfilebasename;
-	lightmapfilebasename << "dumps" << PATH_SLASH_CHAR << "dump_" << levelname << "_" << fileidx << "_lightmap";
+	lightmapfilebasename << folderpath << "dump_" << levelname << "_" << fileidx << "_lightmap";
 
 	filepath.clear();
 	filepath << lightmapfilebasename << "_default.tga";
@@ -4881,7 +5098,8 @@ void Cmd_BSPToSMD_Lightmap( void )
 		filepath << lightmapfilebasename << "_ambient.tga";
 
 		pwritedata = reinterpret_cast<const byte*>(pambientlightmap);
-		TGA_Write(pwritedata, 4, lightmapWidth, lightmapHeight, filepath.c_str(), FL_GetInterface(), Con_Printf);
+		if(TGA_Write(pwritedata, 4, lightmapWidth, lightmapHeight, filepath.c_str(), FL_GetInterface(), Con_Printf))
+			Con_Printf("Exported %s.\n", filepath.c_str());
 	}
 
 	if(diffuselightdatasize > 0)
@@ -4890,7 +5108,8 @@ void Cmd_BSPToSMD_Lightmap( void )
 		filepath << lightmapfilebasename << "_diffuse.tga";
 
 		pwritedata = reinterpret_cast<const byte*>(pdiffuselightmap);
-		TGA_Write(pwritedata, 4, lightmapWidth, lightmapHeight, filepath.c_str(), FL_GetInterface(), Con_Printf);
+		if(TGA_Write(pwritedata, 4, lightmapWidth, lightmapHeight, filepath.c_str(), FL_GetInterface(), Con_Printf))
+			Con_Printf("Exported %s.\n", filepath.c_str());
 	}
 
 	if(lightvecsdatasize > 0)
@@ -4899,8 +5118,12 @@ void Cmd_BSPToSMD_Lightmap( void )
 		filepath << lightmapfilebasename << "_lightvecs.tga";
 
 		pwritedata = reinterpret_cast<const byte*>(plightvecslightmap);
-		TGA_Write(pwritedata, 4, lightmapWidth, lightmapHeight, filepath.c_str(), FL_GetInterface(), Con_Printf);
+		if(TGA_Write(pwritedata, 4, lightmapWidth, lightmapHeight, filepath.c_str(), FL_GetInterface(), Con_Printf))
+			Con_Printf("Exported %s.\n", filepath.c_str());
 	}
+
+	for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
+		delete[] pdatapointers[i];
 
 	delete[] plightmap;
 	delete[] pambientlightmap;
@@ -5317,5 +5540,49 @@ void Cmd_LoadAllParticleScripts( void )
 		if(!FindNextFile(dir, &file_data))
 			break;
 	}
+}
+
+//====================================
+//
+//====================================
+void Cmd_ExportALD( void )
+{
+	if(gCommands.Cmd_Argc() < 2)
+	{
+		Con_Printf("r_exportald usage: r_exportald <stage of day(nightstage or daylightreturn)>\n");
+		return;
+	}
+
+	// Get day stage
+	daystage_t daystage;
+	CString daystagearg = gCommands.Cmd_Argv(1);
+	if(!qstrcmp(daystagearg, "nightstage"))
+	{
+		daystage = DAYSTAGE_NIGHTSTAGE;
+	}
+	else if(!qstrcmp(daystagearg, "daylightreturn"))
+	{
+		daystage = DAYSTAGE_DAYLIGHT_RETURN;
+	}
+	else
+	{
+		Con_EPrintf("r_exportald - Invalid day stage '%s' specified.\n", daystagearg.c_str());
+		return;
+	}
+
+	// Get worldmodel
+	cache_model_t* pworldcache = gModelCache.GetModelByIndex(WORLD_MODEL_INDEX);
+	if(!pworldcache)
+	{
+		Con_EPrintf("r_exportald - Failed to get world model.\n", daystagearg.c_str());
+		return;
+	}
+
+	// Fetch data from the backup file
+	CString srcFilename = ALD_GetFilePath(DAYSTAGE_NORMAL_RESTORE, pworldcache);
+	if(srcFilename.empty())
+		return;
+
+	ALD_CopyAndExportLightmaps(srcFilename.c_str(), DAYSTAGE_NORMAL_RESTORE, daystage);
 }
 

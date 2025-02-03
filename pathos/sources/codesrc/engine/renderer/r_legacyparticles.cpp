@@ -190,7 +190,7 @@ void CLegacyParticles::ClearGame( void )
 void CLegacyParticles::AllocateParticles( void )
 {
 	// Allocate particles
-	for(Uint32 i = 0; i < MAX_LEGACY_PARTICLES; i++)
+	for(Uint32 i = 0; i < LEGACY_PARTICLE_ALLOC_COUNT; i++)
 	{
 		particle_t* pnew = new particle_t;
 
@@ -202,8 +202,8 @@ void CLegacyParticles::AllocateParticles( void )
 	}
 
 	Uint32 prevSize = m_pSortedParticles.size();
-	m_pSortedParticles.resize(prevSize + MAX_LEGACY_PARTICLES);
-	for(Uint32 i = prevSize; i < MAX_LEGACY_PARTICLES; i++)
+	m_pSortedParticles.resize(prevSize + LEGACY_PARTICLE_ALLOC_COUNT);
+	for(Uint32 i = prevSize; i < LEGACY_PARTICLE_ALLOC_COUNT; i++)
 		m_pSortedParticles[i] = nullptr;
 }
 
@@ -263,7 +263,7 @@ CLegacyParticles::particle_t* CLegacyParticles::AllocParticle( void )
 	if(m_pFreeParticleHeader)
 		m_pFreeParticleHeader->pprev = nullptr;
 
-	// Clear tempentity state
+	// Clear particle state
 	(*pnew) = particle_t();
 
 	// Add system into pointer array
@@ -849,12 +849,13 @@ bool CLegacyParticles::DrawParticles( void )
 		pDraw->Color4f(color.x, color.y, color.z, 1.0);
 		pDraw->TexCoord2f(0.0, 1.0);
 		pDraw->Vertex3fv(vpoint);
-		nbVertexes += 6;
+		nbVertexes += 4;
 
-		if(i < (m_nbSortedParticles-1) && (nbVertexes+6) >= CBasicDraw::BASICDRAW_VERTEX_CACHE_SIZE)
+		if(i < (m_nbSortedParticles-1) && (nbVertexes+4) >= CBasicDraw::BASICDRAW_VERTEX_CACHE_SIZE)
 		{
 			pDraw->End();
 			pDraw->Begin(CBasicDraw::DRAW_QUADS);
+			nbVertexes = 0;
 		}
 	}
 

@@ -26,7 +26,12 @@ enum pp_shadertypes_t
 	SHADER_BLOOM_DARKEN,
 	SHADER_BLOOM_APPLY,
 	SHADER_BLOOM_BLUR_H,
-	SHADER_BLOOM_BLUR_V
+	SHADER_BLOOM_BLUR_V,
+	SHADER_CHROMATIC,
+	SHADER_BW,
+	SHADER_VIGNETTE,
+	SHADER_2DTEXTURE,
+	SHADER_2DTEXTURE_ALPHATEST
 };
 
 struct pp_shader_attribs
@@ -41,9 +46,14 @@ struct pp_shader_attribs
 		u_screenwidth(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_screenheight(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_timer(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_chromatic_strength(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_bw_strength(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_vignette_strength(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_vignette_radius(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_offsetdivider(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_texture1rect(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_texture2rect(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_texture2d(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_darken_steps(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_brighten_multiplier(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_blur_brightness(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -66,10 +76,16 @@ struct pp_shader_attribs
 	Int32	u_screenwidth;
 	Int32	u_screenheight;
 	Int32	u_timer;
+	Int32	u_grainammount;
+	Int32	u_chromatic_strength;
+	Int32	u_vignette_strength;
+	Int32	u_vignette_radius;
+	Int32	u_bw_strength;
 	Int32	u_offsetdivider;
 
 	Int32	u_texture1rect;
 	Int32	u_texture2rect;
+	Int32	u_texture2d;
 
 	Int32	u_darken_steps;
 	Int32	u_brighten_multiplier;
@@ -92,6 +108,42 @@ CPostProcess
 */
 class CPostProcess
 {
+public:
+	// Overlay folder name
+	static const Char OVERLAY_FOLDER_PATH[];
+
+public:
+	struct overlay_t
+	{
+		overlay_t():
+			layerindex(0),
+			ptexture(nullptr),
+			rendermode(OVERLAY_RENDER_NORMAL),
+			renderamt(0),
+			effect(OVERLAY_EFFECT_NONE),
+			effectbegintime(0),
+			effectspeed(0),
+			effectminalpha(0),
+			fadebegintime(0),
+			fadetime(0),
+			fadeout(false)
+		{}
+
+		Int32 layerindex;
+		en_texture_t* ptexture;
+		overlay_rendermode_t rendermode;
+		Vector rendercolor;
+		Float renderamt;
+		overlay_effect_t effect;
+		Float effectspeed;
+		Float effectminalpha;
+		Double effectbegintime;
+
+		Double fadebegintime;
+		Float fadetime;
+		bool fadeout;
+	};
+
 public:
 	CPostProcess( void );
 	~CPostProcess( void );
@@ -129,6 +181,14 @@ private:
 	bool DrawFilmGrain( void );
 	// Draw bloom
 	bool DrawBloom( void );
+	// Draw chromatic aberration
+	bool DrawChromatic( void );
+	// Draw black and white effect
+	bool DrawBlackAndWhite( void );
+	// Draw vignette effect
+	bool DrawVignette( void );
+	// Draw overlay effects
+	bool DrawOverlays( void );
 
 	// Fetches screen contents
 	static void FetchScreen( rtt_texture_t** ptarget );
@@ -142,10 +202,22 @@ private:
 public:
 	// Toggle motion blur effect message
 	void SetMotionBlur( bool active, Float blurfade, bool override );
+	// Toggle vignette effect message
+	void SetVignette(bool active, Float strength, Float radius);
+	// Toggle filmgrain effect message
+	void SetFilmGrain(bool active, Float strength);
+	// Toggle bw effect message
+	void SetBlackAndWhite( bool active, Float strength );
+	// Toggle chromatic effect message
+	void SetChromatic(bool active, Float strength);
 	// Reads fade message
 	void SetFade( Uint32 layerindex, Float duration, Float holdtime, Int32 flags, const color24_t& color, byte alpha, Float timeoffset );
 	// Sets gaussian blur
 	void SetGaussianBlur( bool active, Float alpha );
+	// Set overlay
+	void SetOverlay( Int32 layerindex, const Char* pstrtexturename, overlay_rendermode_t rendermode, const Vector& rendercolor, Float renderamt, overlay_effect_t effect, Float effectspeed, Float effectminalpha, Float fadetime );
+	// Clear an overlay slot
+	void ClearOverlay( Int32 layerindex, Float fadetime );
 
 private:
 	// Gamma cvar
@@ -157,6 +229,14 @@ private:
 	bool			m_gaussianBlurActive;
 	// TRUE if motion blur is active
 	bool			m_motionBlurActive;
+	// TRUE if vignette is active
+	bool			m_vignetteActive;
+	// TRUE if bw is active
+	bool			m_blackAndWhiteActive;
+	// TRUE if filmgrain is active
+	bool			m_filmGrainActive;
+	// TRUE if chromatic is active
+	bool			m_chromaticActive;
 	// TRUe if need to override motion blur
 	bool			m_blurOverride;
 	
@@ -174,6 +254,9 @@ private:
 	// Screenfade information
 	screenfade_t	m_fadeLayersArray[MAX_FADE_LAYERS];
 
+	// Overlays array
+	CArray<overlay_t> m_screenOverlays;
+
 private:
 	// Pointer to shader object
 	class CGLSLShader*	m_pShader;
@@ -184,6 +267,16 @@ private:
 	CCVar*			m_pCvarFilmGrain;
 	// Postporcess cvar
 	CCVar*			m_pCvarPostProcess;
+	// Vignette strength
+	Float           m_vignetteStrength;
+	// Filmgrain strength
+	Float           m_filmGrainStrength;
+	// bw strength
+	Float           m_blackAndWhiteStrength;
+	// Vignette radius
+	Float           m_vignetteRadius;
+	// Chromatic strength
+	Float  m_chromaticStrength;
 	// Bloom cvar
 	CCVar*			m_pCvarBloom;
 	// Bloom darken steps cvar

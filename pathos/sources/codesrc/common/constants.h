@@ -244,8 +244,6 @@ static constexpr Uint32 CL_ENTITY_INDEX_BASE = MAX_SERVER_ENTITIES;
 
 // Max surface extents size
 static constexpr Uint32 MAX_SURFACE_EXTENTS = 1024;
-// Size of a light block(1024x1024 chop size should give 64x64, but we pad by 2)
-static constexpr Uint32 BLOCKLIGHTS_SIZE = (66*66);
 
 // Default field of view value
 static constexpr Uint32 DEFAULT_FOV_VALUE = 70;
@@ -317,6 +315,7 @@ enum walkmove_t
 
 enum hull_types_t
 {
+	HULL_BBOX = -2, // Request box hull only
 	HULL_AUTO = -1, // Hull will be determined by engine
 	HULL_POINT = 0, // Point sized hull
 	HULL_HUMAN = 1, // Player/human npcs
@@ -434,7 +433,8 @@ enum breakmaterials_t
 
 enum localmove_t
 {
-	LOCAL_MOVE_INVALID = 0,
+	LOCAL_MOVE_NULL		= -1,
+	LOCAL_MOVE_INVALID	= 0,
 	LOCAL_MOVE_INVALID_NO_TRIANGULATION,
 	LOCAL_MOVE_RESULT_FAILURE,
 
@@ -468,8 +468,9 @@ enum dmg_types_t
 	DMG_BUCKSHOT			= (1<<21),
 	DMG_BLACKHOLE			= (1<<22),
 	DMG_UNUSED2				= (1<<23),
-	DMG_UNUSED3			= (1<<24),
+	DMG_UNUSED3				= (1<<24),
 	DMG_PENETRATION			= (1<<25),
+	DMG_BLOWBACK			= (1<<26),
 	DMG_GIB_CORPSE			= (DMG_CRUSH|DMG_FALL|DMG_EXPLOSION|DMG_MELEE),
 	DMG_TIMEBASED			= (DMG_DROWN|DMG_DROWNRECOVER|DMG_ACID),
 	DMG_BLOODDECAL			= (DMG_CRUSH|DMG_SLASH|DMG_EXPLOSION|DMG_MELEE|DMG_AXE|DMG_BULLET)
@@ -826,7 +827,8 @@ enum tempentitytypes_t
 	TE_PARTICLEEFFECT,
 	TE_LAVASPLASH,
 	TE_TELEPORTSPLASH,
-	TE_ROCKETTRAIL
+	TE_ROCKETTRAIL,
+	TE_TRACER
 };
 
 enum trailtype_t
@@ -896,7 +898,11 @@ enum daystage_t
 {
 	DAYSTAGE_NORMAL = 0,
 	DAYSTAGE_NIGHTSTAGE,
-	DAYSTAGE_DAYLIGHT_RETURN
+	DAYSTAGE_DAYLIGHT_RETURN,
+	DAYSTAGE_NORMAL_RESTORE, // Special case for restoring normal time of day
+
+	// Number of day stages
+	NB_DAY_STAGES
 };
 
 enum entity_free_flags_t
@@ -923,5 +929,35 @@ enum edict_removed_t
 	EDICT_REMOVED_AT_SPAWN,
 	EDICT_REMOVED_AT_RESTORE,
 	EDICT_REMOVED_CLEAR_CLIENT
+};
+
+//
+// Lightmap data compression types
+//
+enum pbspv2_compressiontypes_t
+{
+	BSP_LMAP_COMPRESSION_NONE = 0,
+	BSP_LMAP_COMPRESSION_MINIZ
+};
+
+enum overlay_rendermode_t
+{
+	OVERLAY_RENDER_NORMAL = 0,
+	OVERLAY_RENDER_ADDITIVE,
+	OVERLAY_RENDER_ALPHATEST,
+	OVERLAY_RENDER_ALPHABLEND
+};
+
+enum overlay_effect_t
+{
+	OVERLAY_EFFECT_NONE = 0,
+	OVERLAY_EFFECT_PULSATE
+};
+
+enum overlay_msg_type_t
+{
+	OVERLAY_MSG_SET = 0,
+	OVERLAY_MSG_CLEAR_FADEOUT,
+	OVERLAY_MSG_CLEAR
 };
 #endif //CONSTANTS_H

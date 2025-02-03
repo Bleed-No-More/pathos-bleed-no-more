@@ -8,6 +8,7 @@
 @SolidClass = worldspawn : "World entity" 
 [
   skyname(string) : "environment map (cl_skyname)"
+  chaptertitle(string) : "Chapter Title Message"
 ]
 
 //
@@ -475,6 +476,11 @@
     8: "Maintenance area"
   ] 
   _minlight(string) : "Minimum light level"
+	_ignorenight(choices) : "Ignore night mode" : 0 =
+	[
+		0 : "No"
+		1 : "Yes"
+	]
 ]
 
 @BaseClass = PlatSounds 
@@ -624,6 +630,7 @@
      [
           1: "Remove on fire" : 0
           2: "Loop music" : 0
+          4: "Turn off other entity" : 0
      ]
 ]
 
@@ -655,6 +662,7 @@
     1024: "No occlusion dimming" : 0
     2048: "Dim other sounds" : 0
     4096: "Mute all other sounds" : 0
+    8192: "Subtitles only in radius" : 0
   ]
 ]
 
@@ -715,7 +723,6 @@
   life(integer) : "Duration" : 4
   width(integer) : "Beam width" : 16
   texture(sprite) : "Sprite"
-  beamnoise(integer) : "Noise" : 0
   attachment(Choices) : "Attachment" : -1 =
   [ 
       0 : "None"
@@ -772,6 +779,21 @@
   ]
 ]
 @PointClass base(Targetname, Angles) size(-16 -16 -16, 16 16 16) color(255 0 0) = env_blood : "Blood Effects"  []
+@PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_blackandwhite : "Black and White Effect"
+[
+  strength(integer) : "Effect strength" : 1
+  globaltriggermode(Choices) : "Global trigger mode" : 0 =
+  [ 
+      0 : "Toggle"
+      1 : "On"
+      2 : "Off"
+  ]
+  spawnflags(flags) = 
+  [
+    1 : "Start On" : 0
+	2 : "Global" : 0
+  ]
+]
 @PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_blackhole : "Black Hole"
 [
   scale(integer) : "Scale" : 1
@@ -788,9 +810,31 @@
 @PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_blur : "Motion Blur" 
 [
   fade(string) : "Blur fade" : "0.1"
+  globaltriggermode(Choices) : "Global trigger mode" : 0 =
+  [ 
+      0 : "Toggle"
+      1 : "On"
+      2 : "Off"
+  ]
   spawnflags(flags) =
   [
     1 : "Start On" : 0
+	2 : "Global" : 0
+  ]
+]
+@PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_chromatic : "Chromatic Aberration Effect"
+[
+  strength(integer) : "Chromatic Aberration Strength" : 0
+  globaltriggermode(Choices) : "Global trigger mode" : 0 =
+  [ 
+      0 : "Toggle"
+      1 : "On"
+      2 : "Off"
+  ]
+  spawnflags(flags) = 
+  [
+    1 : "Start On" : 0
+	2 : "Global" : 0
   ]
 ]
 @SolidClass base(Targetname, ZHLT) = env_bubbles : "Bubble Volume" 
@@ -947,6 +991,21 @@
     7 : "Layer 8"
   ]
 ]
+@PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_filmgrain : "FilmGrain Effect"
+[
+  strength(string) : "Effect strength" : "0.001"
+  globaltriggermode(Choices) : "Global trigger mode" : 0 =
+  [ 
+      0 : "Toggle"
+      1 : "On"
+      2 : "Off"
+  ]
+  spawnflags(flags) = 
+  [
+    1 : "Start On" : 0
+	2 : "Global" : 0
+  ]
+]
 @PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_fog : "Client Fog" 
 [
   startdist(string) : "Start Distance" : "1"
@@ -1001,6 +1060,15 @@
 [
 	model(sprite) : "Sprite Name" : "sprites/glow01.spr"
 	scale(integer) : "Scale" : 1
+]
+
+@PointClass base(Targetname, Target) = env_hudpickupmsg : "Custom HUD Pickup Text Message" 
+[
+  message(string) : "Message to Display"
+  spawnflags(flags) =
+  [
+    1: "Play Once" : 0
+  ]
 ]
 @PointClass base(Angles, Targetname, RenderFields) size(-16 -16 0, 16 16 36) studio() = env_ladder : "Ladder" 
 [
@@ -1107,6 +1175,39 @@
     16 : "No fire pass" : 0
     512 : "Start On" : 0
   ]      
+]
+@PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_overlay : "Screen Overlay"
+[
+  setmode(Choices) : "Mode" : 0 =
+  [
+      0 : "Set overlay"
+      1 : "Clear overlay"
+  ]
+  layerindex(Choices) : "Overlay index" : 0 =
+  [
+      0 : "Layer 0"
+      1 : "Layer 1"
+      2 : "Layer 2"
+      3 : "Layer 3"
+  ]
+  texturename(string) : "Texture name"
+  layer_rendermode(Choices) : "Render mode" : 0 =
+  [
+      0 : "Normal"
+      1 : "Additive"
+      2 : "Alpha Tested"
+      3 : "Alpha Blended"
+  ]
+  layer_effect(Choices) : "Effect" : 0 =
+  [
+      0 : "None"
+      1 : "Pulsate"
+  ]
+  renderamt(integer) : "Render Alpha" : 255
+  rendercolor(color255) : "Render Color" : "0 0 0"
+  effectspeed(string) : "Effect speed multiplier" : "1.0"
+  effectminalpha(string) : "Effect minimum alpha" : "0.2"
+  fadetime(string) : "Effect fade in/out time" : "0"
 ]
 @PointClass base(Targetname, Target, Angles) = env_particle_system: "Particle System"
 [
@@ -1363,6 +1464,22 @@
 [
   netname(target_source) : "Sync target"
 ]
+@PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = env_vignette : "Vignette Effect"
+[
+  strength(integer) : "Effect strength" : 0
+  radius(integer) : "Vignette radius" : 0
+  globaltriggermode(Choices) : "Global trigger mode" : 0 =
+  [ 
+      0 : "Toggle"
+      1 : "On"
+      2 : "Off"
+  ]
+  spawnflags(flags) = 
+  [
+    1 : "Start On" : 0
+	2 : "Global" : 0
+  ]
+]
 @PointClass base(Targetname) size(-4 -4 -4, 4 4 4) color(200 100 50) = envpos_sky : "Sky Marker" 
 [
   target(target_source) : "First stop target"
@@ -1380,7 +1497,6 @@
   skytexture(string) : "Sky texture"
 ]
 @PointClass base(Targetname) size(-4 -4 -4, 4 4 4) color(200 100 50) = envpos_portal_world : "Portal world marker" [ ]
-
 @PointClass base(Targetname) size(-4 -4 -4, 4 4 4) color(200 100 50) = envpos_world : "Sky World Marker" 
 [
   health(string) : "Size" : "16"
@@ -1501,7 +1617,6 @@
 ]
 @SolidClass base(Targetname, Global, Appearflags, RenderFields, ZHLT, Angles, ParentedEnt) = func_clipeconomy : "Clip Economy Entity" 
 [
-  zhlt_noclip(integer) : "Noclip" : 1
   _minlight(string) : "Minimum light level"
 	_ignorenight(choices) : "Ignore night mode" : 0 =
 	[
@@ -1574,7 +1689,7 @@
 @SolidClass base(Targetname) = func_ladder : "Ladder" []
 
 @SolidClass base(Targetname, Appearflags) = func_mirror : "Mirror" []
-@SolidClass = func_null : "Null brush entity" 
+@SolidClass base(RenderFields) = func_null : "Null brush entity" 
 [
   zhlt_noclip(integer) : "Noclip" : 1
 ]
@@ -1612,6 +1727,8 @@
     1: "Start Off" : 0
   ]
 ]
+
+@SolidClass base(Targetname) = func_particle_blocker : "Particle blocker brush" []
 
 // not fully implemented
 @SolidClass base(Appearflags, Targetname, Global, RenderFields, Angles, ZHLT) = func_pendulum : "Swings back and forth" 
@@ -1992,6 +2109,11 @@
   ]
 ]
 
+@PointClass base(Targetname) size(-8 -8 -8, 8 8 8) color(230 230 255) = game_staminamodifier : "Monitor Camera" 
+[
+	sprintmultiplier(integer) : "Sprint Drain Multiplier" : 0
+	normaldrainfactor(integer) : "Normal Movement Drain Factor" : 0
+]
 @PointClass base(Targetname, Target) = game_text : "HUD Text Message" 
 [
   spawnflags(flags) =
@@ -2146,23 +2268,63 @@
 
 @PointClass iconsprite("sprites/lightbulb.spr") base(Target, Targetname, Light, ZHLT_point) = light : "Invisible lightsource"
 [
+	spawnflags(Flags) = [ 1 : "Initially dark" : 0 ]
 ]
 
-@PointClass iconsprite("sprites/lightbulb.spr") base(Target, Targetname, Angles, ZHLT_point) = light_spot : "Spotlight" 
+@PointClass iconsprite("sprites/lightbulb.spr") base(Target, Targetname, Angles, Light, ZHLT_point) = light_spot : "Spotlight" 
 [
 	_cone(integer) : "Inner (bright) angle" : 30
 	_cone2(integer) : "Outer (fading) angle" : 45
 	pitch(integer) : "Pitch" : -90
-	_light(color255) : "Brightness" : "255 255 128 200"
 	_sky(Choices) : "Is Sky" : 0 = 
 	[ 
 		0 : "No"
 		1 : "Yes"
 	]
+	spawnflags(Flags) = [ 1 : "Initially dark" : 0 ]
 ]
 
-@PointClass iconsprite("sprites/lightbulb.spr") base(Target, Targetname, Light, ZHLT_point) = night_light : "Invisible lightsource"
+@PointClass base(Targetname) size(-16 -16 -16, 16 16 16) = math_counter : "Math Counter"
 [
+  startvalue(string) : "Start value" : "0"
+  increment_off(string) : "Increment value on Off trigger" : "1"
+  increment_on(string) : "Increment value on On trigger" : "1"
+  increment_toggle(string) : "Increment value on Toggle trigger" : "1"
+  maxvalue(string) : "Maximum value" : "100"
+  minvalue(string) : "Minimum value" : "0"
+  target(target_source) : "Target" : "0"
+  operation_off(Choices) : "Operation on Off trigger" : 0 =
+  [ 
+     0 : "Addition"
+     1 : "Subtraction"
+	 2 : "Division"
+	 3 : "Multiplication"
+  ]
+  operation_on(Choices) : "Operation on On trigger" : 0 =
+  [ 
+     0 : "Addition"
+     1 : "Subtraction"
+	 2 : "Division"
+	 3 : "Multiplication"
+  ]
+  operation_toggle(Choices) : "Operation on Toggle trigger" : 0 =
+  [ 
+     0 : "Addition"
+     1 : "Subtraction"
+	 2 : "Division"
+	 3 : "Multiplication"
+  ]
+  spawnflags(flags) =
+  [
+    1: "Reset On Use" : 0
+    2: "Trigger On Max" : 0
+    4: "Trigger On Min" : 0
+  ]
+]
+
+@PointClass iconsprite("sprites/lightbulb.spr") base(Target, Targetname, ZHLT_point) = night_light : "Invisible lightsource"
+[
+  _light(color255) : "Brightness" : "255 255 128 200"
 	spawnflags(Flags) = [ 1 : "Initially dark" : 0 ]
 ]
 
@@ -2178,22 +2340,6 @@
 		1 : "Yes"
 	]
 	spawnflags(Flags) = [ 1 : "Initially dark" : 0 ]
-      style(Choices) : "Appearance" : 0 =
-	[
-		0 : "Normal"
-		10: "Fluorescent flicker"
-		2 : "Slow, strong pulse"
-		11: "Slow pulse, noblack"
-		5 : "Gentle pulse"
-		1 : "Flicker A"
-		6 : "Flicker B"
-		3 : "Candle A"
-		7 : "Candle B"
-		8 : "Candle C"
-		4 : "Fast strobe"
-		9 : "Slow strobe"
-	]
-	pattern(string) : "Custom Appearance"
 ]
 
 @PointClass base(Angles, ZHLT_point) iconsprite("sprites/lightbulb.spr") = light_environment : "Environment" 

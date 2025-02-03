@@ -96,6 +96,7 @@ struct bsp_shader_attribs
 		d_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_cubemaps(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_luminance(CGLSLShader::PROPERTY_UNAVAILABLE),
+		d_ao(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_numlights(CGLSLShader::PROPERTY_UNAVAILABLE),
 		a_position(CGLSLShader::PROPERTY_UNAVAILABLE),
 		a_tangent(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -129,6 +130,7 @@ struct bsp_shader_attribs
 		u_chrometex(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_normalmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_luminance(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_aomap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_difflightmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_lightvecstex(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -145,6 +147,7 @@ struct bsp_shader_attribs
 	Int32 d_specular;
 	Int32 d_cubemaps;
 	Int32 d_luminance;
+	Int32 d_ao;
 	Int32 d_numlights;
 
 	// vertex attribs
@@ -190,6 +193,7 @@ struct bsp_shader_attribs
 	Int32 u_chrometex;
 	Int32 u_normalmap;
 	Int32 u_luminance;
+	Int32 u_aomap;
 	Int32 u_difflightmap;
 	Int32 u_lightvecstex;
 	Int32 u_specular;
@@ -261,8 +265,7 @@ struct stylebatches_t
 struct lightstyleinfo_t
 {
 	lightstyleinfo_t()
-	{
-	}
+	{}
 
 	CArray<stylebatches_t> stylebatches;
 };
@@ -471,6 +474,8 @@ public:
 	void SetLightmapCoords( void );
 	// Initializes the main VBO
 	void InitVBO( void );
+	// Initializes the decal VBO
+	void InitDecalVBO( void );
 
 	// Returns the lightmap width
 	Uint32 GetLightmapWidth( Uint32 index ) { if(index < MAX_SURFACE_STYLES) return m_lightmapWidths[index]; else return 0; }
@@ -536,9 +541,9 @@ private:
 	bool BatchBrushModelForVSM( cl_entity_t& entity, bool isstatic );
 
 	// Prepares a light for rendering
-	bool SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Uint32& texunit, lightbatchtype_t type );
+	bool SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Int32& texunit, lightbatchtype_t type );
 	// Finishes rendering of a light
-	void FinishLight( cl_dlight_t* pdlight, Uint32& texunit );
+	void FinishLight( cl_dlight_t* pdlight, Int32& texunit );
 
 private:
 	// Draws a single decal
@@ -622,6 +627,8 @@ private:
 	class CGLSLShader *m_pShader;
 	// VBO object
 	class CVBO *m_pVBO;
+	// VBO object
+	class CVBO *m_pDecalVBO;
 
 	// Shader attrib info
 	bsp_shader_attribs m_attribs;

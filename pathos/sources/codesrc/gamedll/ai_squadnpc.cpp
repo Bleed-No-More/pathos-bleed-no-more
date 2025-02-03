@@ -292,37 +292,40 @@ void CSquadNPC::InitSquad( void )
 			&& !pEntity->HasNetname())
 		{
 			trace_t tr;
-			Util::TraceLine(GetEyePosition(), pEntity->GetEyePosition(), true, false, pEntity->GetEdict(), tr);
-			if(tr.noHit() && pEntity->AddToSquad(this))
+			Util::TraceLine(GetEyePosition(), pEntity->GetEyePosition(), true, false, GetEdict(), tr);
+			if(tr.noHit() || tr.hitentity == pEntity->GetEntityIndex())
 			{
-				CString classificationName;
-				switch(GetClassification())
+				if(pEntity->AddToSquad(this))
 				{
-				case CLASS_UNDEFINED:
-					classificationName = "CLASS_UNDEFINED";
-					break;
-				case CLASS_NONE:
-					classificationName = "CLASS_NONE";
-					break;
-				case CLASS_MACHINE:
-					classificationName = "CLASS_MACHINE";
-					break;
-				case CLASS_PLAYER:
-					classificationName = "CLASS_PLAYER";
-					break;
-				case CLASS_HUMAN_HOSTILE:
-					classificationName = "CLASS_HUMAN_HOSTILE";
-					break;
-				case CLASS_HUMAN_FRIENDLY:
-					classificationName = "CLASS_HUMAN_FRIENDLY";
-					break;
-				case CLASS_UNUSED:
-					classificationName = "CLASS_UNUSED";
-					break;
-				}
+					CString classificationName;
+					switch(GetClassification())
+					{
+					case CLASS_UNDEFINED:
+						classificationName = "CLASS_UNDEFINED";
+						break;
+					case CLASS_NONE:
+						classificationName = "CLASS_NONE";
+						break;
+					case CLASS_MACHINE:
+						classificationName = "CLASS_MACHINE";
+						break;
+					case CLASS_PLAYER:
+						classificationName = "CLASS_PLAYER";
+						break;
+					case CLASS_HUMAN_HOSTILE:
+						classificationName = "CLASS_HUMAN_HOSTILE";
+						break;
+					case CLASS_HUMAN_FRIENDLY:
+						classificationName = "CLASS_HUMAN_FRIENDLY";
+						break;
+					case CLASS_UNUSED:
+						classificationName = "CLASS_UNUSED";
+						break;
+					}
 
-				Util::EntityConDPrintf(m_pEdict, "%s joined existing squad of '%s'.\n", pEntity->GetClassName(), classificationName.c_str());
-				return;
+					Util::EntityConDPrintf(m_pEdict, "%s joined existing squad of '%s'.\n", pEntity->GetClassName(), classificationName.c_str());
+					return;
+				}
 			}
 		}
 	}
@@ -411,7 +414,7 @@ void CSquadNPC::ForgetPlayer( CBaseEntity* pPlayer )
 {
 	if(IsSquadLeader())
 	{
-		for(Uint32 i = 0; i < (MAX_SQUAD_MEMBERS-1); i++)
+		for(Uint32 i = 0; i < MAX_SQUAD_MEMBERS; i++)
 		{
 			CBaseEntity* pMember = GetSquadMember(i);
 			if(!pMember || pMember == this)
@@ -796,6 +799,7 @@ void CSquadNPC::SetSquadEnemy( CBaseEntity* pEnemy )
 		return;
 	}
 	
+	// Most likely a skullflwoer taking on a false enlightened, or vice-versa
 	if(pEnemy->GetClassification() == GetClassification())
 		return;
 
@@ -806,10 +810,11 @@ void CSquadNPC::SetSquadEnemy( CBaseEntity* pEnemy )
 		return;
 	}
 
-	for(Uint32 i = 0; i < (MAX_SQUAD_MEMBERS-1); i++)
+	// Copy to rest of squad
+	for(Uint32 i = 0; i < MAX_SQUAD_MEMBERS; i++)
 	{
 		CBaseEntity* pMember = pSquadLeader->GetSquadMember(i);
-		if(!pMember)
+		if(!pMember || pMember == this)
 			continue;
 
 		CBaseEntity* pMemberEnemy = pMember->GetEnemy();
@@ -1069,7 +1074,7 @@ bool CSquadNPC::AddToSquad( CBaseEntity* pAddNPC )
 		return false;
 	}
 
-	// Avoid adding a sqquad member twice
+	// Avoid adding a squad member twice
 	for(Uint32 i = 0; i < (MAX_SQUAD_MEMBERS-1); i++)
 	{
 		if(m_squadMembers[i] == reinterpret_cast<const CBaseEntity*>(pAddNPC))

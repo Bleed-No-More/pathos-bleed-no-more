@@ -28,6 +28,8 @@ All Rights Reserved.
 #include "tempentity.h"
 #include "screentext.h"
 #include "beam_shared.h"
+#include "flex_shared.h"
+#include "tracer.h"
 
 #include "gameui_shared.h"
 #include "gameuimanager.h"
@@ -868,6 +870,35 @@ MSGFN MsgFunc_CreateTempEntity( const Char* pstrName, const byte* pdata, Uint32 
 			cl_efxapi.pfnRocketTrail(start, end, parttype);
 		}
 		break;
+	case TE_TRACER:
+		{
+			Vector origin;
+			for(Uint32 i = 0; i < 3; i++)
+				origin[i] = reader.ReadFloat();
+
+			Vector velocity;
+			for(Uint32 i = 0; i < 3; i++)
+				velocity[i] = reader.ReadFloat();
+
+			Vector color;
+			for(Uint32 i = 0; i < 3; i++)
+				color[i] = static_cast<Float>(reader.ReadByte()) / 255.0f;
+
+			Float alpha = static_cast<Float>(reader.ReadByte()) / 255.0f;
+			Float width = reader.ReadByte();
+			Float length = reader.ReadSmallFloat();
+			Float life = reader.ReadSmallFloat();
+			tracer_type_t tracertype = static_cast<tracer_type_t>(reader.ReadByte());
+
+			if(reader.HasError())
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+				return false;
+			}
+
+			cl_efxapi.pfnCreateTracer(origin, velocity, color, alpha, width, length, life, tracertype);
+		}
+		break;
 	case TE_UNDEFINED:
 	default:
 			cl_engfuncs.pfnCon_Printf("%s - Unknown tempentity type '%d'.\n", __FUNCTION__, (Int32)type);
@@ -1123,6 +1154,26 @@ MSGFN MsgFunc_ItemPickup( const Char* pstrName, const byte* pdata, Uint32 msgsiz
 
 	// Add the weapon to the history
 	gHUD.ItemPickup(szName);
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+MSGFN MsgFunc_CustomItemPickup( const Char* pstrName, const byte* pdata, Uint32 msgsize )
+{
+	CMSGReader reader(pdata, msgsize);
+	const Char *szString = reader.ReadString();
+
+	if(reader.HasError())
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+		return false;
+	}
+
+	// Add the weapon to the history
+	gHUD.CustomPickupMessage(szString);
 	return true;
 }
 
@@ -2380,4 +2431,210 @@ MSGFN MsgFunc_SetSkyTexture( const Char* pstrName, const byte* pdata, Uint32 msg
 
 	cl_efxapi.pfnSetSkyTexture(setIndex);
 	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+MSGFN MsgFunc_Vignette(const Char* pstrName, const byte* pdata, Uint32 msgsize)
+{
+	CMSGReader reader(pdata, msgsize);
+	bool isActive = (reader.ReadByte() == 1) ? true : false;
+	
+	Float strength;
+	Float radius;
+
+	if (isActive)
+	{
+		strength = reader.ReadFloat();
+		radius = reader.ReadFloat();
+	}
+	else
+	{
+		strength = 0;
+		radius = 0;
+	}
+
+	if (reader.HasError())
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+		return false;
+	}
+
+	cl_efxapi.pfnSetVignette(isActive, strength, radius);
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+MSGFN MsgFunc_FilmGrain(const Char* pstrName, const byte* pdata, Uint32 msgsize)
+{
+	CMSGReader reader(pdata, msgsize);
+	bool isActive = (reader.ReadByte() == 1) ? true : false;
+
+	Float strength;
+	if (isActive)
+		strength = reader.ReadFloat();
+	else
+		strength = 0;
+
+	if (reader.HasError())
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+		return false;
+	}
+
+	cl_efxapi.pfnSetFilmGrain(isActive, strength);
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+MSGFN MsgFunc_BlackAndWhite(const Char* pstrName, const byte* pdata, Uint32 msgsize)
+{
+	CMSGReader reader(pdata, msgsize);
+	bool isActive = (reader.ReadByte() == 1) ? true : false;
+
+	Float strength;
+	if (isActive)
+		strength = reader.ReadFloat();
+	else
+		strength = 0;
+
+	if (reader.HasError())
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+		return false;
+	}
+
+	cl_efxapi.pfnSetBlackAndWhite(isActive, strength);
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+MSGFN MsgFunc_Chromatic(const Char* pstrName, const byte* pdata, Uint32 msgsize)
+{
+	CMSGReader reader(pdata, msgsize);
+	bool isActive = (reader.ReadByte() == 1) ? true : false;
+
+	Float strength;
+	if (isActive)
+		strength = reader.ReadFloat();
+	else
+		strength = 0;
+
+	if (reader.HasError())
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+		return false;
+	}
+
+	cl_efxapi.pfnSetChromatic(isActive, strength);
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+MSGFN MsgFunc_SetScreenOverlay(const Char* pstrName, const byte* pdata, Uint32 msgsize)
+{
+	CMSGReader reader(pdata, msgsize);
+	Int32 layerindex = reader.ReadByte();
+	Int32 msgType = reader.ReadByte();
+	switch(msgType)
+	{
+	case OVERLAY_MSG_SET:
+		{
+			CString texturename = reader.ReadString();
+
+			overlay_rendermode_t rendermode;
+			Int32 msgrendermode = reader.ReadByte();
+			switch(msgrendermode)
+			{
+			case 0: 
+				rendermode = OVERLAY_RENDER_NORMAL; 
+				break;
+			case 1:
+				rendermode = OVERLAY_RENDER_ADDITIVE; 
+				break;
+			case 2:
+				rendermode = OVERLAY_RENDER_ALPHATEST; 
+				break;
+			case 3:
+				rendermode = OVERLAY_RENDER_ALPHABLEND; 
+				break;
+			default:
+				cl_engfuncs.pfnCon_Printf("%s - Error reading message: Invalid rendermode %d read.\n", __FUNCTION__, msgrendermode);
+				rendermode = OVERLAY_RENDER_NORMAL;
+				break;
+			}
+
+			Vector rendercolor;
+			for(Uint32 i = 0; i < 3; i++)
+				rendercolor[i] = static_cast<Float>(reader.ReadByte()) / 255.0f;
+
+			Float renderamt = static_cast<Float>(reader.ReadByte()) / 255.0f;
+
+			overlay_effect_t effect;
+			Int32 msgeffect = reader.ReadByte();
+			switch(msgeffect)
+			{
+			case 0: 
+				effect = OVERLAY_EFFECT_NONE; 
+				break;
+			case 1:
+				effect = OVERLAY_EFFECT_PULSATE; 
+				break;
+			default:
+				cl_engfuncs.pfnCon_Printf("%s - Error reading message: Invalid effect %d read.\n", __FUNCTION__, msgrendermode);
+				effect = OVERLAY_EFFECT_NONE;
+				break;
+			}
+		
+			Float effectspeed;
+			Float effectminalpha;
+			if(msgeffect != OVERLAY_EFFECT_NONE)
+			{
+				effectspeed = reader.ReadSmallFloat();
+				effectminalpha = reader.ReadSmallFloat();
+			}
+			else
+			{
+				effectspeed = 0;
+				effectminalpha = 0;
+			}
+
+			Float fadetime = reader.ReadSmallFloat();
+			cl_efxapi.pfnSetScreenOverlay(layerindex, texturename.c_str(), rendermode, rendercolor, renderamt, effect, effectspeed, effectminalpha, fadetime);
+		}
+		break;
+	case OVERLAY_MSG_CLEAR_FADEOUT:
+		{
+			Float duration = reader.ReadSmallFloat();
+			cl_efxapi.pfnClearScreenOverlay(layerindex, duration);
+		}
+		break;
+	case OVERLAY_MSG_CLEAR:
+		{
+			cl_efxapi.pfnClearScreenOverlay(layerindex, 0);
+		}
+		break;
+	}
+
+	if (reader.HasError())
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+		return false;
+	}
+	else
+		return true;
 }

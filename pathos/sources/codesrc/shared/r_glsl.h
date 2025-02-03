@@ -10,12 +10,16 @@ All Rights Reserved.
 #ifndef R_GLSL_H
 #define R_GLSL_H
 
+#include <map>
+#include <vector>
+
+#define USE_SHADER_VALUES_MAP
+
 #include "file_interface.h"
 
 class CGLExtF;
 
 #define MAX_DETERMINATORS		16
-#define MAX_VARIATIONS			4096
 
 #define SHADER_VERTEX			0
 #define SHADER_FRAGMENT			1
@@ -37,7 +41,14 @@ class CGLSLShader
 public:
 	// Typedef for progress update function
 	typedef void (*pfnProgressUpdateFunction_t)( const Char* pstrShaderName, Uint32 totalCount, Uint32 completedCount, bool buildingCache );
-
+#ifdef USE_SHADER_VALUES_MAP
+	// Shader values vector type
+	typedef std::string ShaderValuesStringType_t;
+	// Shader values->index map pair type
+	typedef std::pair<ShaderValuesStringType_t, Int32> ShaderValuesIndexMapPairType_t;
+	// Shader values->index map datatype
+	typedef std::unordered_map<ShaderValuesStringType_t, Int32> ShaderValuesIndexMapType_t;
+#endif
 public:
 	enum shaderflags_t
 	{
@@ -102,8 +113,8 @@ public:
 
 		operator_e boperator;
 		comparison_e bcomparison;
-		Int32 determinatorindex;
-		Int32 value;
+		Int16 determinatorindex;
+		Int16 value;
 	};
 
 	// <glsl_determinator_t>
@@ -119,8 +130,8 @@ public:
 		CArray<Int16> values;
 		determinator_e type;
 
-		Int32 minval;
-		Int32 maxval;
+		Int16 minval;
+		Int16 maxval;
 	};
 
 	// <glsl_uniform_t>
@@ -242,11 +253,11 @@ public:
 			memset(dt_maxrange, 0, sizeof(dt_maxrange));
 		}
 
-		Uint32 dt_indexes[MAX_DETERMINATORS];
-		Int32 dt_minrange[MAX_DETERMINATORS];
-		Int32 dt_maxrange[MAX_DETERMINATORS];
+		Uint16 dt_indexes[MAX_DETERMINATORS];
+		Int16 dt_minrange[MAX_DETERMINATORS];
+		Int16 dt_maxrange[MAX_DETERMINATORS];
 
-		Uint32 numdts;
+		Uint16 numdts;
 	};
 
 	// <disabled_state_t>
@@ -258,8 +269,8 @@ public:
 		{}
 
 		CString dt_name;
-		Int32 dt_setting;
-		Int32 dt_index;
+		Int16 dt_setting;
+		Int16 dt_index;
 	};
 
 	// <csdheader_t>
@@ -548,6 +559,8 @@ private:
 	Int32 m_shaderIndex;
 	// Index of the last shader bound
 	Int32 m_lastIndex;
+	// TRUE if VBO was changed
+	bool m_vboChanged;
 
 	// Array of determinators
 	CArray<glsl_determinator_t> m_determinatorArray;
@@ -563,9 +576,14 @@ private:
 	CArray<invalid_state_t> m_invalidStatesArray;
 	// Array of disabled determinator states
 	CArray<disabled_state_t> m_disabledStatesArray;
-
+#ifdef USE_SHADER_VALUES_MAP
+	// Shader value map
+	ShaderValuesIndexMapType_t m_shaderValuesIndexMap;
+#endif
 	// Used to store permutation arrays
-	Int32 *m_pDeterminatorValues;
+	Int16 *m_pDeterminatorValues;
+	// Shader determinator values
+	Int16 *m_pShaderDeterminatorValues;
 
 	// Pointer to VBO associated with this shader
 	CVBO *m_pVBO;

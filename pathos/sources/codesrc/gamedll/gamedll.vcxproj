@@ -106,6 +106,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
       <AdditionalDependencies>..\Win32\Debug\SDL2.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
       <Command>copy /Y "$(OutDir)$(TargetName)$(TargetExt)" "$(SolutionDir)../../dlls/$(TargetName)$(TargetExt)"</Command>
@@ -121,7 +122,7 @@
       <PreprocessorDefinitions>WIN32;_64BUILD;GAMEDLL;_DEBUG;_WINDOWS;_USRDLL;GAMEDLL_EXPORTS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\common;..\libs\sdl2.0\include\;..\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4305;4244;4127;4100;4481;4512;4018;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -191,6 +192,7 @@
     <ClCompile Include="..\common\common.cpp" />
     <ClCompile Include="..\common\crc32.cpp" />
     <ClCompile Include="..\common\cstring.cpp" />
+    <ClCompile Include="..\common\cstringpool.cpp" />
     <ClCompile Include="..\common\logfile.cpp" />
     <ClCompile Include="..\shared\activitymappings.cpp" />
     <ClCompile Include="..\shared\decallist.cpp" />
@@ -228,14 +230,19 @@
     <ClCompile Include="envbeam.cpp" />
     <ClCompile Include="envbeamfollow.cpp" />
     <ClCompile Include="envblackhole.cpp" />
+    <ClCompile Include="envblackandwhite.cpp" />
+    <ClCompile Include="envchromatic.cpp" />
     <ClCompile Include="envdlighttrain.cpp" />
     <ClCompile Include="envearthquake.cpp" />
     <ClCompile Include="envelighttrain.cpp" />
+    <ClCompile Include="envfilmgrain.cpp" />
+    <ClCompile Include="envhudpickupmsg.cpp" />
     <ClCompile Include="envlaser.cpp" />
     <ClCompile Include="envlensflare.cpp" />
     <ClCompile Include="envlightning.cpp" />
     <ClCompile Include="envmodelbreakable.cpp" />
     <ClCompile Include="envmodeltrain.cpp" />
+    <ClCompile Include="envoverlay.cpp" />
     <ClCompile Include="envparticleeffect.cpp" />
     <ClCompile Include="envposportal.cpp" />
     <ClCompile Include="envposportalworld.cpp" />
@@ -246,6 +253,7 @@
     <ClCompile Include="envbeamfx.cpp" />
     <ClCompile Include="envsun.cpp" />
     <ClCompile Include="envsyncanimation.cpp" />
+    <ClCompile Include="envvignette.cpp" />
     <ClCompile Include="funcbreakable.cpp" />
     <ClCompile Include="funcbutton.cpp" />
     <ClCompile Include="funcdoor.cpp" />
@@ -323,6 +331,7 @@
     <ClCompile Include="itemshoulderlight.cpp" />
     <ClCompile Include="itemsodacan.cpp" />
     <ClCompile Include="itemtaperecorder.cpp" />
+    <ClCompile Include="mathcounter.cpp" />
     <ClCompile Include="multidamage.cpp" />
     <ClCompile Include="delayentity.cpp" />
     <ClCompile Include="envblur.cpp" />
@@ -462,6 +471,8 @@
     <ClInclude Include="..\common\contents.h" />
     <ClInclude Include="..\common\crc32.h" />
     <ClInclude Include="..\common\cstring.h" />
+    <ClInclude Include="..\common\cstringpool.h" />
+    <ClInclude Include="..\common\cstringpool_inline.hpp" />
     <ClInclude Include="..\common\cstring_inline.hpp" />
     <ClInclude Include="..\common\logfile.h" />
     <ClInclude Include="..\common\vector.h" />
@@ -501,12 +512,17 @@
     <ClInclude Include="envbeamfollow.h" />
     <ClInclude Include="envbeamfx.h" />
     <ClInclude Include="envblackhole.h" />
+    <ClInclude Include="envblackandwhite.h" />
+    <ClInclude Include="envchromatic.h" />
     <ClInclude Include="envdlighttrain.h" />
     <ClInclude Include="envearthquake.h" />
     <ClInclude Include="envelighttrain.h" />
+    <ClInclude Include="envfilmgrain.h" />
+    <ClInclude Include="envhudpickupmsg.h" />
     <ClInclude Include="envlaser.h" />
     <ClInclude Include="envlensflare.h" />
     <ClInclude Include="envlightning.h" />
+    <ClInclude Include="envoverlay.h" />
     <ClInclude Include="envparticleeffect.h" />
     <ClInclude Include="envposportal.h" />
     <ClInclude Include="envposportalworld.h" />
@@ -515,6 +531,7 @@
     <ClInclude Include="envsetskytexture.h" />
     <ClInclude Include="envsun.h" />
     <ClInclude Include="envsyncanimation.h" />
+    <ClInclude Include="envvignette.h" />
     <ClInclude Include="funcparticleblocker.h" />
     <ClInclude Include="funcportalsurface.h" />
     <ClInclude Include="funcslippery.h" />
@@ -528,6 +545,7 @@
     <ClInclude Include="itemtaperecorder.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="lightstyles.h" />
+    <ClInclude Include="mathcounter.h" />
     <ClInclude Include="nodeviewer.h" />
     <ClInclude Include="npcclonesoldier.h" />
     <ClInclude Include="npcgeneric.h" />

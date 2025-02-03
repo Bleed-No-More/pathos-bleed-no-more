@@ -15,6 +15,7 @@ All Rights Reserved.
 #include "r_glextf.h"
 #include "md5.h"
 #include "cbuffer.h"
+#include "constants.h"
 
 // Total duration of vertex shader compile calls
 Double CGLSLShader::g_vertexShaderCompileTotalDuration = 0;
@@ -42,10 +43,12 @@ CGLSLShader::CGLSLShader ( const file_interface_t& fileFuncs, const CGLExtF& glE
 	m_glExtF( glExtF ),
 	m_shaderIndex( 0 ),
 	m_pVBO( nullptr ),
-	m_lastIndex( -1 ),
+	m_lastIndex( NO_POSITION ),
+	m_vboChanged( false ),
 	m_pVertexScript( nullptr ),
 	m_pFragmentScript( nullptr ),
 	m_pDeterminatorValues( nullptr ),
+	m_pShaderDeterminatorValues( nullptr ),
 	m_pCSDHeader( nullptr ),
 	m_reCheck( false ),
 	m_onDemandLoad( false ),
@@ -84,10 +87,12 @@ CGLSLShader::CGLSLShader ( const file_interface_t& fileFuncs, const CGLExtF& glE
 	m_glExtF( glExtF ),
 	m_shaderIndex( 0 ),
 	m_pVBO( nullptr ),
-	m_lastIndex( -1 ),
+	m_lastIndex( NO_POSITION ),
+	m_vboChanged( false ),
 	m_pVertexScript( nullptr ),
 	m_pFragmentScript( nullptr ),
 	m_pDeterminatorValues( nullptr ),
+	m_pShaderDeterminatorValues( nullptr ),
 	m_pCSDHeader( nullptr ),
 	m_reCheck( false ),
 	m_onDemandLoad( false ),
@@ -204,6 +209,10 @@ void CGLSLShader::FreeShaderData ( void )
 
 		m_shadersArray.clear();
 	}
+#ifdef USE_SHADER_VALUES_MAP
+	if(!m_shaderValuesIndexMap.empty())
+		m_shaderValuesIndexMap.clear();
+#endif
 }
 
 //=============================================
@@ -232,6 +241,12 @@ void CGLSLShader::FreeData ( void )
 	{
 		delete[] m_pDeterminatorValues;
 		m_pDeterminatorValues = nullptr;
+	}
+
+	if(m_pShaderDeterminatorValues)
+	{
+		delete[] m_pShaderDeterminatorValues;
+		m_pShaderDeterminatorValues = nullptr;
 	}
 
 	if(!m_vertexAttribsArray.empty())
@@ -495,9 +510,13 @@ bool CGLSLShader::CompileFromCSD( void )
 	m_fileInterface.pfnFreeFile(pFile);
 
 	// Set determinator values
-	m_pDeterminatorValues = new Int32[m_pCSDHeader->numshaders];
-	for(Uint32 i = 0; i < m_pCSDHeader->numshaders; i++)
+	m_pDeterminatorValues = new Int16[m_pCSDHeader->numdeterminators];
+	for(Uint32 i = 0; i < m_pCSDHeader->numdeterminators; i++)
 		m_pDeterminatorValues[i] = 0;
+
+	// Set this as well
+	m_pShaderDeterminatorValues = new Int16[m_pCSDHeader->numdeterminators * m_pCSDHeader->numshaders];
+	memset(m_pShaderDeterminatorValues, 0, sizeof(Int16)*m_pCSDHeader->numdeterminators*m_pCSDHeader->numshaders);
 
 	// Set determinators
 	m_determinatorArray.resize(m_pCSDHeader->numdeterminators);
@@ -513,7 +532,22 @@ bool CGLSLShader::CompileFromCSD( void )
 		Int16* pinvalues = reinterpret_cast<Int16*>(reinterpret_cast<byte*>(m_pCSDHeader) + pindeterminators[i].valuesoffset);
 		m_determinatorArray[i].values.resize(m_pCSDHeader->numshaders);
 		memcpy(&m_determinatorArray[i].values[0], pinvalues, sizeof(Int16)*m_pCSDHeader->numshaders);
+
+		// Set in the fast array too
+		for(Uint32 j = 0; j < m_pCSDHeader->numshaders; j++)
+			m_pShaderDeterminatorValues[j * m_pCSDHeader->numdeterminators + i] = pinvalues[j];
 	}
+
+#ifdef USE_SHADER_VALUES_MAP
+	// Create map
+	for(Uint32 i = 0; i < m_pCSDHeader->numshaders; i++)
+	{
+		Char* pshadervaluesbytes = reinterpret_cast<Char*>(m_pShaderDeterminatorValues + m_pCSDHeader->numdeterminators * i);
+		ShaderValuesStringType_t valuestr(pshadervaluesbytes, m_pCSDHeader->numdeterminators * sizeof(Int16));
+		std::pair<ShaderValuesIndexMapType_t::iterator, bool> insertResult = m_shaderValuesIndexMap.insert(ShaderValuesIndexMapPairType_t(valuestr, i));
+		assert(insertResult.second == true);
+	}
+#endif
 
 	// Allocate the shaders
 	m_shadersArray.resize(m_pCSDHeader->numshaders);
@@ -1449,7 +1483,7 @@ void CGLSLShader::RecursiveFillValues( Uint32 index, Uint32& numShaders )
 					for(; k < m_invalidStatesArray[j].numdts; k++)
 					{
 						invalid_state_t *pstate = &m_invalidStatesArray[j];
-						Int32 value = m_pDeterminatorValues[pstate->dt_indexes[k]];
+						Int16 value = m_pDeterminatorValues[pstate->dt_indexes[k]];
 
 						if(value < pstate->dt_minrange[k] || value > pstate->dt_maxrange[k])
 							break;
@@ -1533,7 +1567,15 @@ bool CGLSLShader::ShouldIncludeChunk( Uint32 id, shader_chunk_t *pchunk )
 		if(pconditional->boperator == OPERATOR_NONE && bComparisonResult
 			|| pconditional->boperator == OPERATOR_AND && bResult && bResult == bComparisonResult
 			|| pconditional->boperator == OPERATOR_ELSE && (bComparisonResult || bResult))
+		{
+			// Comparison is ok so far
 			bResult = true;
+		}
+		else
+		{
+			// Mark as failed
+			bResult = false;
+		}
 	}
 
 	return bResult;
@@ -1693,7 +1735,7 @@ bool CGLSLShader::CompileShaderVariation( Uint32 index )
 	for(Uint32 i = 0; i < m_uniformsArray.size(); i++)
 	{
 		m_uniformsArray[i].indexes[index] = m_glExtF.glGetUniformLocation(m_shadersArray[index].program_id, m_uniformsArray[i].name.c_str());
-		if(m_uniformsArray[i].indexes[index] == -1)
+		if(m_uniformsArray[i].indexes[index] == NO_POSITION)
 			m_uniformsArray[i].indexes[index] = PROPERTY_UNAVAILABLE;
 		else
 			assert(m_uniformsArray[i].indexes[index] >= 0);
@@ -1703,7 +1745,7 @@ bool CGLSLShader::CompileShaderVariation( Uint32 index )
 	for(Uint32 i = 0; i < m_uniformBufferObjectsArray.size(); i++)
 	{
 		m_uniformBufferObjectsArray[i].blockindexes[index] = m_glExtF.glGetUniformBlockIndex(m_shadersArray[index].program_id, m_uniformBufferObjectsArray[i].name.c_str());
-		if(m_uniformBufferObjectsArray[i].blockindexes[index] == -1)
+		if(m_uniformBufferObjectsArray[i].blockindexes[index] == NO_POSITION)
 			m_uniformBufferObjectsArray[i].blockindexes[index] = PROPERTY_UNAVAILABLE;
 		else
 			assert(m_uniformBufferObjectsArray[i].blockindexes[index] >= 0);
@@ -1713,7 +1755,7 @@ bool CGLSLShader::CompileShaderVariation( Uint32 index )
 	for(Uint32 i = 0; i < m_vertexAttribsArray.size(); i++)
 	{
 		m_vertexAttribsArray[i].indexes[index] = m_glExtF.glGetAttribLocation(m_shadersArray[index].program_id, m_vertexAttribsArray[i].name.c_str());
-		if(m_vertexAttribsArray[i].indexes[index] == -1)
+		if(m_vertexAttribsArray[i].indexes[index] == NO_POSITION)
 			m_vertexAttribsArray[i].indexes[index] = PROPERTY_UNAVAILABLE;
 		else
 			assert(m_vertexAttribsArray[i].indexes[index] >= 0);
@@ -1732,17 +1774,20 @@ bool CGLSLShader::ConstructBranches ( const Char* pSrc, Uint32 fileSize )
 	Uint32 nbShaders = 1;
 	if(!m_determinatorArray.empty())
 	{
-		m_pDeterminatorValues = new Int32[m_determinatorArray.size()];
-		memset(m_pDeterminatorValues, 0, sizeof(Int32)*m_determinatorArray.size());
+		m_pDeterminatorValues = new Int16[m_determinatorArray.size()];
+		memset(m_pDeterminatorValues, 0, sizeof(Int16)*m_determinatorArray.size());
 
 		nbShaders = 0;
 		RecursiveFillValues(0, nbShaders);
-	}
 
-	if(nbShaders >= MAX_VARIATIONS)
-	{
-		m_errorString << CString("nbShaders > ") << static_cast<Int32>(MAX_VARIATIONS) << " in " << m_shaderFile;
-		return false;
+		// Fill the fast seek array
+		m_pShaderDeterminatorValues = new Int16[nbShaders * m_determinatorArray.size()];
+		for(Uint32 i = 0; i < m_determinatorArray.size(); i++)
+		{
+			glsl_determinator_t& dt = m_determinatorArray[i];
+			for(Uint32 j = 0; j < nbShaders; j++)
+				m_pShaderDeterminatorValues[j * m_determinatorArray.size() + i] = dt.values[j];
+		}
 	}
 
 	// Get the temp buffer for writing the file
@@ -2047,11 +2092,11 @@ bool CGLSLShader::EnableShader ( void )
 		m_areUBOsBound = true;
 	}
 
-	if(m_shaderIndex == m_lastIndex)
+	if(!m_vboChanged && m_shaderIndex == m_lastIndex)
 		return true;
 
 	// resync attribs if previous shader was valid
-	if(m_lastIndex != -1)
+	if(m_lastIndex != NO_POSITION && m_lastIndex != m_shaderIndex)
 	{
 		for(Uint32 i = 0; i < m_vertexAttribsArray.size(); i++)
 		{
@@ -2076,8 +2121,11 @@ bool CGLSLShader::EnableShader ( void )
 	{
 		glsl_attrib_t *pattrib = &m_vertexAttribsArray[i];
 
-		if(m_lastIndex != -1 && pattrib->indexes[m_shaderIndex] == pattrib->indexes[m_lastIndex])
-			continue;
+		if(!m_vboChanged)
+		{
+			if(m_lastIndex != NO_POSITION && pattrib->indexes[m_shaderIndex] == pattrib->indexes[m_lastIndex])
+				continue;
+		}
 
 		if(pattrib->indexes[m_shaderIndex] != PROPERTY_UNAVAILABLE && pattrib->active)
 			m_pVBO->SetAttribPointer(pattrib->indexes[m_shaderIndex], pattrib->size, pattrib->type, pattrib->stride, pattrib->pointer);
@@ -2085,6 +2133,7 @@ bool CGLSLShader::EnableShader ( void )
 
 	// Resync values
 	m_lastIndex = m_shaderIndex;
+	m_vboChanged = false;
 
 	for(Uint32 i = 0; i < m_uniformsArray.size(); i++)
 	{
@@ -2096,7 +2145,7 @@ bool CGLSLShader::EnableShader ( void )
 		if(uniform.type == UNIFORM_NOSYNC)
 			continue;
 
-		if(uniform.indexes[m_shaderIndex] == -1)
+		if(uniform.indexes[m_shaderIndex] == NO_POSITION)
 			continue;
 		
 		SyncUniform(uniform);
@@ -2213,7 +2262,7 @@ void CGLSLShader::ResetShader ( void )
 	for(Uint32 i = 0; i < m_vertexAttribsArray.size(); i++)
 		DisableAttribute(i);
 
-	m_lastIndex = -1;
+	m_lastIndex = NO_POSITION;
 }
 
 //=============================================
@@ -2253,7 +2302,7 @@ Int32 CGLSLShader::InitAttribute( const Char *szname, Uint32 size, Int32 type, U
 				continue;
 
 			newAttrib.indexes[i] = m_glExtF.glGetAttribLocation(m_shadersArray[i].program_id, szname);
-			if(newAttrib.indexes[i] == -1)
+			if(newAttrib.indexes[i] == NO_POSITION)
 				newAttrib.indexes[i] = PROPERTY_UNAVAILABLE;
 			else
 				assert(newAttrib.indexes[i] >= 0);
@@ -2350,7 +2399,30 @@ void CGLSLShader::DisableAttribute( Int32 index )
 //=============================================
 void CGLSLShader::SetVBO( CVBO *pVBO )
 {
+	// If SetVBO is called, assume always we're changing
 	m_pVBO = pVBO;
+
+	// Re-set the attrib pointers if we are active
+	if(m_isActive)
+	{
+		for(Uint32 i = 0; i < m_vertexAttribsArray.size(); i++)
+		{
+			glsl_attrib_t *pattrib = &m_vertexAttribsArray[i];
+
+			if(pattrib->indexes[m_shaderIndex] != PROPERTY_UNAVAILABLE)
+			{
+				if(pattrib->active)
+					m_pVBO->SetAttribPointer(pattrib->indexes[m_shaderIndex], pattrib->size, pattrib->type, pattrib->stride, pattrib->pointer);
+				else
+					m_pVBO->DisableAttribPointer(pattrib->indexes[m_shaderIndex]);
+			}
+		}
+	}
+	else
+	{
+		// signal to re-set the pointers later on
+		m_vboChanged = true;
+	}
 }
 
 //=============================================
@@ -2414,7 +2486,7 @@ Int32 CGLSLShader::InitUniform( const Char *szname, uniform_e type, Uint32 eleme
 				continue;
 
 			newUniform.indexes[i] = m_glExtF.glGetUniformLocation(m_shadersArray[i].program_id, szname);
-			if(newUniform.indexes[i] == -1)
+			if(newUniform.indexes[i] == NO_POSITION)
 				newUniform.indexes[i] = PROPERTY_UNAVAILABLE;
 		}
 
@@ -2468,7 +2540,7 @@ Int32 CGLSLShader :: InitUniformBufferObject( const Char* pstrName, Uint32 buffe
 		for(Uint32 i = 0; i < m_shadersArray.size(); i++)
 		{
 			newUBO.blockindexes[i] = m_glExtF.glGetUniformBlockIndex(m_shadersArray[i].program_id, newUBO.name.c_str());
-			if(newUBO.blockindexes[i] == -1)
+			if(newUBO.blockindexes[i] == NO_POSITION)
 				newUBO.blockindexes[i] = PROPERTY_UNAVAILABLE;
 		}
 
@@ -2506,7 +2578,7 @@ Int32 CGLSLShader :: InitUniformBufferObject( const Char* pstrName, Uint32 buffe
 
 	for(Uint32 j = 0; j < m_shadersArray.size(); j++)
 	{
-		if(newUBO.blockindexes[j] == -1)
+		if(newUBO.blockindexes[j] == NO_POSITION)
 			continue;
 
 		m_glExtF.glUniformBlockBinding(m_shadersArray[j].program_id, newUBO.blockindexes[j], uboIndex+1);
@@ -2527,6 +2599,8 @@ Int32 CGLSLShader :: InitUniformBufferObject( const Char* pstrName, Uint32 buffe
 //=============================================
 bool CGLSLShader :: SetDeterminator ( Int32 index, Int32 value, bool update )
 {
+	assert(index >= 0 && index < m_determinatorArray.size());
+
 	if(!m_reCheck)
 	{
 		if(m_pDeterminatorValues[index] == value)
@@ -2557,44 +2631,60 @@ bool CGLSLShader :: SetDeterminator ( Int32 index, Int32 value, bool update )
 //=============================================
 bool CGLSLShader :: VerifyDeterminators ( void )
 {
-	for(Uint32 k = 0; k < m_disabledStatesArray.size(); k++)
+	if(!m_disabledStatesArray.empty())
 	{
-		const disabled_state_t& state = m_disabledStatesArray[k];
-		if(state.dt_setting == m_pDeterminatorValues[state.dt_index])
+		for(Uint32 k = 0; k < m_disabledStatesArray.size(); k++)
 		{
-			const glsl_determinator_t& dt = m_determinatorArray[state.dt_index];
-			m_errorString << "Tried to use disabled state for determinator " << dt.name << " in shader " << m_shaderFile;
-			return false;
+			const disabled_state_t& state = m_disabledStatesArray[k];
+			if(state.dt_setting == m_pDeterminatorValues[state.dt_index])
+			{
+				const glsl_determinator_t& dt = m_determinatorArray[state.dt_index];
+				m_errorString << "Tried to use disabled state for determinator " << dt.name << " in shader " << m_shaderFile;
+				return false;
+			}
 		}
 	}
 
+	// Shader to bind
+	Int32 shaderIndex = NO_POSITION;
+
+#ifdef USE_SHADER_VALUES_MAP
+	Char* pvaluesbytes = reinterpret_cast<Char*>(m_pDeterminatorValues);
+	ShaderValuesStringType_t valuestr(pvaluesbytes, m_determinatorArray.size() * sizeof(Int16));
+
+	ShaderValuesIndexMapType_t::iterator it = m_shaderValuesIndexMap.find(valuestr);
+	if(it != m_shaderValuesIndexMap.end())
+		shaderIndex = it->second;
+#else
+	Uint32 determinatorCount = m_determinatorArray.size();
 	for(Uint32 i = 0; i < m_shadersArray.size(); i++)
 	{
-		Uint32 j = 0;
-		for(; j < m_determinatorArray.size(); j++)
+		Int16* pCheckValues = m_pShaderDeterminatorValues + i * determinatorCount;
+		if(memcmp(pCheckValues, m_pDeterminatorValues, sizeof(Int16)*determinatorCount) == 0)
 		{
-			if(m_determinatorArray[j].values[i] != m_pDeterminatorValues[j])
-				break;
+			shaderIndex = static_cast<Int32>(i);
+			break;
 		}
+	}
+#endif
 
-		if(j == m_determinatorArray.size())
+	if(shaderIndex != NO_POSITION)
+	{
+		if(m_shaderIndex == shaderIndex)
+			return true;
+
+		m_shaderIndex = shaderIndex;
+		if(m_isActive)
 		{
-			if(m_shaderIndex == static_cast<Int32>(i))
+			if(EnableShader())
 				return true;
-
-			m_shaderIndex = i;
-			if(m_isActive)
-			{
-				if(EnableShader())
-					return true;
-				else
-					return false;
-			}
 			else
-			{
-				// Will be tested later
-				return true;
-			}
+				return false;
+		}
+		else
+		{
+			// Will be tested later
+			return true;
 		}
 	}
 
@@ -2607,6 +2697,7 @@ bool CGLSLShader :: VerifyDeterminators ( void )
 	m_errorString = buffer;
 	return false;
 }
+
 
 //=============================================
 // @brief Returns the index of a determinator

@@ -248,6 +248,8 @@ public:
 	static const Uint32 NPC_MAX_TASK_EXECUTIONS;
 	// Navigability minimum distance change
 	static const Float NAVIGABILITY_CHECK_MIN_DISTANCE_CHANGE;
+	// Max walk-move traces per frame
+	static const Uint32 MAX_FRAME_WALKMOVE_TRACES;
 
 public:
 	// Max backed up enemies
@@ -523,7 +525,7 @@ public:
 
 	// Performs a localmove check
 	// Note: Keep startPosition as not a reference, because CheckLocalMove modifies m_pState->origin, which is used sometimes as a parameter
-	virtual localmove_t CheckLocalMove( const Vector startPosition, const Vector& endPosition, const CBaseEntity* pTargetEntity, Float* pDistance = nullptr, bool isInitial = false ) override;
+	virtual localmove_t CheckLocalMove( const Vector startPosition, const Vector& endPosition, const CBaseEntity* pTargetEntity, Float* pDistance = nullptr, bool isInitial = false, bool isPerformingMovement = false ) override;
 
 	// Sets the current script state
 	virtual void SetScriptState( scriptstate_t state ) override;
@@ -794,6 +796,8 @@ protected:
 	bool BuildNodeRoute( const Vector& destination, CBaseEntity* pTargetEntity = nullptr );
 	// Checks if a node route is available from start to end
 	bool CheckNodeRoute( const Vector& startPosition, const Vector& endPosition, CBaseEntity* pTargetEntity = nullptr );
+	// Checks if a node route is available from start to end
+	bool CheckNodeRoute( Int32 startNodeIndex, Int32 endNodeIndex, CBaseEntity* pTargetEntity );
 	// Builds a node detour route around an obstable marked by some nodes
 	bool BuildNodeDetourRoute( const Vector& destination, CBaseEntity* pBlocker, CBaseEntity* pTargetEntity = nullptr );
 	// Builds a route where a position vector is visible
@@ -1108,6 +1112,10 @@ protected:
 	// Checks if an enemy's body target is shootable
 	virtual bool IsEnemyBodyTargetShootable( CBaseEntity& enemy, bool ignoreGlass, bool ignoreBreakables, const Vector& gunPosition, const Vector& enemyBodyTarget );
 
+public:
+	// Reset frame-dependent counters
+	static void ResetFrameStates( void );
+
 protected:
 	// Last time the NPC thought
 	Double						m_npcLastThinkTime;
@@ -1143,6 +1151,11 @@ protected:
 	// Next schedule to play after current schedule has ended for any reason
 	Int32						m_nextScheduleIndex;
 
+	// Own position navigability result
+	bool						m_ownPositionNavigability;
+	// Last checked own position for navigability
+	Vector						m_lastCheckedNavigabilityPosition;
+
 	// NPC AI state
 	Int32						m_npcState;
 	// Ideal NPC AI state
@@ -1166,12 +1179,16 @@ protected:
 	CBitSet						m_disabledCapabilityBits;
 	// Damage bits taken
 	Uint64						m_damageBits;
+	// Damage direction
+	Vector						m_damageDirection;
 	// Last damage amount we took
 	Float						m_lastDamageAmount;
 	// Last attack vector
 	Vector						m_lastAttackVector;
 	// For damage types that need to be cleared after a while
 	CLinkedList<cleardamage_t>	m_damageClearList;
+	// Last heavy flinch time
+	Double						m_lastHeavyFlinchTime;
 
 	// Current enemy
 	CEntityHandle				m_enemy;
@@ -1361,5 +1378,7 @@ protected:
 	static Int32 g_lastCoverSearchNodeIndex;
 	// Last active idle search node
 	static Int32 g_lastActiveIdleSearchNodeIndex;
+	// Number of walk move traces this frame
+	static Uint32 g_numFrameWalkMoveTraces;
 };
 #endif //AI_BASENPC_H

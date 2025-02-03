@@ -34,8 +34,10 @@ All Rights Reserved.
 #include "r_lensflare.h"
 #include "r_sky.h"
 #include "r_lightstyles.h"
+#include "r_tracers.h"
 
 #include "ald.h"
+#include "aldformat.h"
 #include "efxapi.h"
 #include "entity_extrainfo.h"
 #include "flexmanager.h"
@@ -44,6 +46,7 @@ All Rights Reserved.
 #include "studio.h"
 #include "vbmformat.h"
 #include "enginestate.h"
+#include "bsp_shared.h"
 
 static cl_efxapi_t EFXAPI_INTERFACE_FUNCS =
 {
@@ -68,6 +71,12 @@ static cl_efxapi_t EFXAPI_INTERFACE_FUNCS =
 	CL_SpawnParticleSystem,			//pfnSpawnParticleSystem
 	CL_KillEntityParticleSystems,	//pfnKillEntityParticleSystems
 	CL_SetMotionBlur,				//pfnSetMotionBlur
+	CL_SetVignette,				    //pfnSetVignette
+	CL_SetFilmGrain,				//pfnSetFilmGrain
+	CL_SetBlackAndWhite,			//pfnSetBlackAndWhite
+	CL_SetChromatic,				//pfnSetChromatic
+	CL_SetScreenOverlay,			//pfnSetScreenOverlay
+	CL_ClearScreenOverlay,			//pfnClearScreenOverlay
 	CL_SetFade,						//pfnSetFade
 	CL_SetGaussianBlur,				//pfnSetGaussianBlur
 	CL_BreakModel,					//pfnBreakModel
@@ -77,6 +86,7 @@ static cl_efxapi_t EFXAPI_INTERFACE_FUNCS =
 	CL_SphereModel,					//pfnSphereModel
 	CL_TempModel,					//pfnTempModel
 	CL_TempSprite,					//pfnTempSprite
+	CL_CreateTracer,				//pfnCreateTracer
 	CL_ParticleExplosion1,			//pfnParticleExplosion1
 	CL_ParticleExplosion2,			//pfnParticleExplosion2
 	CL_BlobExplosion,				//pfnBlobExplosion
@@ -294,48 +304,33 @@ void CL_SetDayStage( daystage_t daystage )
 	// Data pointers for our load result
 	byte* pdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
 
-	if (!ALD_Load(rns.daystage, pdatapointers))
+	// If restoring to DAYSTAGE_NORMAL from any other stage, then we
+	// need to load the restore file 
+	daystage_t loadstage;
+	if(daystage == DAYSTAGE_NORMAL && prevdaystage != DAYSTAGE_NORMAL)
+		loadstage = DAYSTAGE_NORMAL_RESTORE;
+	else
+		loadstage = rns.daystage;
+
+	if (!ALD_Load(loadstage, pdatapointers))
 	{
-		for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
-			pdatapointers[i] = reinterpret_cast<byte*>(pworldmodel->pbaselightdata[i]);
-
-		Uint32 i = 0;
-		for(; i < NB_SURF_LIGHTMAP_LAYERS; i++)
-		{
-			if(!pdatapointers[i] || pdatapointers[i] != reinterpret_cast<byte*>(pworldmodel->plightdata[i]))
-				break;
-		}
-
-		if(i == NB_SURF_LIGHTMAP_LAYERS)
-			return;
-	}
-
-	// Go through each surface and verify that the data size is correct
-	for (Uint32 i = 0; i < pworldmodel->numsurfaces; i++)
-	{
-		msurface_t* psurface = &pworldmodel->psurfaces[i];
-		if (psurface->lightoffset == -1)
-			continue;
-
-		// Re-set samples pointer to the new data
-		for(Uint32 j = 0; j < NB_SURF_LIGHTMAP_LAYERS; j++)
-		{
-			if(pdatapointers[j])
-				psurface->psamples[j] = reinterpret_cast<color24_t*>(pdatapointers[j] + psurface->lightoffset);
-			else
-				psurface->psamples[j] = nullptr;
-		}
+		// Mark as having relevant data
+		rns.hasdaystagedata = false;
+		return;
 	}
 
 	// Set the new pointer
 	for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
 	{
 		// All data was successfully set, so release original data
-		if (pworldmodel->plightdata[i] != pworldmodel->pbaselightdata[i])
+		if (pworldmodel->plightdata[i])
 			delete[] pworldmodel->plightdata[i];
 
 		pworldmodel->plightdata[i] = reinterpret_cast<color24_t*>(pdatapointers[i]);
 	}
+
+	// Set new sampling data
+	BSP_SetSamplingLightData(*ens.pworld);
 
 	// Reset lighting on entities
 	CL_ResetLighting();
@@ -347,8 +342,16 @@ void CL_SetDayStage( daystage_t daystage )
 	gCubemaps.InitGame();
 
 	// Load day stage water scripts
+	BSP_ReserveWaterLighting();
+
 	gWaterShader.LoadScripts();
 	gWaterShader.ReloadLightmapData();
+
+	// Release the lightmap data
+	BSP_ReleaseLightmapData(*ens.pworld);
+
+	// Mark as having relevant data
+	rns.hasdaystagedata = true;
 }
 
 //====================================
@@ -484,6 +487,54 @@ void CL_SpawnParticleSystem( const Vector& origin, const Vector& direction, part
 void CL_SetMotionBlur( bool active, Float blurfade, bool override )
 {
 	gPostProcess.SetMotionBlur(active, blurfade, override);
+}
+
+//====================================
+//
+//====================================
+void CL_SetVignette( bool active, Float strength, Float radius )
+{
+	gPostProcess.SetVignette(active, strength, radius);
+}
+
+//====================================
+// 
+//====================================
+void CL_SetFilmGrain( bool active, Float strength )
+{
+	gPostProcess.SetFilmGrain(active, strength);
+}
+
+//====================================
+//
+//====================================
+void CL_SetBlackAndWhite( bool active, Float strength )
+{
+	gPostProcess.SetBlackAndWhite(active, strength);
+}
+
+//====================================
+//
+//====================================
+void CL_SetChromatic( bool active, Float strength )
+{
+	gPostProcess.SetChromatic(active, strength);
+}
+
+//====================================
+//
+//====================================
+void CL_SetScreenOverlay( Int32 layerindex, const Char* pstrtexturename, overlay_rendermode_t rendermode, const Vector& rendercolor, Float renderamt, overlay_effect_t effect, Float effectspeed, Float effectminalpha, Float fadetime )
+{
+	gPostProcess.SetOverlay(layerindex, pstrtexturename, rendermode, rendercolor, renderamt, effect, effectspeed, effectminalpha, fadetime);
+}
+
+//====================================
+//
+//====================================
+void CL_ClearScreenOverlay( Int32 layerindex, Float fadetime )
+{
+	gPostProcess.ClearOverlay(layerindex, fadetime);
 }
 
 //====================================
@@ -740,4 +791,12 @@ void CL_AddSkyTextureSet( const Char* pstrSkyTextureName, Int32 skysetindex )
 void CL_SetSkyTexture( Int32 skysetindex )
 {
 	gSkyRenderer.SetSkyTexture(skysetindex);
+}
+
+//====================================
+//
+//====================================
+tracer_t* CL_CreateTracer( const Vector& origin, const Vector& velocity, const Vector& color, Float alpha, Float width, Float length, Float life, tracer_type_t type )
+{
+	return gTracers.CreateTracer(origin, velocity, color, alpha, width, length, life, type);
 }

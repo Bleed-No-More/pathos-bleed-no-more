@@ -638,7 +638,7 @@ bool CMonitorManager::SetupMonitorPass( void )
 	cl_entity_t* pplayer = CL_GetLocalPlayer();
 
 	// Get the aiment
-	Int32 cameraEntityIndex = m_pCurrentMonitor->pentity->curstate.aiment;
+	entindex_t cameraEntityIndex = m_pCurrentMonitor->pentity->curstate.aiment;
 	cl_entity_t* pCameraEntity = CL_GetEntityByIndex(cameraEntityIndex);
 	if(!pCameraEntity || pCameraEntity->curstate.msg_num != pplayer->curstate.msg_num)
 		return false;
@@ -699,7 +699,7 @@ void CMonitorManager::FinishMonitorPass( void )
 	}
 
 	// Get the aiment
-	Uint32 cameraEntityIndex = m_pCurrentMonitor->pentity->curstate.aiment;
+	entindex_t cameraEntityIndex = m_pCurrentMonitor->pentity->curstate.aiment;
 	cl_entity_t* pCameraEntity = CL_GetEntityByIndex(cameraEntityIndex);
 	if(!pCameraEntity)
 		return;

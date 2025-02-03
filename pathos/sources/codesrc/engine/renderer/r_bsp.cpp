@@ -8,6 +8,9 @@ All Rights Reserved.
 ===============================================
 */
 
+// Notes:
+// AO mapping related code was done by valina354.
+
 #include "includes.h"
 #include "brushmodel.h"
 #include "cl_entity.h"
@@ -85,6 +88,7 @@ CBSPRenderer::CBSPRenderer( void ):
 	m_pCvarLegacyTransparents(nullptr),
 	m_pShader(nullptr),
 	m_pVBO(nullptr),
+	m_pDecalVBO(nullptr),
 	m_isCubemappingSupported(false)
 {
 	m_tempDecalVertsArray.resize(TEMP_DECAL_VERTEX_ALLOC_SIZE);
@@ -182,6 +186,7 @@ bool CBSPRenderer::InitGL( void )
 		if(m_isCubemappingSupported)
 			m_attribs.d_cubemaps = m_pShader->GetDeterminatorIndex("cubemaps");
 		m_attribs.d_luminance = m_pShader->GetDeterminatorIndex("luminance");
+		m_attribs.d_ao = m_pShader->GetDeterminatorIndex("ao");
 		m_attribs.d_numlights = m_pShader->GetDeterminatorIndex("numlights");
 
 		if(!R_CheckShaderDeterminator(m_attribs.d_shadertype, "shadertype", m_pShader, Sys_ErrorPopup)
@@ -190,6 +195,7 @@ bool CBSPRenderer::InitGL( void )
 			|| !R_CheckShaderDeterminator(m_attribs.d_bumpmapping, "bumpmapping", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_specular, "specular", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_luminance, "luminance", m_pShader, Sys_ErrorPopup)
+			|| !R_CheckShaderDeterminator(m_attribs.d_ao, "ao", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_numlights, "numlights", m_pShader, Sys_ErrorPopup))
 			return false;
 
@@ -252,6 +258,7 @@ bool CBSPRenderer::InitGL( void )
 		m_attribs.u_chrometex = m_pShader->InitUniform("chrometex", CGLSLShader::UNIFORM_INT1);
 		m_attribs.u_normalmap = m_pShader->InitUniform("normalmap", CGLSLShader::UNIFORM_INT1);
 		m_attribs.u_luminance = m_pShader->InitUniform("luminance", CGLSLShader::UNIFORM_INT1);
+		m_attribs.u_aomap = m_pShader->InitUniform("aomaptex", CGLSLShader::UNIFORM_INT1);
 		m_attribs.u_difflightmap = m_pShader->InitUniform("difflightmap", CGLSLShader::UNIFORM_INT1);
 		m_attribs.u_lightvecstex = m_pShader->InitUniform("lightvecstex", CGLSLShader::UNIFORM_INT1);
 		m_attribs.u_specular = m_pShader->InitUniform("speculartex", CGLSLShader::UNIFORM_INT1);
@@ -285,6 +292,7 @@ bool CBSPRenderer::InitGL( void )
 			|| !R_CheckShaderUniform(m_attribs.u_detailtex, "detailtex", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderUniform(m_attribs.u_chrometex, "chrometex", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderUniform(m_attribs.u_normalmap, "normalmap", m_pShader, Sys_ErrorPopup)
+			|| !R_CheckShaderUniform(m_attribs.u_aomap, "aomaptex", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderUniform(m_attribs.u_difflightmap, "difflightmap", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderUniform(m_attribs.u_lightvecstex, "lightvecstex", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderUniform(m_attribs.u_specular, "speculartex", m_pShader, Sys_ErrorPopup)
@@ -358,21 +366,18 @@ bool CBSPRenderer::InitGL( void )
 		}
 	}
 
-	if(m_pVBO)
+	if(CL_IsGameActive())
 	{
 		VID_DrawLoadingScreen("Reloading world geometry");
 
-		m_pVBO->RebindGL();
-		m_pShader->SetVBO(m_pVBO);
-	}
-
-	if(CL_IsGameActive())
-	{
 		// Reload textures
 		LoadTextures();
 
 		// Init lightmap
 		InitLightmaps();
+
+		// Create VBO
+		InitVBO();
 
 		// Delete WAD resource
 		if(ens.pwadresource)
@@ -380,6 +385,9 @@ bool CBSPRenderer::InitGL( void )
 			delete ens.pwadresource;
 			ens.pwadresource = nullptr;
 		}
+
+		// Rebind decal VBO
+		m_pDecalVBO->RebindGL();
 	}
 
 	return true;
@@ -398,7 +406,13 @@ void CBSPRenderer::ClearGL( void )
 	}
 
 	if(m_pVBO)
-		m_pVBO->ClearGL();
+	{
+		delete m_pVBO;
+		m_pVBO = nullptr;
+	}
+
+	if(m_pDecalVBO)
+		m_pDecalVBO->ClearGL();
 
 	// Clear these
 	memset(m_lightmapIndexes, 0, sizeof(m_lightmapIndexes));
@@ -466,6 +480,9 @@ bool CBSPRenderer::InitGame( void )
 	// Init the VBO
 	InitVBO();
 
+	// Create decal VBO
+	InitDecalVBO();
+
 	// Set up lightmap
 	InitLightmaps();
 
@@ -491,6 +508,12 @@ void CBSPRenderer::ClearGame( void )
 	{
 		delete m_pVBO;
 		m_pVBO = nullptr;
+	}
+
+	if(m_pDecalVBO)
+	{
+		delete m_pDecalVBO;
+		m_pDecalVBO = nullptr;
 	}
 
 	m_vertexCacheBase = 0;
@@ -606,6 +629,8 @@ void CBSPRenderer::InitLightmaps( void )
 	m_bumpMaps = false;
 	m_useLightStyles = false;
 
+	Uint32 lightmapDataTotal = 0;
+
 	//
 	// Initialize the basic lightmap first
 	//
@@ -645,36 +670,52 @@ void CBSPRenderer::InitLightmaps( void )
 			Float overdarkValue = (i == BASE_LIGHTMAP_INDEX) ? overdarken : 0;
 
 			// Build the base lightmap
-			color24_t* psrc = psurface->psamples[SURF_LIGHTMAP_DEFAULT];
-			R_BuildLightmap(pbspsurface->light_s[i], pbspsurface->light_t[i], psrc, psurface, plightmap, i, m_lightmapWidths[i], overdarkValue, false, isfullbright);
+			color24_t* psrclightdata;
+			if(ens.pworld->plightdata[SURF_LIGHTMAP_DEFAULT])
+				psrclightdata = reinterpret_cast<color24_t*>(reinterpret_cast<byte*>(ens.pworld->plightdata[SURF_LIGHTMAP_DEFAULT]) + psurface->lightoffset);
+			else
+				psrclightdata = nullptr;
+
+			R_BuildLightmap(pbspsurface->light_s[i], pbspsurface->light_t[i], psrclightdata, psurface, plightmap, i, m_lightmapWidths[i], overdarkValue, false, isfullbright);
 			lightmapdatasize += size*sizeof(color32_t);
 		}
 
 		if(i > BASE_LIGHTMAP_INDEX && lightmapdatasize <= 0)
+		{
+			delete[] plightmap;
 			continue;
+		}
 
 		if(g_pCvarDumpLightmaps->GetValue() >= 1)
 		{
 			CString basename;
 			Common::Basename(ens.pworld->name.c_str(), basename);
 
-			CString filepath;
-			filepath << "dumps" << PATH_SLASH_CHAR << "dump_" << basename << "_lightmap_default_layer_" << i << ".tga";
+			CString directoryPath;
+			directoryPath << "dumps" << PATH_SLASH_CHAR << "lightmaps" << PATH_SLASH_CHAR << basename << PATH_SLASH_CHAR;
+			if(FL_CreateDirectory(directoryPath.c_str()))
+			{
+				CString filepath;
+				filepath << directoryPath << PATH_SLASH_CHAR << "dump_lightmap_default_layer_" << i << ".tga";
 
-			const byte* pwritedata = reinterpret_cast<const byte*>(plightmap);
-			TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf);
+				const byte* pwritedata = reinterpret_cast<const byte*>(plightmap);
+				if(TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf))
+					Con_Printf("Exported %s.\n", filepath.c_str());
+			}
+			else
+			{
+				Con_Printf("%s - Failed to create directory '%s'.\n", __FUNCTION__, directoryPath.c_str());
+			}
 		}
 
 		// Set default lightmap
 		if(!m_lightmapIndexes[i])
 			m_lightmapIndexes[i] = pTextureManager->GenTextureIndex(RS_GAME_LEVEL)->gl_index;
 
-		glBindTexture(GL_TEXTURE_2D, m_lightmapIndexes[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_lightmapWidths[i], m_lightmapHeights[i], 0, GL_RGBA, GL_UNSIGNED_BYTE, plightmap);
-
-		Con_Printf("Loaded 1 lightmaps for layer %d: %.2f mbytes.\n", i, static_cast<Float>(lightmapdatasize)/(1024.0f*1024.0f));
+		Uint32 resultsize;
+		R_SetLightmapTexture(m_lightmapIndexes[i], m_lightmapWidths[i], m_lightmapHeights[i], false, plightmap, resultsize);
+		Con_Printf("Loaded 1 lightmaps for default layer %d: %.2f mbytes.\n", i, static_cast<Float>(resultsize)/(1024.0f*1024.0f));
+		lightmapDataTotal += resultsize;
 
 		if(i > 0)
 			m_useLightStyles = true;
@@ -691,133 +732,124 @@ void CBSPRenderer::InitLightmaps( void )
 		&& ens.pworld->plightdata[SURF_LIGHTMAP_DIFFUSE]
 		&& ens.pworld->plightdata[SURF_LIGHTMAP_VECTORS])
 	{
-		for(Uint32 i = 0; i < MAX_SURFACE_STYLES; i++)
+		for(Uint32 k = 1; k < NB_SURF_LIGHTMAP_LAYERS; k++)
 		{
-			// alloc ambient lightmap's data
-			Uint32 amblightdatasize = 0;
-			color32_t* pambientlightmap = new color32_t[m_lightmapWidths[i]*m_lightmapHeights[i]];
-			memset(pambientlightmap, 0, sizeof(color32_t)*m_lightmapWidths[i]*m_lightmapHeights[i]);
+			// Determine specifics
+			Float _overdarken = (k == SURF_LIGHTMAP_AMBIENT) ? overdarken : 0;
+			bool isvectormap = (k == SURF_LIGHTMAP_VECTORS) ? true : false;
 
-			// alloc diffuse lightmap's data
-			Uint32 diffuselightdatasize = 0;
-			color32_t* pdiffuselightmap = new color32_t[m_lightmapWidths[i]*m_lightmapHeights[i]];
-			memset(pdiffuselightmap, 0, sizeof(color32_t)*m_lightmapWidths[i]*m_lightmapHeights[i]);
-
-			// alloc lightvec lightmap's data
-			Uint32 lightvecsdatasize = 0;
-			color32_t* plightvecslightmap = new color32_t[m_lightmapWidths[i]*m_lightmapHeights[i]];
-			memset(plightvecslightmap, 0, sizeof(color32_t)*m_lightmapWidths[i]*m_lightmapHeights[i]);
-
-			// Process the surfaces
-			for(Uint32 j = 0; j < ens.pworld->numsurfaces; j++)
+			CString lmapname;
+			switch(k)
 			{
-				const msurface_t* psurface = &ens.pworld->psurfaces[j];
-				if(psurface->flags & (SURF_DRAWSKY|SURF_DRAWTURB))
-					continue;
+			case SURF_LIGHTMAP_VECTORS:
+				lmapname = "vectors";
+				break;
+			case SURF_LIGHTMAP_AMBIENT:
+				lmapname = "ambient";
+				break;
+			case SURF_LIGHTMAP_DIFFUSE:
+				lmapname = "diffuse";
+				break;
+			}
 
-				// Skip empty styles
-				if(i > BASE_LIGHTMAP_INDEX && psurface->styles[i] == NULL_LIGHTSTYLE_INDEX)
-					continue;
+			for(Uint32 i = 0; i < MAX_SURFACE_STYLES; i++)
+			{
+				// alloc ambient lightmap's data
+				Uint32 lightdatasize = 0;
+				color32_t* plightmapdata = new color32_t[m_lightmapWidths[i]*m_lightmapHeights[i]];
+				memset(plightmapdata, 0, sizeof(color32_t)*m_lightmapWidths[i]*m_lightmapHeights[i]);
 
-				bsp_surface_t* pbspsurface = &m_surfacesArray[j];
-		
-				bool isfullbright = false;
-				if(psurface->infoindex != NO_INFO_INDEX)
+				// Process the surfaces
+				for(Uint32 j = 0; j < ens.pworld->numsurfaces; j++)
 				{
-					bsp_texture_t* ptexture = pbspsurface->ptexture;
-					if(ptexture && ptexture->pmaterial && (ptexture->pmaterial->flags & TX_FL_FULLBRIGHT))
-						isfullbright = true;
+					const msurface_t* psurface = &ens.pworld->psurfaces[j];
+					if(psurface->flags & (SURF_DRAWSKY|SURF_DRAWTURB))
+						continue;
+
+					// Skip empty styles
+					if(i > BASE_LIGHTMAP_INDEX && psurface->styles[i] == NULL_LIGHTSTYLE_INDEX)
+						continue;
+
+					bsp_surface_t* pbspsurface = &m_surfacesArray[j];
+		
+					bool isfullbright = false;
+					if(psurface->infoindex != NO_INFO_INDEX)
+					{
+						bsp_texture_t* ptexture = pbspsurface->ptexture;
+						if(ptexture && ptexture->pmaterial && (ptexture->pmaterial->flags & TX_FL_FULLBRIGHT))
+							isfullbright = true;
+					}
+
+					// Determine sizes
+					Uint32 xsize = (psurface->extents[0] / psurface->lightmapdivider)+1;
+					Uint32 ysize = (psurface->extents[1] / psurface->lightmapdivider)+1;
+					Uint32 size = xsize*ysize;
+
+					color24_t* psrc = reinterpret_cast<color24_t*>(reinterpret_cast<byte*>(ens.pworld->plightdata[k]) + psurface->lightoffset);
+					R_BuildLightmap(pbspsurface->light_s[i], pbspsurface->light_t[i], psrc, psurface, plightmapdata, i, m_lightmapWidths[i], _overdarken, isvectormap);
+					lightdatasize += size*sizeof(color32_t);
 				}
 
-				// Determine sizes
-				Uint32 xsize = (psurface->extents[0] / psurface->lightmapdivider)+1;
-				Uint32 ysize = (psurface->extents[1] / psurface->lightmapdivider)+1;
-				Uint32 size = xsize*ysize;
+				if(i > BASE_LIGHTMAP_INDEX && lightdatasize <= 0)
+				{
+					delete[] plightmapdata;
+					continue;
+				}
 
-				// Ambient lightmap
-				color24_t* psrc = psurface->psamples[SURF_LIGHTMAP_AMBIENT];
-				R_BuildLightmap(pbspsurface->light_s[i], pbspsurface->light_t[i], psrc, psurface, pambientlightmap, i, m_lightmapWidths[i], overdarken);
-				amblightdatasize += size*sizeof(color32_t);
+				if(g_pCvarDumpLightmaps->GetValue() >= 1)
+				{
+					CString basename;
+					Common::Basename(ens.pworld->name.c_str(), basename);
 
-				// Diffuse lightmap
-				psrc = psurface->psamples[SURF_LIGHTMAP_DIFFUSE];
-				R_BuildLightmap(pbspsurface->light_s[i], pbspsurface->light_t[i], psrc, psurface, pdiffuselightmap, i, m_lightmapWidths[i], overdarken);
-				diffuselightdatasize += size*sizeof(color32_t);
+					CString directoryPath;
+					directoryPath << "dumps" << PATH_SLASH_CHAR << "lightmaps" << PATH_SLASH_CHAR << basename << PATH_SLASH_CHAR;
 
-				// Light vectors lightmap
-				psrc = psurface->psamples[SURF_LIGHTMAP_VECTORS];
-				R_BuildLightmap(pbspsurface->light_s[i], pbspsurface->light_t[i], psrc, psurface, plightvecslightmap, i, m_lightmapWidths[i], 0, true);
-				lightvecsdatasize += size*sizeof(color32_t);
+					if(FL_CreateDirectory(directoryPath.c_str()))
+					{
+						// Write file
+						CString filepath;
+						filepath << directoryPath << "dump_" << basename << "_lightmap_" << lmapname << "_layer_" << i << ".tga";
+
+						const byte* pwritedata = reinterpret_cast<const byte*>(plightmapdata);
+						if(TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf))
+							Con_Printf("Exported %s.\n", filepath.c_str());
+					}
+					else
+					{
+						Con_Printf("%s - Failed to create directory '%s'.\n", __FUNCTION__, directoryPath.c_str());
+					}
+				}
+
+				Uint32* pdestindex = nullptr;
+				switch(k)
+				{
+				case SURF_LIGHTMAP_VECTORS:
+					pdestindex = &m_lightVectorsIndexes[i];
+					break;
+				case SURF_LIGHTMAP_AMBIENT:
+					pdestindex = &m_ambientLightmapIndexes[i];
+					break;
+				case SURF_LIGHTMAP_DIFFUSE:
+					pdestindex = &m_diffuseLightmapIndexes[i];
+					break;
+				}
+
+				// Load the ambient lightmap
+				if(!(*pdestindex))
+					(*pdestindex) = pTextureManager->GenTextureIndex(RS_GAME_LEVEL)->gl_index;
+
+				Uint32 resultsize;
+				R_SetLightmapTexture((*pdestindex), m_lightmapWidths[i], m_lightmapHeights[i], isvectormap, plightmapdata, resultsize);
+				Con_Printf("Loaded 1 lightmaps for %s layer %d: %.2f mbytes.\n", lmapname.c_str(), i, static_cast<Float>(resultsize)/(1024.0f*1024.0f));
+				lightmapDataTotal += resultsize;
+
+				if(!m_bumpMaps)
+					m_bumpMaps = true;
 			}
-
-			if(i > BASE_LIGHTMAP_INDEX && amblightdatasize <= 0 && diffuselightdatasize <= 0 && lightvecsdatasize <= 0)
-				continue;
-			
-			if(g_pCvarDumpLightmaps->GetValue() >= 1)
-			{
-				CString basename;
-				Common::Basename(ens.pworld->name.c_str(), basename);
-
-				// Write ambient file
-				CString filepath;
-				filepath << "dumps" << PATH_SLASH_CHAR << "dump_" << basename << "_lightmap_ambient_layer_" << i << ".tga";
-
-				const byte* pwritedata = reinterpret_cast<const byte*>(pambientlightmap);
-				TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf);
-
-				// Write diffuse file
-				filepath.clear();
-				filepath << "dumps" << PATH_SLASH_CHAR << "dump_" << basename << "_lightmap_diffuse_layer_" << i << ".tga";
-
-				pwritedata = reinterpret_cast<const byte*>(pdiffuselightmap);
-				TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf);
-			
-				// Write vectors file
-				filepath.clear();
-				filepath << "dumps" << PATH_SLASH_CHAR << "dump_" << basename << "_lightmap_vectors_layer_" << i << ".tga";
-
-				pwritedata = reinterpret_cast<const byte*>(plightvecslightmap);
-				TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf);
-			}
-
-			// Load the ambient lightmap
-			if(!m_ambientLightmapIndexes[i])
-				m_ambientLightmapIndexes[i] = pTextureManager->GenTextureIndex(RS_GAME_LEVEL)->gl_index;
-
-			glBindTexture(GL_TEXTURE_2D, m_ambientLightmapIndexes[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_lightmapWidths[i], m_lightmapHeights[i], 0, GL_RGBA, GL_UNSIGNED_BYTE, pambientlightmap);
-
-			// Load the diffuse lightmap
-			if(!m_diffuseLightmapIndexes[i])
-				m_diffuseLightmapIndexes[i] = pTextureManager->GenTextureIndex(RS_GAME_LEVEL)->gl_index;
-
-			glBindTexture(GL_TEXTURE_2D, m_diffuseLightmapIndexes[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_lightmapWidths[i], m_lightmapHeights[i], 0, GL_RGBA, GL_UNSIGNED_BYTE, pdiffuselightmap);
-
-			// Load the lightvecs lightmap
-			if(!m_lightVectorsIndexes[i])
-				m_lightVectorsIndexes[i] = pTextureManager->GenTextureIndex(RS_GAME_LEVEL)->gl_index;
-
-			glBindTexture(GL_TEXTURE_2D, m_lightVectorsIndexes[i]);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_lightmapWidths[i], m_lightmapHeights[i], 0, GL_RGBA, GL_UNSIGNED_BYTE, plightvecslightmap);
-
-			// Calculate total memory used
-			Uint32 totalSize = amblightdatasize + diffuselightdatasize + lightvecsdatasize;
-			Con_Printf("Loaded 3 bumpmap lightmaps for layer %d: %.2f mbytes.\n", i, static_cast<Float>(totalSize)/(1024.0f*1024.0f)); 
-			m_bumpMaps = true;
-
-			// Delete allocations
-			delete[] pambientlightmap;
-			delete[] pdiffuselightmap;
-			delete[] plightvecslightmap;
 		}
 	}
+
+	Con_Printf("Done loading lightmaps: %.2f mbytes loaded total.\n", static_cast<Float>(lightmapDataTotal)/(1024.0f*1024.0f));
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -857,8 +889,6 @@ void CBSPRenderer::InitVBO( void )
 
 	// Set this for full vbo
 	numVertexes = numWorldVertexes;
-	// Add in decal cache
-	numVertexes += NB_BSP_DECAL_VERTS;
 
 	// create smoothing object
 	CNormalSmoothing *psmoothing = nullptr;
@@ -1074,21 +1104,33 @@ void CBSPRenderer::InitVBO( void )
 		delete psmoothing;
 	}
 
-	// Set the decal cache
-	m_vertexCacheBase = curVertexIndex;
-	m_vertexCacheIndex = m_vertexCacheBase;
-	m_vertexCacheSize = NB_BSP_DECAL_VERTS;
-	curVertexIndex += NB_BSP_DECAL_VERTS;
-
 	// Set the VBO
-	m_pVBO = new CVBO(gGLExtF, pvertexes, sizeof(bsp_vertex_t)*numVertexes, pindexes, sizeof(Uint32)*numIndexes, true);
+	m_pVBO = new CVBO(gGLExtF, pvertexes, sizeof(bsp_vertex_t)*numVertexes, pindexes, sizeof(Uint32)*numIndexes);
 
 	delete[] pvertexes;
 	delete[] pindexes;
 
-	m_pShader->SetVBO(m_pVBO);
-
 	rns.fog.prevspecialfog = rns.fog.specialfog;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void CBSPRenderer::InitDecalVBO( void )
+{
+	if(m_pDecalVBO)
+		delete m_pDecalVBO;
+
+	// Set the decal cache
+	m_vertexCacheBase = 0; // We use separate buffers now
+	m_vertexCacheIndex = m_vertexCacheBase;
+	m_vertexCacheSize = NB_BSP_DECAL_VERTS;
+
+	// Set the VBO
+	bsp_vertex_t* pvertexes = new bsp_vertex_t[m_vertexCacheSize];
+	m_pDecalVBO = new CVBO(gGLExtF, pvertexes, sizeof(bsp_vertex_t)*m_vertexCacheSize, nullptr, 0, true);
+	delete[] pvertexes;
 }
 
 //=============================================
@@ -1224,7 +1266,10 @@ void CBSPRenderer::InitTextures( CWADTextureResource& wadTextures, const CArray<
 //=============================================
 bool CBSPRenderer::DrawNormal( void ) 
 {
+	// Set shader's VBO and bind it
+	m_pShader->SetVBO(m_pVBO);
 	m_pVBO->Bind();
+
 	if(!m_pShader->EnableShader())
 	{
 		Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
@@ -1274,7 +1319,10 @@ bool CBSPRenderer::DrawTransparent( void )
 	if(m_pCvarDrawWorld->GetValue() < 1)
 		return true;
 
+	// Set shader's VBO and bind it
+	m_pShader->SetVBO(m_pVBO);
 	m_pVBO->Bind();
+
 	if(!m_pShader->EnableShader())
 	{
 		Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
@@ -1349,15 +1397,24 @@ bool CBSPRenderer::DrawTransparent( void )
 		}
 	}
 
+	// Reset everything after rendering transparents
+	m_disableMultiPass = false;
+	m_pVBO->UnBind();
+
 	// Draw decals last
 	if(result)
+	{
+		// Set shader's VBO and bind it
+		m_pDecalVBO->Bind();
+		m_pShader->SetVBO(m_pDecalVBO);
+
 		result = DrawDecals(true);
 
-	// Reset this
-	m_disableMultiPass = false;
+		// Disable VBO
+		m_pDecalVBO->UnBind();
+	}
 
 	m_pShader->DisableShader();
-	m_pVBO->UnBind();
 
 	glDisable(GL_BLEND);
 	glDepthMask(GL_TRUE);
@@ -1377,7 +1434,10 @@ bool CBSPRenderer::DrawTransparent( void )
 //=============================================
 bool CBSPRenderer::DrawSkyBox( bool inZElements ) 
 {
+	// Set shader's VBO and bind it
+	m_pShader->SetVBO(m_pVBO);
 	m_pVBO->Bind();
+
 	if(!m_pShader->EnableShader())
 	{
 		Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
@@ -1446,9 +1506,6 @@ bool CBSPRenderer::DrawSkyBox( bool inZElements )
 	m_pShader->DisableShader();
 	m_pVBO->UnBind();
 
-	m_pShader->DisableShader();
-	m_pVBO->UnBind();
-
 	return true;
 }
 
@@ -1458,9 +1515,6 @@ bool CBSPRenderer::DrawSkyBox( bool inZElements )
 //=============================================
 bool CBSPRenderer::DrawWorld( void ) 
 {
-	// Set view frustum again after sky
-	R_SetFrustum(rns.view.frustum, rns.view.v_origin, rns.view.v_angles, rns.view.fov, rns.view.viewsize_x, rns.view.viewsize_y, true);
-
 	if(m_pCvarDrawWorld->GetValue() < 1)
 		return true;
 
@@ -1865,7 +1919,6 @@ __forceinline void CBSPRenderer::AddBatch( CArray<drawbatch_t>& batches, Uint32&
 //=============================================
 void CBSPRenderer::FlagIfDynamicLighted( const Vector& mins, const Vector& maxs ) 
 {
-	Vector lmins, lmaxs;
 	cl_dlight_t *dl;
 
 	if(m_disableMultiPass)
@@ -1906,6 +1959,12 @@ void CBSPRenderer::FlagIfDynamicLighted( const Vector& mins, const Vector& maxs 
 	while(!dlightlist.end())
 	{
 		dl = dlightlist.get();
+		if(Math::CheckMinsMaxs(mins, maxs, dl->mins, dl->maxs))
+		{
+			dlightlist.next();
+			continue;
+		}
+
 		if(dl->pfrustum)
 		{
 			if(dl->pfrustum->CullBBox(mins, maxs))
@@ -1914,21 +1973,7 @@ void CBSPRenderer::FlagIfDynamicLighted( const Vector& mins, const Vector& maxs 
 				continue;
 			}
 		}
-		else
-		{
-			for(Uint32 i = 0; i < 3; i++)
-			{
-				lmins[i] = dl->origin[i] - dl->radius;
-				lmaxs[i] = dl->origin[i] + dl->radius;
-			}
 
-			if(Math::CheckMinsMaxs(mins, maxs, lmins, lmaxs))
-			{
-				dlightlist.next();
-				continue;
-			}
-		}
-		
 		m_addMulti = true;
 		return;
 	}
@@ -2183,6 +2228,7 @@ bool CBSPRenderer::DrawFirst( void )
 				|| !m_pShader->SetDeterminator(m_attribs.d_specular, FALSE, false)
 				|| !m_pShader->SetDeterminator(m_attribs.d_bumpmapping, FALSE, false)
 				|| !m_pShader->SetDeterminator(m_attribs.d_luminance, FALSE, false)
+				|| !m_pShader->SetDeterminator(m_attribs.d_ao, FALSE, false)
 				|| !m_pShader->SetDeterminator(m_attribs.d_shadertype, shader_solidcolor))
 				return false;
 
@@ -2375,6 +2421,25 @@ bool CBSPRenderer::DrawFirst( void )
 			if(!m_pShader->SetDeterminator(m_attribs.d_luminance, FALSE))
 				return false;
 		}
+		
+		if (pmaterial->ptextures[MT_TX_AO])
+		{
+			if (!m_pShader->SetDeterminator(m_attribs.d_ao, TRUE))
+				return false;
+
+			en_texture_t* paotexture = pmaterial->ptextures[MT_TX_AO];
+			m_pShader->SetUniform1i(m_attribs.u_aomap, textureIndex);
+			R_Bind2DTexture(GL_TEXTURE0 + textureIndex, paotexture->palloc->gl_index);
+			textureIndex++;
+
+			// We'll need texcoords
+			useTexcoord = true;
+		}
+		else
+		{
+			if (!m_pShader->SetDeterminator(m_attribs.d_ao, FALSE))
+				return false;
+		}
 
 		R_ValidateShader(m_pShader);
 
@@ -2520,6 +2585,25 @@ bool CBSPRenderer::DrawFirst( void )
 							return false;
 					}
 
+					if (pmaterial->ptextures[MT_TX_AO])
+					{
+						if (!m_pShader->SetDeterminator(m_attribs.d_ao, TRUE))
+							return false;
+
+						en_texture_t* paotexture = pmaterial->ptextures[MT_TX_AO];
+						m_pShader->SetUniform1i(m_attribs.u_aomap, textureIndex);
+						R_Bind2DTexture(GL_TEXTURE0 + textureIndex, paotexture->palloc->gl_index);
+						textureIndex++;
+
+						// We'll need texcoords
+						useTexcoord = true;
+					}
+					else
+					{
+						if (!m_pShader->SetDeterminator(m_attribs.d_ao, FALSE))
+							return false;
+					}
+
 					R_ValidateShader(m_pShader);
 
 					if(useTexcoord)
@@ -2551,6 +2635,7 @@ bool CBSPRenderer::DrawFirst( void )
 	// Make sure to restore these
 	if(!m_pShader->SetDeterminator(m_attribs.d_alphatest, ALPHATEST_DISABLED, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_bumpmapping, FALSE, false)
+		|| !m_pShader->SetDeterminator(m_attribs.d_ao, FALSE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_luminance, FALSE, false))
 		return false;
 
@@ -2805,6 +2890,22 @@ bool CBSPRenderer::BindTextures( bsp_texture_t* phandle, cubemapinfo_t* pcubemap
 		if(!m_pShader->SetDeterminator(m_attribs.d_luminance, FALSE, false))
 			return false;
 	}
+	
+	if (pmaterial->ptextures[MT_TX_AO])
+	{
+		if (!m_pShader->SetDeterminator(m_attribs.d_ao, TRUE, false))
+			return false;
+
+		en_texture_t* paotexture = pmaterial->ptextures[MT_TX_AO];
+		m_pShader->SetUniform1i(m_attribs.u_aomap, textureIndex);
+		R_Bind2DTexture(GL_TEXTURE0 + textureIndex, paotexture->palloc->gl_index);
+		textureIndex++;
+	}
+	else
+	{
+		if (!m_pShader->SetDeterminator(m_attribs.d_ao, FALSE, false))
+			return false;
+	}
 
 	if(enableNormal)
 		m_pShader->EnableAttribute(m_attribs.a_normal);
@@ -2983,7 +3084,7 @@ bool CBSPRenderer::DrawBrushModel( cl_entity_t& entity, bool isstatic )
 // @brief
 //
 //=============================================
-bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Uint32& texunit, lightbatchtype_t type )
+bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Int32& texunit, lightbatchtype_t type )
 {
 	CMatrix matrix;
 	Vector vtransorigin;
@@ -3102,7 +3203,7 @@ bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Uint32& 
 // @brief
 //
 //=============================================
-void CBSPRenderer::FinishLight( cl_dlight_t* pdlight, Uint32& texunit )
+void CBSPRenderer::FinishLight( cl_dlight_t* pdlight, Int32& texunit )
 {
 	if(pdlight->cone_size)
 	{
@@ -3175,15 +3276,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 	while(!dlightlist.end())
 	{
 		cl_dlight_t* dl = dlightlist.get();
-
-		Vector mins, maxs;
-		for(Uint32 i = 0; i < 3; i++)
-		{
-			mins[i] = dl->origin[i] - dl->radius;
-			maxs[i] = dl->origin[i] + dl->radius;
-		}
-
-		if(!DL_IsLightVisible(rns.view.frustum, mins, maxs, dl))
+		if(!DL_IsLightVisible(rns.view.frustum, dl->mins, dl->maxs, dl))
 		{
 			dlightlist.next();
 			continue;
@@ -3210,7 +3303,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 				Math::VectorAdd(m_pCurrentEntity->curstate.origin, pmodel->maxs, entitymaxs);
 			}
 
-			if(Math::CheckMinsMaxs(mins, maxs, entitymins, entitymaxs))
+			if(Math::CheckMinsMaxs(dl->mins, dl->maxs, entitymins, entitymaxs))
 			{
 				dlightlist.next();
 				continue;
@@ -3246,7 +3339,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 				lightbatch_t& curbatch = lightBatches.get();
 				if(curbatch.type == type && curbatch.lightslist.size() < MAX_BATCH_LIGHTS)
 				{
-					if(!Math::CheckMinsMaxs(curbatch.mins, curbatch.maxs, mins, maxs))
+					if(!Math::CheckMinsMaxs(curbatch.mins, curbatch.maxs, dl->mins, dl->maxs))
 					{
 						pbatch = &curbatch;
 						break;
@@ -3267,37 +3360,37 @@ bool CBSPRenderer::DrawLights( bool specular )
 				Math::RotateToEntitySpace(m_pCurrentEntity->curstate.angles, vorigin);
 		}
 
+		Vector lmins, lmaxs;
 		for(Uint32 i = 0; i < 3; i++)
 		{
-			mins[i] = vorigin[i] - dl->radius;
-			maxs[i] = vorigin[i] + dl->radius;
+			lmins[i] = vorigin[i] - dl->radius;
+			lmaxs[i] = vorigin[i] + dl->radius;
 		}
 
 		if(!pbatch)
 		{
 			lightbatch_t newbatch;
 			newbatch.type = type;
-			newbatch.mins = mins;
-			newbatch.maxs = maxs;
+			newbatch.mins = lmins;
+			newbatch.maxs = lmaxs;
 
 			pbatch = &lightBatches.add(newbatch)->_val;
 		}
-
-		for(Uint32 i = 0; i < 3; i++)
+		else
 		{
-			if(pbatch->mins[i] > mins[i])
-				pbatch->mins[i] = mins[i];
+			for(Uint32 i = 0; i < 3; i++)
+			{
+				if(pbatch->mins[i] > lmins[i])
+					pbatch->mins[i] = lmins[i];
 
-			if(pbatch->maxs[i] < maxs[i])
-				pbatch->maxs[i] = maxs[i];
+				if(pbatch->maxs[i] < lmaxs[i])
+					pbatch->maxs[i] = lmaxs[i];
+			}
 		}
 
 		pbatch->lightslist.add(dl);
 		dlightlist.next();
 	};
-
-	// Highest texture unit used
-	Uint32 highestunit = 0;
 
 	// Now draw the actual batches
 	lightBatches.begin();
@@ -3308,7 +3401,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 		// Latest light index
 		Uint32 lightindex = 0;
 		// Next available texture unit
-		Uint32 texunit = 0;
+		Int32 texunit = 0;
 
 		if(batch.type == LB_TYPE_POINTLIGHT || batch.type == LB_TYPE_POINTLIGHT_SHADOW)
 		{
@@ -3325,16 +3418,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 		while(!batch.lightslist.end())
 		{
 			cl_dlight_t* pdlight = batch.lightslist.get();
-
-			// Build mins/maxs
-			Vector mins, maxs;
-			for(Uint32 i = 0; i < 3; i++)
-			{
-				mins[i] = pdlight->origin[i] - pdlight->radius;
-				maxs[i] = pdlight->origin[i] + pdlight->radius;
-			}
-
-			if(!DL_IsLightVisible(rns.view.frustum, mins, maxs, pdlight))
+			if(!DL_IsLightVisible(rns.view.frustum, pdlight->mins, pdlight->maxs, pdlight))
 			{
 				dlightlist.next();
 				continue;
@@ -3385,31 +3469,52 @@ bool CBSPRenderer::DrawLights( bool specular )
 				pnext = pclsurf->ptexturechain;
 				rns.counters.brushpolies++;
 			}
-
-			// ALWAYS set this, because AMD will complain about multiple
-			// sampler types being set to texture unit 0
-			m_pShader->SetUniform1i(m_attribs.u_normalmap, texunit);
-			m_pShader->SetUniform1i(m_attribs.u_specular, texunit+1);
+			
+			// TRUE if we should send texcoords
+			bool useTexCoord = false;
+			// Normal map unit
+			Int32 normalmapunit = NO_POSITION;
+			// Specular map unit
+			Int32 specularmapunit = NO_POSITION;
+			// AO mapping unit to use
+			Int32 aomapunit = NO_POSITION;
+			// First unit used
+			Int32 firstunit = texunit;
+			// Tex units for current texture
+			Int32 texunit_local = firstunit;
 
 			if(specular)
 			{
 				m_pShader->SetUniform1f(m_attribs.u_phong_exponent, pmaterial->phong_exp*g_pCvarPhongExponent->GetValue());
 				m_pShader->SetUniform1f(m_attribs.u_specularfactor, pmaterial->spec_factor);
 
-				R_Bind2DTexture(GL_TEXTURE0+texunit, pmaterial->ptextures[MT_TX_NORMALMAP]->palloc->gl_index);
-				R_Bind2DTexture(GL_TEXTURE0+texunit+1, pmaterial->ptextures[MT_TX_SPECULAR]->palloc->gl_index);
+				// Set normal map
+				normalmapunit = texunit_local;
+				texunit_local++;
+
+				R_Bind2DTexture(GL_TEXTURE0 + normalmapunit, pmaterial->ptextures[MT_TX_NORMALMAP]->palloc->gl_index);
+
+				// Set specular map
+				specularmapunit = texunit_local;
+				texunit_local++;
+
+				R_Bind2DTexture(GL_TEXTURE0 + specularmapunit, pmaterial->ptextures[MT_TX_SPECULAR]->palloc->gl_index);
 
 				m_pShader->EnableAttribute(m_attribs.a_tangent);
 				m_pShader->EnableAttribute(m_attribs.a_binormal);
-				m_pShader->EnableAttribute(m_attribs.a_texcoord);
+				useTexCoord = true;
 			}
 			else if(pmaterial->ptextures[MT_TX_NORMALMAP] && g_pCvarBumpMaps->GetValue() > 0)
 			{
-				R_Bind2DTexture(GL_TEXTURE0+texunit, pmaterial->ptextures[MT_TX_NORMALMAP]->palloc->gl_index);
+				// Set normal map
+				normalmapunit = texunit_local;
+				texunit_local++;
+
+				R_Bind2DTexture(GL_TEXTURE0 + normalmapunit, pmaterial->ptextures[MT_TX_NORMALMAP]->palloc->gl_index);
 
 				m_pShader->EnableAttribute(m_attribs.a_tangent);
 				m_pShader->EnableAttribute(m_attribs.a_binormal);
-				m_pShader->EnableAttribute(m_attribs.a_texcoord);
+				useTexCoord = true;
 
 				if(!m_pShader->SetDeterminator(m_attribs.d_bumpmapping, true, false))
 					return false;
@@ -3418,25 +3523,63 @@ bool CBSPRenderer::DrawLights( bool specular )
 			{
 				m_pShader->DisableAttribute(m_attribs.a_tangent);
 				m_pShader->DisableAttribute(m_attribs.a_binormal);
-				m_pShader->DisableAttribute(m_attribs.a_texcoord);
+				useTexCoord = false;
+				normalmapunit = texunit_local;
 
 				if(!m_pShader->SetDeterminator(m_attribs.d_specular, false, false)
 					|| !m_pShader->SetDeterminator(m_attribs.d_bumpmapping, false, false))
 					return false;
 			}
 
+			if (pmaterial->ptextures[MT_TX_AO])
+			{
+				// Specify the AO map unit
+				aomapunit = texunit_local;
+				texunit_local++;
+
+				R_Bind2DTexture(GL_TEXTURE0 + aomapunit, pmaterial->ptextures[MT_TX_AO]->palloc->gl_index);
+				useTexCoord = true;
+
+				if (!m_pShader->SetDeterminator(m_attribs.d_ao, true, false))
+					return false;
+			}
+			else
+			{
+				if (!m_pShader->SetDeterminator(m_attribs.d_ao, false, false))
+					return false;
+			}
+
+			// u_specular always needs to be set, otherwise AMD will complain
+			// about two samplers being on the same unit.
+			m_pShader->SetUniform1i(m_attribs.u_normalmap, normalmapunit);
+			if(specularmapunit != NO_POSITION)
+				m_pShader->SetUniform1i(m_attribs.u_specular, specularmapunit);
+			else if(aomapunit != NO_POSITION)
+				m_pShader->SetUniform1i(m_attribs.u_specular, aomapunit + 1);
+			else
+				m_pShader->SetUniform1i(m_attribs.u_specular, normalmapunit + 1);
+
+			if(aomapunit != NO_POSITION)
+				m_pShader->SetUniform1i(m_attribs.u_aomap, aomapunit);
+
+			// Verify that everything is ok with the states
 			if(!m_pShader->VerifyDeterminators())
 				return false;
 
 			// Make sure shaders are valid
 			R_ValidateShader(m_pShader);
 
-			if(highestunit < texunit)
-				highestunit = texunit;
+			if(useTexCoord)
+				m_pShader->EnableAttribute(m_attribs.a_texcoord);
+			else
+				m_pShader->DisableAttribute(m_attribs.a_texcoord);
 
 			drawbatch_t *pdrawbatch = &ptexturehandle->light_batches[0];
 			for(Uint32 j = 0; j < ptexturehandle->numlightbatches; j++, pdrawbatch++)
 				glDrawElements(GL_TRIANGLES, pdrawbatch->end_index-pdrawbatch->start_index, GL_UNSIGNED_INT, BUFFER_OFFSET(pdrawbatch->start_index));
+
+			// Remove all current binds from textures used
+			R_ClearBinds(firstunit);
 		}
 
 		// Clean up bound textures
@@ -3451,6 +3594,9 @@ bool CBSPRenderer::DrawLights( bool specular )
 			batch.lightslist.next();
 			lightindex++;
 		}
+
+		// Remove all current binds
+		R_ClearBinds();
 
 		// Reset everything
 		for(Uint32 i = 0; i < MAX_BATCH_LIGHTS; i++)
@@ -3483,11 +3629,10 @@ bool CBSPRenderer::DrawLights( bool specular )
 	m_pShader->DisableAttribute(m_attribs.a_binormal);
 	m_pShader->DisableAttribute(m_attribs.a_texcoord);
 
-	R_Bind2DTexture(GL_TEXTURE0+highestunit, 0);
-	R_Bind2DTexture(GL_TEXTURE0+highestunit+1, 0);
-
+	// Reset determinators
 	if(!m_pShader->SetDeterminator(m_attribs.d_bumpmapping, FALSE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_specular, FALSE, false)
+		|| !m_pShader->SetDeterminator(m_attribs.d_ao, FALSE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_numlights, 0, false))
 		return false;
 	else
@@ -3880,7 +4025,7 @@ bool CBSPRenderer::DrawFinalSpecular( void )
 
 	if(!m_pShader->SetDeterminator(m_attribs.d_bumpmapping, TRUE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_specular, TRUE, false)
-		|| !m_pShader->SetDeterminator(m_attribs.d_shadertype, shader_speconly))
+		|| !m_pShader->SetDeterminator(m_attribs.d_shadertype, shader_speconly, false))
 		return false;
 
 	m_pShader->SetUniform1i(m_attribs.u_difflightmap, 0);
@@ -3914,6 +4059,21 @@ bool CBSPRenderer::DrawFinalSpecular( void )
 
 		m_pShader->SetUniform1i(m_attribs.u_specular, 3);
 		R_Bind2DTexture(GL_TEXTURE3, pspecular->palloc->gl_index);
+
+		if (pmaterial->ptextures[MT_TX_AO])
+		{
+			if (!m_pShader->SetDeterminator(m_attribs.d_ao, TRUE))
+				return false;
+
+			en_texture_t* paotexture = pmaterial->ptextures[MT_TX_AO];
+			m_pShader->SetUniform1i(m_attribs.u_aomap, 4);
+			R_Bind2DTexture(GL_TEXTURE0 + 4, paotexture->palloc->gl_index);
+		}
+		else
+		{
+			if (!m_pShader->SetDeterminator(m_attribs.d_ao, FALSE))
+				return false;
+		}
 
 		R_ValidateShader(m_pShader);
 
@@ -3982,6 +4142,21 @@ bool CBSPRenderer::DrawFinalSpecular( void )
 
 					m_pShader->SetUniform1i(m_attribs.u_specular, 3);
 					R_Bind2DTexture(GL_TEXTURE3, pspecular->palloc->gl_index);
+
+					if (pmaterial->ptextures[MT_TX_AO])
+					{
+						if (!m_pShader->SetDeterminator(m_attribs.d_ao, TRUE))
+							return false;
+
+						en_texture_t* paotexture = pmaterial->ptextures[MT_TX_AO];
+						m_pShader->SetUniform1i(m_attribs.u_aomap, 4);
+						R_Bind2DTexture(GL_TEXTURE0 + 4, paotexture->palloc->gl_index);
+					}
+					else
+					{
+						if (!m_pShader->SetDeterminator(m_attribs.d_ao, FALSE))
+							return false;
+					}
 
 					R_ValidateShader(m_pShader);
 
@@ -4112,8 +4287,16 @@ bool CBSPRenderer::DrawVSMFaces( void )
 //=============================================
 bool CBSPRenderer::DrawVSM( cl_dlight_t *dl, cl_entity_t** pvisents, Uint32 numentities, bool drawworld )
 {
+	// Set shader's VBO and bind it
+	m_pShader->SetVBO(m_pVBO);
 	m_pVBO->Bind();
-	m_pShader->EnableShader();
+
+	if(!m_pShader->EnableShader())
+	{
+		Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
+		return false;
+	}
+
 	m_pShader->EnableAttribute(m_attribs.a_position);
 	if(!m_pShader->SetDeterminator(m_attribs.d_fogtype, fog_none, false))
 	{
@@ -4616,43 +4799,48 @@ void CBSPRenderer::RemoveDecalFromVBO( bsp_decal_t *pdelete )
 	Uint32 vertexend = plastgroup->start_vertex + plastgroup->num_vertexes;
 	Uint32 nbremoved = vertexend - vertexstart;
 
+	assert(vertexend <= m_vertexCacheIndex);
 	Uint32 nbshift = m_vertexCacheIndex - vertexend;
 	m_vertexCacheIndex -= nbremoved;
 
 	// See if there's anything to shift
-	if(!nbshift)
-		return;
-
-	// Get VBO vertex data
-	const bsp_vertex_t* pvertexdata = static_cast<const bsp_vertex_t*>(m_pVBO->GetVBOData());
-	const bsp_vertex_t* psrcdata = pvertexdata + vertexend;
-
-	m_pVBO->VBOSubBufferData(sizeof(bsp_vertex_t)*vertexstart, psrcdata, sizeof(bsp_vertex_t)*nbshift);
-
-	m_decalsList.push_iterator();
-	m_decalsList.begin();
-	while(!m_decalsList.end())
+	if(nbshift > 0)
 	{
-		bsp_decal_t* pdecal = m_decalsList.get();
-		for(Uint32 i = 0; i < pdecal->polygroups.size(); i++)
+		const bsp_vertex_t* pvertexdata = reinterpret_cast<const bsp_vertex_t*>(m_pDecalVBO->GetVBOData());
+		const bsp_vertex_t* psrcdata = pvertexdata + vertexend;
+
+		Uint32 offsetsize = sizeof(bsp_vertex_t)*vertexstart;
+		Uint32 sizemove = sizeof(bsp_vertex_t)*nbshift;
+
+		m_pDecalVBO->VBOSubBufferData(offsetsize, psrcdata, sizemove);
+
+		// Now shift existing decals
+		m_decalsList.push_iterator();
+		m_decalsList.begin();
+		while(!m_decalsList.end())
 		{
-			decalpolygroup_t* pgroup = pdecal->polygroups[i];
-			if(pgroup->start_vertex > vertexstart)
-				pgroup->start_vertex -= nbremoved;
+			bsp_decal_t* pdecal = m_decalsList.get();
+			for(Uint32 i = 0; i < pdecal->polygroups.size(); i++)
+			{
+				decalpolygroup_t* pgroup = pdecal->polygroups[i];
+				if(pgroup->start_vertex >= vertexstart)
+					pgroup->start_vertex -= nbremoved;
+			}
+
+			m_decalsList.next();
 		}
+		m_decalsList.pop_iterator();
 
-		m_decalsList.next();
-	}
-	m_decalsList.pop_iterator();
-
-	for(Uint32 i = 0; i < m_staticDecalsArray.size(); i++)
-	{
-		bsp_decal_t* pdecal = m_staticDecalsArray[i];
-		for(Uint32 j = 0; j < pdecal->polygroups.size(); j++)
+		// Shift static ones too
+		for(Uint32 i = 0; i < m_staticDecalsArray.size(); i++)
 		{
-			decalpolygroup_t* pgroup = pdecal->polygroups[j];
-			if(pgroup->start_vertex > vertexstart)
-				pgroup->start_vertex -= nbremoved;
+			bsp_decal_t* pdecal = m_staticDecalsArray[i];
+			for(Uint32 j = 0; j < pdecal->polygroups.size(); j++)
+			{
+				decalpolygroup_t* pgroup = pdecal->polygroups[j];
+				if(pgroup->start_vertex >= vertexstart)
+					pgroup->start_vertex -= nbremoved;
+			}
 		}
 	}
 }
@@ -4799,9 +4987,7 @@ void CBSPRenderer::DecalSurface( const msurface_t *surf, bsp_decal_t *pdecal, co
 
 	// see if we have enough space
 	numverts = 3+(nv-3)*3;
-	Uint32 ioffset = GetDecalOffset(numverts);
-	if(!ioffset)
-		return;
+	Int32 ioffset = GetDecalOffset(numverts);
 
 	// See if we need to allocate
 	decalpolygroup_t *pgroup = nullptr;
@@ -4923,7 +5109,7 @@ void CBSPRenderer::DecalSurface( const msurface_t *surf, bsp_decal_t *pdecal, co
 			pgroup->radius = size;
 	}
 
-	m_pVBO->VBOSubBufferData(ioffset*sizeof(bsp_vertex_t), &m_tempDecalVertsArray[0], numverts*sizeof(bsp_vertex_t));
+	m_pDecalVBO->VBOSubBufferData(ioffset*sizeof(bsp_vertex_t), &m_tempDecalVertsArray[0], numverts*sizeof(bsp_vertex_t));
 	pgroup->num_vertexes += numverts;
 }
 
@@ -4943,7 +5129,7 @@ Uint32 CBSPRenderer::GetDecalOffset( Uint32 numverts )
 
 		// Expand VBO
 		bsp_vertex_t *pvertexes = new bsp_vertex_t[allocSize];
-		m_pVBO->Append(pvertexes, sizeof(bsp_vertex_t)*allocSize, nullptr, 0);
+		m_pDecalVBO->Append(pvertexes, sizeof(bsp_vertex_t)*allocSize, nullptr, 0);
 		m_vertexCacheSize += allocSize;
 		delete[] pvertexes;
 	}
@@ -5153,6 +5339,9 @@ bool CBSPRenderer::DrawDecals( bool transparents )
 	m_pShader->SetUniform1i(m_attribs.u_detailtex, 1);
 	m_pShader->SetUniformMatrix4fv(m_attribs.u_modelview, rns.view.modelview.GetMatrix());
 
+	if(transparents)
+		glDisable(GL_CULL_FACE);
+
 	glDepthFunc(GL_LEQUAL);
 	glDepthMask(GL_FALSE);
 
@@ -5190,6 +5379,9 @@ bool CBSPRenderer::DrawDecals( bool transparents )
 	glDisable(GL_BLEND);
 	glDisable(GL_POLYGON_OFFSET_FILL);
 
+	if(transparents)
+		glEnable(GL_CULL_FACE);
+
 	if(!m_pShader->SetDeterminator(m_attribs.d_alphatest, ALPHATEST_DISABLED, false))
 		return false;
 
@@ -5211,8 +5403,16 @@ bool CBSPRenderer::DrawDecals( bool transparents )
 //=============================================
 bool CBSPRenderer::DrawNormalDecals( void )
 {
-	m_pVBO->Bind();
-	m_pShader->EnableShader();
+	// Set shader's VBO
+	m_pShader->SetVBO(m_pDecalVBO);
+	m_pDecalVBO->Bind();
+
+	if(!m_pShader->EnableShader())
+	{
+		Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
+		return false;
+	}
+
 	m_pShader->EnableAttribute(m_attribs.a_position);
 
 	// Set the projection matrix
@@ -5233,7 +5433,7 @@ bool CBSPRenderer::DrawNormalDecals( void )
 		result = m_pShader->SetDeterminator(m_attribs.d_alphatest, ALPHATEST_DISABLED, false);
 
 	m_pShader->DisableShader();
-	m_pVBO->UnBind();
+	m_pDecalVBO->UnBind();
 
 	return result;
 }
@@ -5276,11 +5476,11 @@ void CBSPRenderer::Think( void )
 				if(deathtime <= cls.cl_time)
 				{
 					// Delete this decal
-					RemoveDecalFromVBO(pdecal);
-					delete pdecal;
-
 					m_decalsList.remove(m_decalsList.get_link());
 					m_decalsList.next();
+
+					RemoveDecalFromVBO(pdecal);
+					delete pdecal;
 				}
 			}
 

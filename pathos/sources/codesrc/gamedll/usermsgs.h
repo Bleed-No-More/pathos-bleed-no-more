@@ -58,6 +58,10 @@ struct usermsglist_t
 		viewcontroller(0),
 		viewmodel(0),
 		motionblur(0),
+		vignette(0),
+		filmgrain(0),
+		blackandwhite(0),
+		chromatic(0),
 		showmessage(0),
 		showcustommessage(0),
 		screenfade(0),
@@ -71,7 +75,9 @@ struct usermsglist_t
 		npcawareness(0),
 		newobjective(0),
 		addskytextureset(0),
-		setskytexture(0)
+		setskytexture(0),
+		screenoverlay(0),
+		customitempickup(0)
 		{
 		}
 
@@ -118,6 +124,10 @@ struct usermsglist_t
 	Int32 viewcontroller;
 	Int32 viewmodel;
 	Int32 motionblur;
+	Int32 vignette;
+	Int32 filmgrain;
+	Int32 blackandwhite;
+	Int32 chromatic;
 	Int32 showmessage;
 	Int32 showcustommessage;
 	Int32 screenfade;
@@ -132,6 +142,8 @@ struct usermsglist_t
 	Int32 newobjective;
 	Int32 addskytextureset;
 	Int32 setskytexture;
+	Int32 screenoverlay;
+	Int32 customitempickup;
 }; 
 extern usermsglist_t g_usermsgs;
 
