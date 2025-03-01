@@ -74,3 +74,25 @@
 	}
 	{ "1.000000" }
 }
+
+"sv_holdtowalk"
+{
+	"Walk Speed Mode"
+	{
+		UIDropDownList
+		"Toggle" "0"
+		"Hold to Walk" "1"
+	}
+	{ "1.000000" }
+}
+
+"sv_oldschoolblood"
+{
+	"Quake-like Blood Particles"
+	{
+		UIDropDownList
+		"Disabled" "0"
+		"Enabled" "1"
+	}
+	{ "1.000000" }
+}

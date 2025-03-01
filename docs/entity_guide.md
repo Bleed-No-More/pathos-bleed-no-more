@@ -711,6 +711,32 @@ document:
  - Spawnflags:
    - "Play Once": Entity can only be triggered once, after which it'll remove itself.
    
+# env_implosion
+>This entity was added to make use of the tracer implosion tempentity effect, another effect from GoldSrc that
+>I recreated for Pathos. This effect will spawn a bunch of tracers around a point that will all move towards
+>the center and then disappear. This effect can be reversed, turning the implosion into an explosion of tracer
+>particles. The entity can spawn a single instance of these tracers, or it can spawn them over a period of time
+>as they coalesce or explode. With the timed spawn, the tracers become faster or slower as time goes by, which
+>depends on the spawn flags set.
+
+ - Keyvalues:
+   - "Name": Name of this entity.
+   - "FX Amount (1 - 255)": Degree of transparency for the tracers.
+   - "FX Color (R G B)": The color to be applied to the tracers.
+   - "Radius": The max distance at which the tracers will be spawned at or travel to.
+   - "Tracer Count": The total number of tracers spawned. With a duration specified, this'll be spread out
+   over the duration of the effect.
+   - "Life": The max life of an individual tracer. With a duration specified, this'll decrease as the duration
+   of the effect reaches it's end, or with the "Reverse Intensity" flag set, the particles will spawn with a
+   short lifetime and rapid speed, and then travel slower and live longer as the end of the duration is reached.
+   - "Duration": The duration of the time during which tracers are spawned. If zero, then all the tracers will
+   spawn at once.
+   
+ - Spawnflags:
+   - "Reverse Direction": Instead of an implosion, tracers will explode from the center out.
+   - "Reverse Intensity": With a duration set, instead of tracers becoming faster as the end of the duration is
+   reached, the tracers will start with a rapid speed and then slow down towards the end of the effect.
+   
 # env_ladder
 >This entity allows you to place a ladder into the game, that uses first-person animations to provide a more
 >realistic ladder climbing experience. You need to place the origin of the ladder directly near the wall
@@ -950,15 +976,24 @@ document:
 	 - "Lava Splash": Lava splash effect in a rectangular area.
 	 - "Teleport Splash": Teleport splash effect from Quake 1.
 	 - "Rocket Trail": Rocket trail type, needs "Target" to be set.
+	 - "Spark Streak": Half-Life 1 spark streak particles.
+	 - "Streak Splash": Half-Life 1 streak splash effect.
+	 - "Large Funnel": Resonance cascade funnel effect.
+	 - "Blood Stream": Blood stream effect.
+	 - "Blood Particles": Blood drop effect.
    - "Start color index": Beginning of color index range in the Quake 1 palette.
    - "End color index": End of color index range in the Quake 1 palette.
    - "Particle count": Number of particles to spawn, for "Particle Effect" only.
+   - "Velocity": Velocity of particles spawned.
    - "Rocket trail type": Type of rocket trail to spawn.
    - "Minimum repeat delay": Minimum delay before the effect occurs again.
-   - "Maximum repeat delay": Maximum delay before the effect occurs again.   
+   - "Maximum repeat delay": Maximum delay before the effect occurs again.
+   - "Minimum velocity": Minimum velocity of streak particles.
+   - "Maximum velocity": Maximum velocity of streak particles.
    
  - Spawn flags:
    - "Start On": If set, this entity will spawn on the "On" state.
+   - "Reverse Funnel": Sets whether particles should be blowing out from origin with the funnel effect.
    
 # env_render
 >Use this entity to set the render properties of another entity. It can be used to change the render mode,

@@ -72,6 +72,7 @@ struct cl_efxapi_t
 	tempentity_t*			(*pfnTempModel)( const Vector& origin, const Vector& velocity, const Vector& angles, Float life, Uint32 modelindex, Int32 sound, Float buoyancy, Float waterfriction, Int32 flags );
 	tempentity_t*			(*pfnTempSprite)( const Vector& origin, const Vector& velocity, Float scale, Uint32 modelindex, Int32 rendermode, Int32 renderfx, Float alpha, Float life, Int32 sound, Int32 flags );
 	tracer_t*				(*pfnCreateTracer)( const Vector& origin, const Vector& velocity, const Vector& color, Float alpha, Float width, Float length, Float life, tracer_type_t type );
+	void					(*pfnCreateTracerImplosion)( const Vector& destination, Float radius, Uint32 count, Float life, const Vector& color, Float alpha, bool reverse );
 
 	// Legacy particle effects
 	void					(*pfnParticleExplosion1)( const Vector& origin );
@@ -82,6 +83,11 @@ struct cl_efxapi_t
 	void					(*pfnLavaSplash)( const Vector& origin );
 	void					(*pfnTeleportSplash)( const Vector& origin );
 	void					(*pfnRocketTrail)( const Vector& start, const Vector& end, Uint32 type );
+	void					(*pfnCreateSparkStreak)( const Vector& origin, Uint32 count, Float minVelocity, Float maxVelocity );
+	void					(*pfnCreateStreakSplash)( const Vector& origin, const Vector& direction, Uint32 color, Uint32 count, Float speed, Float minVelocity, Float maxVelocity );
+	void					(*pfnCreateLargeFunnel)( const Vector& origin, bool reverse );
+	void					(*pfnCreateBloodStream)( const Vector& origin, const Vector& direction, Uint32 color, Float speed );
+	void					(*pfnCreateBloodParticles)( const Vector& origin, const Vector& direction, Uint32 color, Float speed );
 
 	// Beam effects
 	beam_t*					(*pfnBeamLightning)( const Vector& src, const Vector& end, Int32 modelindex, Float life, Float width, Float amplitude, Float brightness, Float speed, Float noisespeed, Int32 flags );

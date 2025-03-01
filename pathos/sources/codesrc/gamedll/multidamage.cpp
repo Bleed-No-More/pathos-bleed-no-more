@@ -19,7 +19,8 @@ CMultiDamage gMultiDamage;
 //
 //=============================================
 CMultiDamage::CMultiDamage( void ):
-	m_damageFlags(0)
+	m_damageFlags(0),
+	m_nbTotalShots(0)
 {
 }
 
@@ -35,19 +36,31 @@ CMultiDamage::~CMultiDamage( void )
 // @brief
 //
 //=============================================
-void CMultiDamage::Clear( void )
+void CMultiDamage::Prepare( bullet_types_t bulletType )
 {
-	if(!m_damagedEntities.empty())
-		m_damagedEntities.clear();
-
-	m_damageFlags = 0;
+	Prepare(bulletType, ZERO_VECTOR);
 }
 
 //=============================================
 // @brief
 //
 //=============================================
-void CMultiDamage::ApplyDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Int32 hitgroup )
+void CMultiDamage::Prepare( bullet_types_t bulletType, const Vector& shotDirection )
+{
+	if(!m_damagedEntities.empty())
+		m_damagedEntities.clear();
+
+	m_damageFlags = 0;
+	m_nbTotalShots = 0;
+	m_bulletType = bulletType;
+	m_shotDirection = shotDirection;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void CMultiDamage::ApplyDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker )
 {
 	if(m_damagedEntities.empty())
 		return;
@@ -56,7 +69,7 @@ void CMultiDamage::ApplyDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker,
 	while(!m_damagedEntities.end())
 	{
 		entitydamage_t& dmg = m_damagedEntities.get();
-		dmg.hitgroup = hitgroup;
+
 		if(dmg.pentity)
 			dmg.pentity->TakeDamage(pInflictor, pAttacker, dmg.dmgamount, dmg.dmgtype);
 
@@ -71,7 +84,7 @@ void CMultiDamage::ApplyDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker,
 // @brief
 //
 //=============================================
-void CMultiDamage::AddDamage( CBaseEntity* pentity, Float damage, Int32 dmgtype )
+void CMultiDamage::AddDamage( CBaseEntity* pentity, Float damage, Int32 dmgtype, hitgroups_t hitgroup )
 {
 	if(!pentity)
 		return;
@@ -106,6 +119,23 @@ void CMultiDamage::AddDamage( CBaseEntity* pentity, Float damage, Int32 dmgtype 
 		pdamage->dmgtype |= dmgtype;
 
 	pdamage->dmgamount += damage;
+	pdamage->hitcount++;
+
+	if(hitgroup >= 0 && hitgroup < NB_HITGROUPS)
+	{
+		// Apply to the specific hitgroup
+		pdamage->grouphitcounts[hitgroup]++;
+	}
+	else
+	{
+		// Apply to generic instead
+		pdamage->grouphitcounts[HITGROUP_GENERIC]++;
+
+		// Warn developer
+		gd_engfuncs.pfnCon_Printf("%s - Invalid hitgroup %d specified for entity '%s'.\n", __FUNCTION__, hitgroup, pentity->GetClassName());
+	}
+
+	m_nbTotalShots++;
 }
 
 //=============================================
@@ -139,14 +169,102 @@ const Vector& CMultiDamage::GetAttackDirection( void ) const
 // @brief
 //
 //=============================================
-Int32 CMultiDamage::GetHitGroupForEntity( const CBaseEntity* pEntity )
+Uint32 CMultiDamage::GetShotCount( void ) const
+{
+	return m_nbTotalShots;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bullet_types_t CMultiDamage::GetBulletType( void ) const
+{
+	return m_bulletType;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+const Vector& CMultiDamage::GetShotDirection( void ) const
+{
+	return m_shotDirection;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+Uint32 CMultiDamage::GetEntityHitCount( const CBaseEntity* pEntity )
 {
 	m_damagedEntities.begin();
 	while(!m_damagedEntities.end())
 	{
 		const entitydamage_t& check = m_damagedEntities.get();
 		if(check.pentity == pEntity)
-			return check.hitgroup;
+			return check.hitcount;
+
+		m_damagedEntities.next();
+	}
+
+	return 0;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+Uint32 CMultiDamage::GetHitGroupHitCountForEntity( const CBaseEntity* pEntity, hitgroups_t hitgroup )
+{
+	if(hitgroup < 0 || hitgroup > NB_HITGROUPS)
+	{
+		gd_engfuncs.pfnCon_Printf("%s - Invalid hitgroup '%d' specified.\n", __FUNCTION__, static_cast<Int32>(hitgroup));
+		return 0;
+	}
+
+	m_damagedEntities.begin();
+	while(!m_damagedEntities.end())
+	{
+		const entitydamage_t& check = m_damagedEntities.get();
+		if(check.pentity == pEntity)
+			return check.grouphitcounts[hitgroup];
+
+		m_damagedEntities.next();
+	}
+
+	return 0;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+hitgroups_t CMultiDamage::GetHitHighestCountGroupForEntity( const CBaseEntity* pEntity )
+{
+	m_damagedEntities.begin();
+	while(!m_damagedEntities.end())
+	{
+		const entitydamage_t& check = m_damagedEntities.get();
+		if(check.pentity == pEntity)
+		{
+			hitgroups_t highestGrp = HITGROUP_NONE;
+			Uint32 highestCount = 0;
+
+			for(Uint32 i = 0; i < NB_HITGROUPS; i++)
+			{
+				if(check.grouphitcounts[i] > highestCount)
+				{
+					highestGrp = static_cast<hitgroups_t>(i);
+					highestCount = check.grouphitcounts[i];
+				}
+			}
+
+			if(highestGrp != HITGROUP_NONE)
+				return highestGrp;
+			else
+				return HITGROUP_GENERIC;
+		}
 
 		m_damagedEntities.next();
 	}

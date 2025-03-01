@@ -20,12 +20,14 @@ class CEnvFunnel : public CPointEntity
 public:
 	// The default sprite model
 	static const Char DEFAULT_SPRITE_NAME[];
+
 public:
 	enum
 	{
 		FL_REVERSE			= (1<<0),
 		FL_REMOVE_ON_FIRE	= (1<<1)
 	};
+
 public:
 	explicit CEnvFunnel( edict_t* pedict );
 	virtual ~CEnvFunnel( void );
