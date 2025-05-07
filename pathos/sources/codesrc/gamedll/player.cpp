@@ -1162,12 +1162,7 @@ bool CPlayerEntity::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker,
 	m_damageTypes |= damageFlags;
 
 	// Get attck vector
-	Vector direction;
-	if(pInflictor && !Util::IsNullEntity(pInflictor->GetEdict()))
-	{
-		direction = (pInflictor->GetCenter() - Vector(0, 0, 10) - GetCenter()).Normalize();
-		gMultiDamage.SetAttackDirection(direction);
-	}
+	Vector direction = gMultiDamage.GetDamageDirection();
 
 	// Set dmg inflictor
 	if(pInflictor)
@@ -6580,7 +6575,7 @@ void CPlayerEntity::AddMissionObjective( const Char* pstrObjectiveIdentifier, bo
 		const Char* pstrCheckObjective = gd_engfuncs.pfnGetString(m_objectivesArray[i]);
 		if(!qstrcmp(pstrCheckObjective, pstrObjectiveIdentifier))
 		{
-			gd_engfuncs.pfnCon_Printf("%s - Objective '%s' already in list.\n", __FUNCTION__, pstrObjectiveIdentifier);
+			gd_engfuncs.pfnCon_DPrintf("%s - Objective '%s' already in list.\n", __FUNCTION__, pstrObjectiveIdentifier);
 			return;
 		}
 	}
@@ -6620,7 +6615,7 @@ void CPlayerEntity::AddMissionObjective( const Char* pstrObjectiveIdentifier, bo
 }
 
 //=============================================
-// @brief Removes a new mission objective
+// @brief Removes a mission objective
 //
 //=============================================
 void CPlayerEntity::RemoveMissionObjective( const Char* pstrObjectiveIdentifier, bool notify )
@@ -6641,7 +6636,7 @@ void CPlayerEntity::RemoveMissionObjective( const Char* pstrObjectiveIdentifier,
 
 	if(i == m_objectivesArray.size())
 	{
-		gd_engfuncs.pfnCon_Printf("%s - Objective '%s' not in list.\n", __FUNCTION__, pstrObjectiveIdentifier);
+		gd_engfuncs.pfnCon_DPrintf("%s - Objective '%s' not in list.\n", __FUNCTION__, pstrObjectiveIdentifier);
 		return;
 	}
 

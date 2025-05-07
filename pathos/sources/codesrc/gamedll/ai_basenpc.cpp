@@ -144,7 +144,7 @@ const Uint32 CBaseNPC::NPC_MAX_SCHEDULE_CHANGES = 4;
 // Max number of tasks executed
 const Uint32 CBaseNPC::NPC_MAX_TASK_EXECUTIONS = 8;
 // Navigability minimum distance change
-const Float CBaseNPC::NAVIGABILITY_CHECK_MIN_DISTANCE_CHANGE = 64;
+const Float CBaseNPC::NAVIGABILITY_CHECK_MIN_DISTANCE_CHANGE = 16;
 // Max walk-move traces per frame
 const Uint32 CBaseNPC::MAX_FRAME_WALKMOVE_TRACES = 128;
 
@@ -243,6 +243,7 @@ CBaseNPC::CBaseNPC( edict_t* pedict ):
 	m_flexScriptDuration(0),
 	m_flexScriptFlags(0),
 	m_scriptState(AI_SCRIPT_STATE_NONE),
+	m_lastNavigabilityCheckResult(false),
 	m_pScriptedSequence(nullptr),
 	m_updateYaw(false),
 	m_checkSoundWasSet(false),
@@ -1200,7 +1201,7 @@ void CBaseNPC::BecomeDead( bool startedDead )
 	UpdateExpressions();
 
 	// Bullets, melee, crush and slash create decals
-	if(m_deathMode == DEATH_BLOWBACK && HasCapability(AI_CAP_BLOWBACK_ANIMS))
+	if(m_deathMode == DEATH_BLOWBACK)
 	{
 		// Set animation for blowback and death flag
 		m_idealActivity = ACT_BLOWBACK_FLY;
@@ -1220,7 +1221,7 @@ void CBaseNPC::BecomeDead( bool startedDead )
 		Float blastVelocity = upDp * Common::RandomFloat(250, 350) + (1.0 - upDp) * Common::RandomFloat(1250, 1450);
 
 		// Set angles
-		m_pState->angles = Math::VectorToAngles(m_damageDirection);
+		m_pState->angles = Math::VectorToAngles(-gMultiDamage.GetShotDirection());
 		m_pState->idealyaw = m_pState->angles[YAW];
 		m_updateYaw = false;
 
@@ -1230,7 +1231,7 @@ void CBaseNPC::BecomeDead( bool startedDead )
 		if(blastDmgVelocity > 950)
 			blastDmgVelocity = 950;
 
-		m_pState->velocity -= m_damageDirection * blastDmgVelocity + Vector(0, 0, 1) * blastDmgVelocity * 0.25;
+		m_pState->velocity += -m_damageDirection * blastDmgVelocity + Vector(0, 0, 1) * blastDmgVelocity * 0.25;
 
 		// So we know we're flying upwards
 		if(!wasOnground || upDp > 0.5)
@@ -1400,9 +1401,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 	if(pInflictor)
 	{
 		// Change attack dir to use centers
-		m_damageDirection = (pInflictor->GetCenter() - Vector(0, 0, 8) - GetCenter()).Normalize();
-		// Alter in multidamage also
-		gMultiDamage.SetAttackDirection(m_damageDirection); 
+		m_damageDirection = gMultiDamage.GetDamageDirection();
 	}
 	else
 	{
@@ -1417,7 +1416,6 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 	// If not alive, run the function for corpses
 	if(!IsAlive())
 		return TakeDamageDead(pInflictor, pAttacker, amount, damageFlags);
-
 
 	// Get basic infos
 	Uint32 totalNbShots = gMultiDamage.GetShotCount();
@@ -1436,7 +1434,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 	// Check if we got insta-decapitated
 	bool wasDecapitated = false;
 	if((damageFlags & DMG_INSTANTDECAP) && highestHitGrp == HITGROUP_HEAD 
-		&& CanBeInstantlyDecapitated() && shooterDistance < NPC_DECAP_MAX_DISTANCE)
+		&& CanBeInstantlyDecapitated() && (bulletType != BULLET_NPC_BUCKSHOT && shooterDistance < NPC_DECAP_MAX_DISTANCE))
 	{
 		Uint32 groupHitCount = gMultiDamage.GetHitGroupHitCountForEntity(this, highestHitGrp);
 		Uint32 totalShotCount = gMultiDamage.GetShotCount();
@@ -1539,7 +1537,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 		EmitPainSound();
 
 		// If damaged by weapon that'll cause blowback, always flinch
-		if(HasCapability(AI_CAP_HEAVY_FLINCH_ANIMS) && (amount >= NPC_LIGHT_DAMAGE_TRESHOLD)
+		if(CanHeavyFlinch() && HasCapability(AI_CAP_HEAVY_FLINCH_ANIMS) && (amount >= NPC_LIGHT_DAMAGE_TRESHOLD)
 			&& (m_damageBits & DMG_BLOWBACK) && (g_pGameVars->time - m_lastHeavyFlinchTime) > 0.2)
 		{
 			// Reset this so the NPC flinches for each shot
@@ -1547,7 +1545,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 
 			// Set velocity and angles
 			const Float blowbackReferenceDmg = 100;
-			m_pState->velocity -= m_damageDirection * Common::RandomFloat(105, 125) * (_dmgAmount / blowbackReferenceDmg) * GetBlowbackDmgAccelerationMultiplier();
+			m_pState->velocity += -m_damageDirection * Common::RandomFloat(105, 125) * (_dmgAmount / blowbackReferenceDmg) * GetBlowbackDmgAccelerationMultiplier();
 			m_pState->angles[YAW] = Util::VectorToYaw(m_damageDirection);
 			m_pState->idealyaw = m_pState->angles[YAW];
 			m_updateYaw = false;
@@ -1630,12 +1628,7 @@ bool CBaseNPC::TakeDamageDead( CBaseEntity* pInflictor, CBaseEntity* pAttacker, 
 	// Grab the direction from the inflictor
 	Vector dmgDirection;
 	if(pInflictor)
-	{
-		// Change attack dir to use centers
-		dmgDirection = (pInflictor->GetCenter() - Vector(0, 0, 8) - GetCenter()).Normalize();
-		// Alter in multidamage also
-		gMultiDamage.SetAttackDirection(dmgDirection); 
-	}
+		dmgDirection = gMultiDamage.GetDamageDirection();
 
 	// Destroy the corpse if enough damage was dealt
 	if(damageFlags & DMG_GIB_CORPSE)
@@ -1661,7 +1654,7 @@ bool CBaseNPC::TakeDamageDead( CBaseEntity* pInflictor, CBaseEntity* pAttacker, 
 
 		// Set angles
 		m_pState->flags &= FL_ONGROUND;
-		m_pState->angles = Math::VectorToAngles(gMultiDamage.GetShotDirection());
+		m_pState->angles = Math::VectorToAngles(-gMultiDamage.GetShotDirection());
 		m_pState->idealyaw = m_pState->angles[YAW];
 		m_updateYaw = false;
 
@@ -3987,7 +3980,7 @@ void CBaseNPC::ClearRoute( void )
 	m_movementGoal = MOVE_GOAL_NONE;
 	m_movementActivity = ACT_IDLE;
 
-	if(IsMoving() && m_idealActivity != ACT_BLOWBACK_FLY)
+	if(IsMoving() && m_npcState != NPC_STATE_DEAD)
 		SetIdealActivity(m_movementActivity);
 
 	ClearMemory(AI_MEMORY_MOVE_FAILED);
@@ -5817,13 +5810,14 @@ bool CBaseNPC::CheckEnemy( void )
 		Float distanceChange = (m_enemyLastKnownPosition - m_lastNavigabilityCheckPosition).Length();
 		if(distanceChange > NAVIGABILITY_CHECK_MIN_DISTANCE_CHANGE)
 		{
-			if(CheckRoute(m_pState->origin, m_enemyLastKnownPosition, m_enemy))
-				SetCondition(AI_COND_ENEMY_NAVIGABLE);
-			else
-				ClearCondition(AI_COND_ENEMY_NAVIGABLE);
-
+			m_lastNavigabilityCheckResult = CheckRoute(m_pState->origin, m_enemyLastKnownPosition, m_enemy);\
 			m_lastNavigabilityCheckPosition = m_enemyLastKnownPosition;
 		}
+
+		if(m_lastNavigabilityCheckResult)
+			SetCondition(AI_COND_ENEMY_NAVIGABLE);
+		else
+			ClearCondition(AI_COND_ENEMY_NAVIGABLE);
 	}
 
 	// Clear previous attack conditions
@@ -6984,9 +6978,6 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 //=============================================
 bool CBaseNPC::IsPositionNavigable( const Vector& position )
 {
-	if(m_pState->origin == m_lastNavigabilityCheckPosition)
-		return false;
-
 	Uint64 savedFlags = m_pState->flags;
 	entindex_t savedGroundEntity = m_pState->groundent;
 
@@ -7123,12 +7114,19 @@ bool CBaseNPC::BuildNodeRoute( const Vector& destination, CBaseEntity* pTargetEn
 	Uint64 nodeTypeBits = Util::GetNodeTypeForNPC(this);
 	Int32 startNode = gNodeGraph.GetNearestNode(m_pState->origin, nodeTypeBits, this, pTargetEntity);
 	if(startNode == NO_POSITION)
+	{
+		startNode = gNodeGraph.GetNearestNode(m_pState->origin, (nodeTypeBits|CAINodeGraph::AI_NODE_PRECISE_CHECK), this, pTargetEntity);
 		return false;
+	}
 
 	// Get end node
 	Int32 endNode = gNodeGraph.GetNearestNode(destination, nodeTypeBits, this, pTargetEntity);
 	if(endNode == NO_POSITION)
-		return false;
+	{
+		endNode = gNodeGraph.GetNearestNode(destination, (nodeTypeBits|CAINodeGraph::AI_NODE_PRECISE_CHECK), this, pTargetEntity);
+		if(endNode == NO_POSITION)
+			return false;
+	}
 
 	CNodeIgnoreList startIgnoreList;
 
@@ -8725,6 +8723,7 @@ void CBaseNPC::NPCThink( void )
 
 	// Manage any animation events
 	ManageAnimationEvents();
+
 	if(m_npcState != NPC_STATE_DEAD && m_pState->deadstate != DEADSTATE_DYING)
 	{
 		if(!IsMovementComplete())
@@ -9360,6 +9359,15 @@ Float CBaseNPC::GetRouteLength( void )
 Float CBaseNPC::GetReactionTime( void ) 
 { 
 	return GetSkillCVarValue(g_skillcvars.skillNPCReactionTime);
+}
+
+//=============================================
+// @brief Tells if the NPC is allowed to heavy flinch
+//
+//=============================================
+bool CBaseNPC::CanHeavyFlinch( void )
+{
+	return (m_npcState != NPC_STATE_SCRIPT);
 }
 
 //=============================================

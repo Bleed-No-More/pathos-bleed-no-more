@@ -1391,10 +1391,10 @@ void R_Ent_RotLight( cl_entity_t *pentity )
 
 	Vector vforward, vleft, vback, vright;
 	Math::VectorSubtract(pentity->getAttachment(1), pentity->getAttachment(0), vforward);
-	vforward.Normalize();
+	Math::VectorNormalize(vforward);
 
 	Math::VectorSubtract(pentity->getAttachment(2), pentity->getAttachment(0), vleft);
-	vleft.Normalize();
+	Math::VectorNormalize(vleft);
 
 	Math::VectorCopy(vforward, vback);
 	Math::VectorScale(vback, -1, vback);
@@ -3133,10 +3133,10 @@ bool R_DrawString( color32_t color, Int32 x, Int32 y, const Char* pstrString, co
 		return false;
 
 	gText.SetColor(color.r, color.g, color.b, color.a);
-	if(!gText.DrawSimpleString(pfontset, pstrString, x, y))
+	if(!gText.DrawSimpleString(pstrString, x, y))
 		return false;
 
-	gText.UnBind(pfontset);
+	gText.UnBindCurrentSet();
 	gText.Reset();
 
 	return true;
@@ -3162,12 +3162,12 @@ bool R_DrawStringBox( Int16 minx, Int16 miny, Int16 maxx, Int16 maxy, Int16 inse
 	gText.SetColor(color.r, color.g, color.b, color.a);
 	gText.SetRectangle(minx, miny, maxx, maxy, insetx, insety);
 
-	if(!gText.DrawString(pfontset, pstrString, x, y, reverse, lineoffset, minlineheight, xoffset))
+	if(!gText.DrawString(pstrString, x, y, reverse, lineoffset, minlineheight, xoffset))
 		return false;
 
 	gText.SetRectangle(0, 0, 0, 0, 0, 0);
 
-	gText.UnBind(pfontset);
+	gText.UnBindCurrentSet();
 	gText.Reset();
 
 	return true;
@@ -3196,27 +3196,18 @@ bool R_BeginTextRendering( const font_set_t* pfontset )
 //====================================
 //
 //====================================
-void R_FinishTextRendering( const font_set_t* pfontset )
+void R_FinishTextRendering( void )
 {
-	if(!pfontset)
-	{
-		Con_Printf("%s - No font set specified.\n", __FUNCTION__);
-		return;
-	}
-
-	gText.UnBind(pfontset);
+	gText.UnBindCurrentSet();
 	gText.Reset();
 }
 
 //====================================
 //
 //====================================
-bool R_DrawCharacter( const font_set_t* pfontset, Int32 x, Int32 y, Char character, Uint32 r, Uint32 g, Uint32 b, Uint32 a )
+bool R_DrawCharacter( Int32 x, Int32 y, Char character, Uint32 r, Uint32 g, Uint32 b, Uint32 a )
 {
-	if(!pfontset)
-		return true;
-
-	return gText.DrawChar(pfontset, character, x, y, r, g, b, a);
+	return gText.DrawChar(character, x, y, r, g, b, a);
 }
 
 //====================================
@@ -3591,7 +3582,6 @@ Float R_RenderFxBlend( cl_entity_t* pentity )
 
 	return clamp(alpha, 0, 255);
 }
-
 
 //====================================
 //
@@ -4082,7 +4072,7 @@ void Cmd_EFX_BreakModel( void )
 	Vector dir(Common::RandomFloat(-1, 1), Common::RandomFloat(-1, 1), Common::RandomFloat(-1, 1));
 	dir.Normalize();
 
-	CL_BreakModel(tr.endpos+tr.plane.normal*4, Vector(64, 64, 64), dir, 40, 60, 4, pcache->cacheindex, TE_BOUNCE_SHELL, 0, 0, 0);
+	CL_BreakModel(tr.endpos+tr.plane.normal*4, Vector(64, 64, 64), BM_VELOCITY_RANDOM, dir, 40, 100, 60, 4, pcache->cacheindex, TE_BOUNCE_SHELL, 0, 0, 0);
 }
 
 //====================================
