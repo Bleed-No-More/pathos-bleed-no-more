@@ -1,0 +1,296 @@
+window "GameUIKeypadWindow"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags resolution_relative
+	$title "Keypad Window"
+	$width 420
+	$height 770
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIKeypadWindowTitleText"
+{
+	$text "Enter keycode"
+	$originx 0
+	$originy 25
+	$width 750
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "keypadtitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+tab "GameUIKeypadWindowNumericalDisplay"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 80
+	$width 380
+	$height 100
+	$alpha 100
+	$postspacing 20
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIKeypadWindowNumericalDisplayText"
+{
+	$text "NA"
+	$originx 0
+	$originy 25
+	$width 350
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "keypadtext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIKeypadWindowUpperSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 420
+	$originy 195
+}
+tab "GameUIKeypadWindowButtonTab"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 210
+	$width 380
+	$height 400
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit1"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 5
+	$originy 5
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit2"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 130
+	$originy 5
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit3"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 255
+	$originy 5
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit4"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 5
+	$originy 84
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit5"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 130
+	$originy 84
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit6"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 255
+	$originy 84
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit7"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 5
+	$originy 163
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit8"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 130
+	$originy 163
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit9"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 255
+	$originy 163
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDigit0"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 130
+	$originy 242
+	$text "NUMBER"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonOk"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 255
+	$originy 242
+	$text "Ok"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonCancel"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 5
+	$originy 321
+	$text "Cancel"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonDelete"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 130
+	$originy 321
+	$text "Delete"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIKeypadWindowButtonClear"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 255
+	$originy 321
+	$text "Clear"
+	$width 120
+	$height 74
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIKeypadWindowLowerSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 420
+	$originy 630
+}
+tab "GameUIKeypadWindowNotesSurface"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 645
+	$width 380
+	$height 100
+	$alpha 100
+	$postspacing 20
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIKeypadWindowNotesTitleText"
+{
+	$text "Notes"
+	$originx 0
+	$originy 15
+	$width 380
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "keypadtitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIKeypadWindowNotesPasscodeLabel"
+{
+	$text "Passcode:"
+	$originx 15
+	$originy 60
+	$width 380
+	$height 80
+	$flags align_left resolution_relative
+	$textschema "keypadtext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIKeypadWindowNotesPasscode"
+{
+	$text "NA"
+	$originx 100
+	$originy 60
+	$width 380
+	$height 80
+	$flags align_left resolution_relative
+	$textschema "keypadtext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}

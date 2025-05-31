@@ -1,0 +1,181 @@
+window "GameUILoginWindow"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags resolution_relative
+	$title "Login Window"
+	$width 800
+	$height 900
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowTitleText"
+{
+	$text "Log in to computer"
+	$originx 0
+	$originy 50
+	$flags align_center_horizontal resolution_relative
+	$textschema "logintitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUILoginWindowUpperSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 750
+	$originy 120
+}
+text "GameUILoginWindowUsernameText"
+{
+	$text "Username:"
+	$originx 250
+	$originy 160
+	$flags align_left resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+tab "GameUILoginWindowUsernameInputTab"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$textcolor 255 255 255 255
+	$textinset 10
+	$originx 250
+	$originy 180
+	$width 300
+	$height 100
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowPasswordText"
+{
+	$text "Password:"
+	$originx 250
+	$originy 290
+	$flags align_left resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+tab "GameUILoginWindowPasswordInputTab"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$textcolor 255 255 255 255
+	$textinset 10
+	$originx 250
+	$originy 310
+	$width 300
+	$height 100
+	$alpha 100
+	$postspacing 20
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowPromptText"
+{
+	$text "NA"
+	$originx 0
+	$originy 430
+	$width 350
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUILoginWindowLoginButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_left resolution_relative
+	$originx 150
+	$originy 460
+	$text "Login"
+	$width 200
+	$height 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUILoginWindowCancelButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_right resolution_relative
+	$originx 150
+	$originy 460
+	$text "Cancel"
+	$width 200
+	$height 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUILoginWindowLowerSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 750
+	$originy 720
+}
+text "GameUILoginWindowNotesTitleText"
+{
+	$text "Notes"
+	$originx 0
+	$originy 740
+	$flags align_center_horizontal resolution_relative
+	$textschema "logintitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowUsernameLabel"
+{
+	$text "Username:"
+	$originx 50
+	$originy 780
+	$flags align_left resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowUsernameDataField"
+{
+	$text "NA"
+	$originx 150
+	$originy 780
+	$height 80
+	$flags align_left resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowPasswordLabel"
+{
+	$text "Password:"
+	$originx 50
+	$originy 810
+	$flags align_left resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUILoginWindowPasswordDataField"
+{
+	$text "NA"
+	$originx 150
+	$originy 810
+	$height 80
+	$flags align_left resolution_relative
+	$textschema "logintext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}

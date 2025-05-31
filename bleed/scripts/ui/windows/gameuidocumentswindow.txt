@@ -1,0 +1,114 @@
+window "GameUIDocumentsWindow"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags resolution_relative
+	$title "Documents Window"
+	$textschema "documentstitle"
+	$width 800
+	$height 800
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIDocumentsWindowTitleText"
+{
+	$text "Documents"
+	$originx 0
+	$originy 35
+	$width 750
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "documentstitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIDocumentsWindowReaderTitleText"
+{
+	$text "Dummy"
+	$originx 0
+	$originy 35
+	$width 750
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "documentstitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIDocumentsWindowUpperSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 600
+	$originy 75
+}
+tab GameUIDocumentsWindowButtonsTab
+{
+	$schema "defaultgameuiwindow.txt"
+	$buttonschema "defaultgameuiscroller.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 100
+	$width 700
+	$height 500
+	$alpha 100
+	$textschema "documentstext"
+	$postspacing 20
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+texttab "GameUIDocumentsWindowReaderTextTab"
+{
+	$schema "defaultgameuiwindow.txt"
+	$buttonschema "defaultgameuiscroller.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 100
+	$width 700
+	$height 500
+	$textinset 5
+	$textschema "documentstext"
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIDocumentsWindowLowerSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 600
+	$originy 650
+}
+button "GameUIDocumentsWindowExitButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_bottom align_center_horizontal resolution_relative
+	$originy 50
+	$text "Exit"
+	$width 200
+	$height 60
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIDocumentsWindowReaderBackButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_bottom align_center_horizontal resolution_relative
+	$originy 50
+	$text "Back"
+	$width 200
+	$height 60
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIDocumentsWindowDocumentButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$originy 20
+	$text "NA"
+	$width 500
+	$height 60
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}

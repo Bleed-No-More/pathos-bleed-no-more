@@ -1,0 +1,18 @@
+$schema "MenuButtons"
+{
+	$fontcolor "255 255 255 255"
+	$outlinecolor "0 0 0 255"
+	$fontset "albertus.ttf"
+	$fontsize 50
+
+	$resolution 1080
+	{
+		$fontsize 50
+		$outlineradius 2	
+	}
+	$resolution 768
+	{
+		$fontsize 36
+		$outlineradius 2	
+	}
+}

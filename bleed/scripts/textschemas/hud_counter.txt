@@ -1,0 +1,18 @@
+$schema "HUDCounter"
+{
+	$fontcolor "255 255 255 255"
+	$outlinecolor "0 0 0 255"
+	$fontset "arial.ttf"
+	$fontsize 28
+
+	$resolution 1080
+	{
+		$fontsize 28
+		$outlineradius 2	
+	}
+	$resolution 1024
+	{
+		$fontsize 18
+		$outlineradius 1	
+	}
+}
