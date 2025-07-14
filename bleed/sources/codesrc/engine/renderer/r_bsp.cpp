@@ -71,6 +71,7 @@ CBSPRenderer gBSPRenderer;
 //=============================================
 CBSPRenderer::CBSPRenderer( void ):
 	m_pCurrentEntity(nullptr),
+	m_isEntityTransparent(false),
 	m_multiPass(false),
 	m_addMulti(false),
 	m_bumpMaps(false),
@@ -327,6 +328,12 @@ bool CBSPRenderer::InitGL( void )
 			CString lightmatrix;
 			lightmatrix << "light_" << i << "_matrix";
 
+			CString lightconesize;
+			lightconesize << "light_" << i << "_cone_size";
+
+			CString lightspotdirection;
+			lightspotdirection << "light_" << i << "_spotdirection";
+
 			CString lightdeterminatorshadowmap;
 			lightdeterminatorshadowmap << "light" << i << "_shadowmap";
 
@@ -337,6 +344,8 @@ bool CBSPRenderer::InitGL( void )
 			m_attribs.lights[i].u_light_projtexture = m_pShader->InitUniform(lightprojtexture.c_str(), CGLSLShader::UNIFORM_INT1);
 			m_attribs.lights[i].u_light_shadowmap = m_pShader->InitUniform(lightshadowmap.c_str(), CGLSLShader::UNIFORM_INT1);
 			m_attribs.lights[i].u_light_matrix = m_pShader->InitUniform(lightmatrix.c_str(), CGLSLShader::UNIFORM_MATRIX4);
+			m_attribs.lights[i].u_light_cone_size = m_pShader->InitUniform(lightconesize.c_str(), CGLSLShader::UNIFORM_FLOAT1);
+			m_attribs.lights[i].u_light_spotdirection = m_pShader->InitUniform(lightspotdirection.c_str(), CGLSLShader::UNIFORM_FLOAT3);
 			m_attribs.lights[i].d_light_shadowmap = m_pShader->GetDeterminatorIndex(lightdeterminatorshadowmap.c_str());
 
 			if(!R_CheckShaderUniform(m_attribs.lights[i].u_light_color, lightcolor.c_str(), m_pShader, Sys_ErrorPopup)
@@ -346,6 +355,8 @@ bool CBSPRenderer::InitGL( void )
 				|| !R_CheckShaderUniform(m_attribs.lights[i].u_light_projtexture, lightprojtexture.c_str(), m_pShader, Sys_ErrorPopup)
 				|| !R_CheckShaderUniform(m_attribs.lights[i].u_light_shadowmap, lightshadowmap.c_str(), m_pShader, Sys_ErrorPopup)
 				|| !R_CheckShaderUniform(m_attribs.lights[i].u_light_matrix, lightmatrix.c_str(), m_pShader, Sys_ErrorPopup)
+				|| !R_CheckShaderUniform(m_attribs.lights[i].u_light_cone_size, lightconesize.c_str(), m_pShader, Sys_ErrorPopup)
+				|| !R_CheckShaderUniform(m_attribs.lights[i].u_light_spotdirection, lightspotdirection.c_str(), m_pShader, Sys_ErrorPopup)
 				|| !R_CheckShaderDeterminator(m_attribs.lights[i].d_light_shadowmap, lightdeterminatorshadowmap.c_str(), m_pShader, Sys_ErrorPopup))
 				return false;
 		}
@@ -539,6 +550,7 @@ void CBSPRenderer::ClearGame( void )
 	m_useLightStyles = false;
 
 	m_pCurrentEntity = nullptr;
+	m_isEntityTransparent = false;
 
 	if(!m_surfacesArray.empty())
 		m_surfacesArray.clear();
@@ -864,6 +876,12 @@ void CBSPRenderer::InitVBO( void )
 {
 	if(ens.isloading)
 		VID_DrawLoadingScreen("Loading world geometry");
+
+	if(m_pShader)
+	{
+		m_pShader->ResetShader();
+		m_pShader->SetVBO(nullptr);
+	}
 
 	if(m_pVBO)
 	{
@@ -1349,6 +1367,7 @@ bool CBSPRenderer::DrawTransparent( void )
 	bool result = true;
 	// Transparent entities need special multipass rendering solutions
 	m_multiPassMode = MULTIPASS_TRANSPARENTS;
+	m_isEntityTransparent = true;
 
 	// Draw static entities first
 	if(g_pCvarDrawEntities->GetValue() > 0)
@@ -1360,8 +1379,7 @@ bool CBSPRenderer::DrawTransparent( void )
 			if(!entity.pmodel || entity.pmodel->type != MOD_BRUSH)
 				continue;
 
-			if(!R_IsEntityTransparent(entity)
-				|| R_IsSpecialRenderEntity(entity))
+			if(!R_IsEntityTransparent(entity) || R_IsSpecialRenderEntity(entity))
 				continue;
 
 			// Handle skydraw specially
@@ -1404,16 +1422,12 @@ bool CBSPRenderer::DrawTransparent( void )
 
 	// Reset everything after rendering transparents
 	m_multiPassMode = MULTIPASS_NORMAL;
-
-	// Reset everything
-	m_pVBO->UnBind();
-	m_pShader->DisableShader();
+	m_isEntityTransparent = false;
 
 	// Draw decals last
 	if(result)
 	{
 		m_pShader->SetVBO(m_pDecalVBO);
-		m_pDecalVBO->Bind();
 
 		if(!m_pShader->EnableShader())
 		{
@@ -1472,6 +1486,7 @@ bool CBSPRenderer::DrawSkyBox( bool inZElements )
 	glEnable(GL_DEPTH_TEST);
 
 	m_pCurrentEntity = CL_GetEntityByIndex(WORLDSPAWN_ENTITY_INDEX);
+	m_isEntityTransparent = false;
 
 	if(!inZElements)
 	{
@@ -1534,6 +1549,7 @@ bool CBSPRenderer::DrawWorld( void )
 
 	// Draw world first
 	m_pCurrentEntity = CL_GetEntityByIndex(WORLDSPAWN_ENTITY_INDEX);
+	m_isEntityTransparent = false;
 
 	if(!Prepare())
 		return false;
@@ -1594,6 +1610,7 @@ bool CBSPRenderer::DrawWorld( void )
 
 	// Reset this for texture anims
 	m_pCurrentEntity = CL_GetEntityByIndex(WORLDSPAWN_ENTITY_INDEX);
+	m_isEntityTransparent = false;
 
 	if(!DrawFirst()
 		|| !DrawLights(false)
@@ -1737,6 +1754,8 @@ bool CBSPRenderer::Prepare( void )
 		m_pShader->DisableSync(m_attribs.lights[i].u_light_projtexture);
 		m_pShader->DisableSync(m_attribs.lights[i].u_light_shadowmap);
 		m_pShader->DisableSync(m_attribs.lights[i].u_light_matrix);
+		m_pShader->DisableSync(m_attribs.lights[i].u_light_cone_size);
+		m_pShader->DisableSync(m_attribs.lights[i].u_light_spotdirection);
 	}
 
 	return true;
@@ -1842,34 +1861,32 @@ __forceinline void CBSPRenderer::BatchSurface( msurface_t* psurface )
 		return;
 
 	bool addMultiPass = m_addMulti;
-	if(m_multiPassMode != MULTIPASS_DISABLED)
+
+	// First off, check for lightstyles
+	if(m_multiPassMode != MULTIPASS_DISABLED && m_useLightStyles)
 	{
-		// check for animated lights
-		if(m_useLightStyles)
+		for(Uint32 i = 1; i < MAX_SURFACE_STYLES; i++)
 		{
-			for(Uint32 i = 1; i < MAX_SURFACE_STYLES; i++)
+			Uint32 styleIndex = psurface->styles[i];
+			if(styleIndex == NULL_LIGHTSTYLE_INDEX)
+				break;
+
+			if((*m_pLightStyleValuesArray)[styleIndex] <= 0)
+				continue;
+
+			lightstyleinfo_t& info = ptexture->lightstyleinfos[styleIndex];
+
+			// Add to batch
+			stylebatches_t& batch = info.stylebatches[i];
+			AddBatch(batch.batches, batch.numbatches, pbspsurface);
+
+			// See if we need to flag multipass
+			if(!addMultiPass)
 			{
-				Uint32 styleIndex = psurface->styles[i];
-				if(styleIndex == NULL_LIGHTSTYLE_INDEX)
-					break;
+				addMultiPass = true;
 
-				if((*m_pLightStyleValuesArray)[styleIndex] <= 0)
-					continue;
-
-				lightstyleinfo_t& info = ptexture->lightstyleinfos[styleIndex];
-
-				// Add to batch
-				stylebatches_t& batch = info.stylebatches[i];
-				AddBatch(batch.batches, batch.numbatches, pbspsurface);
-
-				// See if we need to flag multipass
-				if(!addMultiPass)
-				{
-					addMultiPass = true;
-
-					if(!m_multiPass)
-						m_multiPass = true;
-				}
+				if(!m_multiPass)
+					m_multiPass = true;
 			}
 		}
 	}
@@ -2223,7 +2240,7 @@ bool CBSPRenderer::DrawFirst( void )
 			glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 		}
 
-		if(g_pCvarWireFrame->GetValue() >= 1 && !R_IsEntityTransparent(*m_pCurrentEntity))
+		if(g_pCvarWireFrame->GetValue() >= 1 && !m_isEntityTransparent)
 		{
 			m_pShader->DisableAttribute(m_attribs.a_lmapcoord);
 			m_pShader->DisableAttribute(m_attribs.a_texcoord);
@@ -2493,7 +2510,7 @@ bool CBSPRenderer::DrawFirst( void )
 		glBlendFunc(GL_ONE, GL_ONE);
 
 		Float flcolormultiplier;
-		if(R_IsEntityTransparent(*m_pCurrentEntity))
+		if(m_isEntityTransparent)
 		{
 			glDepthFunc(GL_LEQUAL);
 			flcolormultiplier = R_RenderFxBlend(m_pCurrentEntity)/255.0f;
@@ -2601,7 +2618,7 @@ bool CBSPRenderer::DrawFirst( void )
 					}
 
 					// Set up for transparent entity if needed, or just default
-					if(R_IsEntityTransparent(*m_pCurrentEntity))
+					if(m_isEntityTransparent)
 					{
 						en_texture_t* pmaintexture = pmaterial->ptextures[MT_TX_DIFFUSE];
 						m_pShader->SetUniform1i(m_attribs.u_maintexture, textureIndex);
@@ -2775,7 +2792,7 @@ bool CBSPRenderer::BindTextures( bsp_texture_t* phandle, cubemapinfo_t* pcubemap
 {
 	Uint32 textureIndex = 0;
 	en_material_t* pmaterial = phandle->pmaterial;
-	bool bChrome = (R_IsEntityTransparent(*m_pCurrentEntity) && pmaterial->flags & TX_FL_CHROME);
+	bool bChrome = (m_isEntityTransparent && pmaterial->flags & TX_FL_CHROME);
 
 	bool enableNormal = false;
 	bool enableTangent = false;
@@ -3041,6 +3058,7 @@ bool CBSPRenderer::DrawBrushModel( cl_entity_t& entity, bool isstatic )
 		return true;
 
 	m_pCurrentEntity = &entity;
+
 	const brushmodel_t* pmodel = entity.pmodel->getBrushmodel();
 
 	Vector vorigin_local;
@@ -3180,13 +3198,13 @@ bool CBSPRenderer::DrawBrushModel( cl_entity_t& entity, bool isstatic )
 bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Int32& texunit, lightbatchtype_t type )
 {
 	CMatrix matrix;
-	Vector vtransorigin;
 
 	m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_color);
 	m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_origin);
 	m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_radius);
 
 	// Transform light origin to eye space
+	Vector vtransorigin;
 	Math::MatMultPosition(rns.view.modelview.Transpose(), pdlight->origin, &vtransorigin);
 	
 	if(type == LB_TYPE_SPOTLIGHT || type == LB_TYPE_SPOTLIGHT_SHADOW)
@@ -3198,9 +3216,13 @@ bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Int32& t
 		Math::AngleVectors(angles, &vforward, nullptr, nullptr);
 		Math::VectorMA(pdlight->origin, pdlight->radius, vforward, vtarget);
 
+		Int32 textureIndex = pdlight->textureindex;
+		if(textureIndex >= rns.objects.projective_textures.size())
+			textureIndex = 0;
+
 		m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_projtexture);
 		m_pShader->SetUniform1i(m_attribs.lights[lightindex].u_light_projtexture, texunit);
-		R_Bind2DTexture(GL_TEXTURE0+texunit, rns.objects.projective_textures[pdlight->textureindex]->palloc->gl_index);
+		R_Bind2DTexture(GL_TEXTURE0+texunit, rns.objects.projective_textures[textureIndex]->palloc->gl_index);
 		texunit++;
 
 		if(DL_CanShadow(pdlight))
@@ -3221,6 +3243,8 @@ bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Int32& t
 		}
 
 		m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_matrix);
+		m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_cone_size);
+		m_pShader->EnableSync(m_attribs.lights[lightindex].u_light_spotdirection);
 
 		matrix.LoadIdentity();
 		matrix.Translate(0.5, 0.5, 0.5);
@@ -3233,11 +3257,19 @@ bool CBSPRenderer::SetupLight( cl_dlight_t* pdlight, Uint32 lightindex, Int32& t
 		matrix.MultMatrix(rns.view.modelview.GetInverse());
 
 		m_pShader->SetUniformMatrix4fv(m_attribs.lights[lightindex].u_light_matrix, matrix.Transpose());
+		m_pShader->SetUniform1f(m_attribs.lights[lightindex].u_light_cone_size, pdlight->cone_size);
+
+		// Transform light direction vector to eye space
+		Vector transdirection;
+		Math::MatMult(rns.view.modelview.Transpose(), vforward, &transdirection);
+		m_pShader->SetUniform3f(m_attribs.lights[lightindex].u_light_spotdirection, transdirection[0], transdirection[1], transdirection[2]);
 	}
 	else
 	{
 		m_pShader->DisableSync(m_attribs.lights[lightindex].u_light_projtexture);
 		m_pShader->DisableSync(m_attribs.lights[lightindex].u_light_shadowmap);
+		m_pShader->DisableSync(m_attribs.lights[lightindex].u_light_cone_size);
+		m_pShader->DisableSync(m_attribs.lights[lightindex].u_light_spotdirection);
 
 		if(DL_CanShadow(pdlight))
 		{
@@ -3341,7 +3373,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 		glEnable(GL_BLEND);
 		glDepthMask(GL_FALSE);
 
-		if(!R_IsEntityTransparent(*m_pCurrentEntity))
+		if(!m_isEntityTransparent)
 			glDepthFunc(GL_EQUAL);
 		else
 			glDepthFunc(GL_LEQUAL);
@@ -3357,11 +3389,36 @@ bool CBSPRenderer::DrawLights( bool specular )
 			return false;
 
 		// If transparent, cannot use GL_EQUAL for specular pass
-		if(R_IsEntityTransparent(*m_pCurrentEntity))
+		if(m_isEntityTransparent)
 			glDepthFunc(GL_LEQUAL);
 	}
 
-	if(!specular && R_IsEntityTransparent(*m_pCurrentEntity))
+	// We need to draw black fog for transparents
+	if(m_isEntityTransparent && rns.fog.settings.active)
+	{
+		m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0, 0, 0);
+		m_pShader->SetUniform2f(m_attribs.u_fogparams, rns.fog.settings.end, 1.0f/(static_cast<Float>(rns.fog.settings.end)- static_cast<Float>(rns.fog.settings.start)));
+
+		if(rns.fog.specialfog)
+		{
+			if(!m_pShader->SetDeterminator(m_attribs.d_fogtype, fog_fogcoord, false))
+				return false;
+
+			m_pShader->EnableAttribute(m_attribs.a_fogcoord);
+		}
+		else
+		{
+			if(!m_pShader->SetDeterminator(m_attribs.d_fogtype, fog_radial, false))
+				return false;
+		}
+	}
+	else
+	{
+		if(!m_pShader->SetDeterminator(m_attribs.d_fogtype, fog_none, false))
+			return false;
+	}
+
+	if(!specular && m_isEntityTransparent)
 	{
 		Float flalpha = R_RenderFxBlend(m_pCurrentEntity)/255.0f;
 		m_pShader->SetUniform4f(m_attribs.u_color, flalpha, flalpha, flalpha, 1.0);
@@ -3370,18 +3427,15 @@ bool CBSPRenderer::DrawLights( bool specular )
 	{
 		// No blending to account for
 		m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
-		if(!m_pShader->SetDeterminator(m_attribs.d_blendmultipass, blendmultipass_no, false))
-			return false;
 	}
 
 	glBlendFunc(GL_ONE, GL_ONE);
 
 	// Do not supply normal if transparent and not specular
-	if(specular || !R_IsEntityTransparent(*m_pCurrentEntity))
+	if(specular || !m_isEntityTransparent)
 		m_pShader->EnableAttribute(m_attribs.a_normal);
 
-	if(!m_pShader->SetDeterminator(m_attribs.d_fogtype, fog_none, false)
-		|| !m_pShader->SetDeterminator(m_attribs.d_alphatest, ALPHATEST_DISABLED, false))
+	if(!m_pShader->SetDeterminator(m_attribs.d_alphatest, ALPHATEST_DISABLED, false))
 		return false;
 
 	// Linked list of dynamic light batches
@@ -3671,7 +3725,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 					return false;
 			}
 
-			if(!specular && R_IsEntityTransparent(*m_pCurrentEntity))
+			if(!specular && m_isEntityTransparent)
 			{
 				// Set main texture
 				maintexunit = texunit_local;
@@ -3698,6 +3752,11 @@ bool CBSPRenderer::DrawLights( bool specular )
 					if(!m_pShader->SetDeterminator(m_attribs.d_blendmultipass, blendmultipass_texture, false))
 						return false;
 				}
+			}
+			else
+			{
+				if(!m_pShader->SetDeterminator(m_attribs.d_blendmultipass, blendmultipass_no, false))
+					return false;
 			}
 
 			// u_specular always needs to be set, otherwise AMD will complain
@@ -3771,7 +3830,9 @@ bool CBSPRenderer::DrawLights( bool specular )
 			m_pShader->DisableSync(m_attribs.lights[i].u_light_projtexture);
 			m_pShader->DisableSync(m_attribs.lights[i].u_light_shadowmap);
 			m_pShader->DisableSync(m_attribs.lights[i].u_light_matrix);
-		
+			m_pShader->DisableSync(m_attribs.lights[i].u_light_cone_size);
+			m_pShader->DisableSync(m_attribs.lights[i].u_light_spotdirection);
+
 			// Reset all of these
 			if(!m_pShader->SetDeterminator(m_attribs.lights[i].d_light_shadowmap, FALSE, false))
 				return false;		
@@ -3786,7 +3847,7 @@ bool CBSPRenderer::DrawLights( bool specular )
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LEQUAL);
 	}
-	else if(R_IsEntityTransparent(*m_pCurrentEntity))
+	else if(m_isEntityTransparent)
 	{
 		glDepthFunc(GL_EQUAL);
 	}
@@ -3797,11 +3858,18 @@ bool CBSPRenderer::DrawLights( bool specular )
 	m_pShader->DisableAttribute(m_attribs.a_texcoord);
 	m_pShader->DisableAttribute(m_attribs.a_dtexcoord);
 
+	if(m_isEntityTransparent && rns.fog.specialfog)
+	{
+		m_pShader->DisableAttribute(m_attribs.a_fogcoord);
+		m_pShader->SetUniform3f(m_attribs.u_fogcolor, rns.fog.settings.color[0], rns.fog.settings.color[1], rns.fog.settings.color[2]);
+	}
+
 	// Reset determinators
 	if(!m_pShader->SetDeterminator(m_attribs.d_bumpmapping, FALSE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_specular, FALSE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_ao, FALSE, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_numlights, 0, false)
+		|| !m_pShader->SetDeterminator(m_attribs.d_fogtype, fog_none, false)
 		|| !m_pShader->SetDeterminator(m_attribs.d_blendmultipass, blendmultipass_no, false))
 		return false;
 	else
@@ -3820,7 +3888,7 @@ bool CBSPRenderer::DrawFinal( void )
 	glEnable(GL_BLEND);
 	glDepthMask(GL_FALSE);
 
-	if(!R_IsEntityTransparent(*m_pCurrentEntity))
+	if(!m_isEntityTransparent)
 		glDepthFunc(GL_EQUAL);
 	else
 		glDepthFunc(GL_LEQUAL);
@@ -4498,6 +4566,7 @@ bool CBSPRenderer::DrawVSM( cl_dlight_t *dl, cl_entity_t** pvisents, Uint32 nume
 
 	// Set initial entity to world
 	m_pCurrentEntity = CL_GetEntityByIndex(WORLDSPAWN_ENTITY_INDEX);
+	m_isEntityTransparent = false;
 
 	// Disable multipass functionalities
 	m_multiPassMode = MULTIPASS_DISABLED;
@@ -4544,6 +4613,7 @@ bool CBSPRenderer::DrawVSM( cl_dlight_t *dl, cl_entity_t** pvisents, Uint32 nume
 
 	// Reset entity to world
 	m_pCurrentEntity = CL_GetEntityByIndex(WORLDSPAWN_ENTITY_INDEX);
+	m_isEntityTransparent = false;
 
 	// Render all statics to vsm
 	if(result)
@@ -4627,6 +4697,8 @@ bool CBSPRenderer::BatchBrushModelForVSM( cl_entity_t& entity, bool isstatic )
 		return true;
 
 	m_pCurrentEntity = &entity;
+	m_isEntityTransparent = false;
+
 	const brushmodel_t* pmodel = entity.pmodel->getBrushmodel();
 
 	Vector vorigin_local;
@@ -5397,8 +5469,9 @@ bool CBSPRenderer::DrawDecal( bsp_decal_t *pdecal, bool transparents, decal_rend
 
 		if(pgroup->pentity)
 		{
-			if(!transparents && R_IsEntityTransparent(*pgroup->pentity)
-				|| transparents && !R_IsEntityTransparent(*pgroup->pentity)
+			bool isTransparent = R_IsEntityTransparent((*pgroup->pentity), false);
+			if(!transparents && isTransparent
+				|| transparents && !isTransparent
 				|| pgroup->pentity->visframe != rns.framecount)
 				continue;
 

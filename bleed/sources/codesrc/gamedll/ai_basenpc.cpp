@@ -136,7 +136,7 @@ const Float CBaseNPC::NPC_MAX_LOCALMOVE_HEIGHT_DIFF = 1024.0f;
 // Distance at which we can be decapitated
 const Float CBaseNPC::NPC_DECAP_MAX_DISTANCE = 256.0f;
 // Distance at which we can be gibbed by a bullet
-const Float CBaseNPC::NPC_BULLETGIB_MAX_DISTANCE = 256.0f;
+const Float CBaseNPC::NPC_BULLETGIB_MAX_DISTANCE = 350.0f;
 // Number of coverage checks
 const Uint32 CBaseNPC::NPC_NUM_COVERAGE_CHECKS = 6;
 // Max number of schedule changes per think
@@ -1545,7 +1545,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 
 			// Set velocity and angles
 			const Float blowbackReferenceDmg = 100;
-			m_pState->velocity += -m_damageDirection * Common::RandomFloat(105, 125) * (_dmgAmount / blowbackReferenceDmg) * GetBlowbackDmgAccelerationMultiplier();
+			m_pState->velocity += -m_damageDirection * Common::RandomFloat(155, 225) * (_dmgAmount / blowbackReferenceDmg) * GetBlowbackDmgAccelerationMultiplier();
 			m_pState->angles[YAW] = Util::VectorToYaw(m_damageDirection);
 			m_pState->idealyaw = m_pState->angles[YAW];
 			m_updateYaw = false;
@@ -2374,11 +2374,19 @@ void CBaseNPC::CleanupScriptedSequence( void )
 				bonePosition = pScript->GetOrigin();
 			}
 
-			// Sew new position if the move is big enough
+			// Set new position if the move is big enough
 			if((m_pState->origin - bonePosition).Length2D() > NPC_SCRIPT_MOVE_MIN_DIST)
 			{
+				Vector prevOrigin = m_pState->origin;
 				m_pState->origin[0] = bonePosition[0];
 				m_pState->origin[1] = bonePosition[1];
+				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+
+				if(!gd_engfuncs.pfnWalkMove(m_pEdict, 0, 0, WALKMOVE_NORMAL))
+				{
+					m_pState->origin = prevOrigin;
+					gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+				}
 			}
 
 			// Set ideal yaw to current angles
@@ -3868,6 +3876,7 @@ void CBaseNPC::Look( void )
 			case R_DISLIKE:
 				sightConditions.set(AI_COND_SEE_DISLIKE);
 				break;
+			case R_NONE:
 			case R_ALLY:
 				break;
 			default:
