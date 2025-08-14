@@ -1,0 +1,3 @@
+Editor:
+ - Add rotation buttons to face edit(45, 60, 90).
+ - Fix VM tool issues.
