@@ -645,11 +645,15 @@ Int32 CPlayerMovement::ClipVelocity( const Vector& in, const Vector& normal, Vec
 //=============================================
 void CPlayerMovement::PreventMegaBunnyJumping( void )
 {
-	if(m_maxSpeed <= 0)
+	// Restore HL behavior for BNM
+	const Float bunnyJumpMaxSpeedFactor = 1.7;
+	Float maxScaledSpeed = bunnyJumpMaxSpeedFactor * m_maxSpeed;
+
+	if(maxScaledSpeed <= 0)
 		return;
 
 	Float speed = m_pPlayerState->velocity.Length();
-	if(speed <= m_maxSpeed)
+	if(speed <= bunnyJumpMaxSpeedFactor)
 		return;
 
 	Float frac = (m_maxSpeed/speed) * 0.65;
@@ -679,39 +683,11 @@ void CPlayerMovement::Move_Walk( void )
 	Vector wishdir = wishvel;
 	Float wishspeed = Math::VectorNormalize(wishdir);
 
-	// Speed-capping depends on direction
-	Float otherDot;
-	Float forwardMaxDot = Math::DotProduct(wishdir, vforward);
-
-	if(forwardMaxDot <= 0)
-	{
-		// Do not consider backwards velocity as forward limit
-		otherDot = 1.0;
-		forwardMaxDot = 0;
-	}
-	else
-	{
-		// Comes from alignment to right side
-		otherDot = SDL_fabs(Math::DotProduct(wishdir, vright));
-	}
-
-	// Normalize values at 1.0
-	Float dotRatio = (forwardMaxDot + otherDot);
-	if(dotRatio > 1.0)
-	{
-		dotRatio = 1.0f/dotRatio;
-		forwardMaxDot *= dotRatio;
-		otherDot *= dotRatio;
-	}
-
-	Float maxSpeedCheck = forwardMaxDot * m_maxForwardSpeed
-		+ otherDot * m_maxSpeed;
-
 	// Clamp to maxspeed
-	if(wishspeed > maxSpeedCheck)
+	if(wishspeed > m_maxSpeed)
 	{
-		Math::VectorScale(wishvel, maxSpeedCheck/wishspeed, wishvel);
-		wishspeed = maxSpeedCheck;
+		Math::VectorScale(wishvel, m_maxSpeed/wishspeed, wishvel);
+		wishspeed = m_maxSpeed;
 	}
 
 	// Set pmove velocity Z component to zero
