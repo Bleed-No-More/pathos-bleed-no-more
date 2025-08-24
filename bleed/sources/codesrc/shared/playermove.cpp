@@ -1156,34 +1156,7 @@ void CPlayerMovement::Jump( void )
 	Math::VectorNormalize(direction);
 
 	// Add in jump velocity
-	m_pPlayerState->velocity[2] += sqrt(2*800*55.0);
-
-	// Add in forward velocity
-	Vector vforward = m_vForward;
-	Vector vright = m_vRight;
-
-	// Clear this
-	vforward[2] = 0;
-	vforward = vforward.Normalize();
-
-	// Do not add in wishvel when on bike and not onground
-	Vector wishvel;
-	for(Int32 i = 0; i < 2; i++)
-		wishvel[i] = vforward[i]*m_userCmd.forwardmove + vright[i]*m_userCmd.sidemove;
-
-	Vector wishdir = wishvel;
-	Float wishspeed = Math::VectorNormalize(wishdir);
-
-	// Clamp to maxspeed
-	if(wishspeed > m_maxSpeed)
-	{
-		Math::VectorScale(wishvel, m_maxSpeed/wishspeed, wishvel);
-		wishspeed = m_maxSpeed;
-	}
-
-	// Add in movement direction velocity
-	for(Int32 i = 0; i < 2; i++)
-		m_pPlayerState->velocity[i] += direction[i]*sqrt(2*wishspeed*55.0);
+	m_pPlayerState->velocity[2] = sqrt(2*800*55.0);
 
 	// NOTES: Do we really need this?
 	FixupGravityVelocity();
