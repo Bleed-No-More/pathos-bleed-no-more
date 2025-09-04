@@ -1,0 +1,129 @@
+window "GameUIObjectivesWindow"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags resolution_relative
+	$title "Login Window"
+	$width 800
+	$height 900
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIObjectivesWindowTitleText"
+{
+	$text "Mission Objectives"
+	$originx 0
+	$originy 50
+	$flags align_center_horizontal resolution_relative
+	$textschema "logintitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIObjectivesWindowUpperSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 750
+	$originy 120
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+tab GameUIObjectivesWindowButtonTab
+{
+	$schema "defaultgameuiwindow.txt"
+	$buttonschema "defaultgameuiscroller.txt"
+	$flags no_bottom_border align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 170
+	$width 700
+	$height 300
+	$alpha 100
+	$textschema "objectivestext"
+	$postspacing 20
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+tab GameUIObjectivesWindowInfoTab
+{
+	$schema "defaultgameuiwindow.txt"
+	$buttonschema "defaultgameuiscroller.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 470
+	$width 700
+	$height 300
+	$alpha 100
+	$textschema "objectivestext"
+	$postspacing 20
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIObjectivesWindowUpperSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 770
+	$originy 145
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUIObjectivesWindowLowerSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 770
+	$originy 790
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIObjectivesWindowObjectiveButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$originx 0
+	$originy 0
+	$text "NA"
+	$width 600
+	$height 70
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+texttab "GameUIObjectivesWindowObjectiveTextTab"
+{
+	$schema "defaultgameuiwindow.txt"
+	$buttonschema "defaultgameuiscroller.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$textcolor 255 255 255 255
+	$originy 0
+	$width 700
+	$height 300
+	$textinset 5
+	$textschema "objectivestext"
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIObjectivesWindowDefaultDescriptionText"
+{
+	$text "Dummy"
+	$originx 15
+	$originy 470
+	$width 700
+	$height 300
+	$flags align_center_horizontal resolution_relative
+	$textschema "objectivestext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIObjectivesWindowExitButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$originy 820
+	$text "Exit"
+	$width 200
+	$height 60
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}

@@ -72,7 +72,11 @@ Body
 }
 ScrollerBase
 {
-	$default	"gameUIDefaultBody.tga"
+	$default	"gameUIScrollerBody.tga"
+}
+ScrollerBaseBorder
+{
+	$default	"gameUIDefaultRight.tga"
 }
 ArrowDown
 {

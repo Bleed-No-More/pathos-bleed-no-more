@@ -204,10 +204,10 @@ CGameUIWindow* CGameUIManager::SpawnWindow( gameui_windows_t windowtype )
 	case GAMEUI_SUBWAYWINDOW:
 			pWindow = new CGameUISubwayWindow(flags, 0, 0, screenwidth, screenheight);
 		break;
-	case GAMEUI_OBJECTIVESWINDOW:
-			pWindow = new CGameUIObjectivesWindow(flags, 0, 0, screenwidth, screenheight);
-		break;
 #endif
+	case GAMEUI_OBJECTIVESWINDOW:
+			pWindow = CGameUIObjectivesWindow::CreateInstance();
+		break;
 	case GAMEUI_DOCUMENTSWINDOW:
 			pWindow = CGameUIDocumentsWindow::CreateInstance();
 		break;
@@ -397,6 +397,7 @@ void CGameUIManager::RespawnWindow( void )
 			pActiveWindow->initData(scriptfile.c_str(), flags, subwayLineIndex);
 		}
 		break;
+#endif
 	case GAMEUI_OBJECTIVESWINDOW:
 		{
 			// Get the current window state
@@ -418,7 +419,6 @@ void CGameUIManager::RespawnWindow( void )
 			pActiveWindow->initData(objectivesArray, selectedObjective.c_str(), newObjectiveBits);
 		}
 		break;
-#endif
 	case GAMEUI_DOCUMENTSWINDOW:
 		{
 			// Get the current window state

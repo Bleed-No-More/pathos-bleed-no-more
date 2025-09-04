@@ -590,7 +590,7 @@ CGameUILoginWindow* CGameUILoginWindow::CreateInstance( void )
 	CGameUILoginWindow* pNewWindow = new CGameUILoginWindow(CGameUIWindow::FL_WINDOW_NONE, xPosition, yPosition, relativeWidth, relativeHeight);
 	if(!pNewWindow->init(pWinDesc, pWindowObject))
 	{
-		cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUIKeypadWindow'.\n", __FUNCTION__);
+		cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUILoginWindow'.\n", __FUNCTION__);
 		delete pNewWindow;
 		return nullptr;
 	}

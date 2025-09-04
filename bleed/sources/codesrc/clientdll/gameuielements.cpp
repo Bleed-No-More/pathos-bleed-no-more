@@ -336,6 +336,14 @@ void CGameUIObject::setDrawFlags( Int32 flags )
 //====================================
 //
 //====================================
+void CGameUIObject::removeDrawFlags( Int32 flags )
+{
+	m_drawFlags &= ~flags;
+}
+
+//====================================
+//
+//====================================
 void CGameUIObject::think( void )
 {
 	if(m_pChildrenArray.empty())
@@ -853,9 +861,12 @@ bool CGameUISurface::initSchema( const Char* pstrSchemaName )
 			return false;
 	}
 
-	// Init top elements
-	if(!initTopElements())
-		return false;
+	if(!(m_flags & UIEL_FL_NO_TOP_BORDER))
+	{
+		// Init top elements
+		if(!initTopElements())
+			return false;
+	}
 
 	return true;
 }
@@ -2219,6 +2230,9 @@ void CGameUIScroller::readjustDragButton( void )
 	// Force a reset
 	m_pDragButton->adjPosition(0, false);
 	m_prevFullRangeSize = m_fullRangeSize;
+
+	// Make sure elements are properly resized
+	adjustPosition();
 }
 
 //=============================================

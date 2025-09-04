@@ -456,6 +456,8 @@ ui_windowdescription_t* CUISchemaManager::LoadWindowDescriptionFile( const Char*
 						newObject.flags |= UIEL_FL_HOVER_HIGHLIGHT;
 					else if(!qstrcmp(flag, "no_bottom_border"))
 						newObject.flags |= UIEL_FL_NO_BOTTOM_BORDER;
+					else if(!qstrcmp(flag, "no_top_border"))
+						newObject.flags |= UIEL_FL_NO_TOP_BORDER;
 					else if(!qstrcmp(flag, "resolution_relative"))
 						newObject.flags |= UIEL_FL_RESOLUTION_RELATIVE;
 					else

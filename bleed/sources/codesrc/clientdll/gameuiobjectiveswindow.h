@@ -6,7 +6,7 @@ Copyright 2016
 All Rights Reserved.
 ===============================================
 */
-#if 0
+
 #ifndef GAMEUIOBJECTIVESWINDOW_H
 #define GAMEUIOBJECTIVESWINDOW_H
 
@@ -49,36 +49,32 @@ public:
 	};
 
 public:
-	// Object x inset for objectives window
-	static const Uint32 OBJECTIVESWINDOW_TAB_X_INSET;
-	// Object y inset for objectives window
-	static const Uint32 OBJECTIVESWINDOW_TAB_Y_INSET;
-	// Object y spacing for objectives window
-	static const Uint32 OBJECTIVESWINDOW_TAB_X_SPACING;
-	// Object x spacing for objectives window
-	static const Uint32 OBJECTIVESWINDOW_TAB_Y_SPACING;
-	// Text inset for objectives window
-	static const Uint32 OBJECTIVESWINDOW_TAB_TEXT_INSET;
-	// Default text color
-	static const color32_t OBJECTIVESWINDOW_TEXT_COLOR;
-	// Height of the title surface
-	static const Uint32 OBJECTIVESWINDOW_TITLE_SURFACE_HEIGHT;
-	// Height of the button surface
-	static const Uint32 OBJECTIVESWINDOW_BUTTON_SURFACE_HEIGHT;
-	// Height of the info surface
-	static const Uint32 OBJECTIVESWINDOW_INFO_SURFACE_HEIGHT;
-	// Height of the exit button surface
-	static const Uint32 OBJECTIVESWINDOW_EXIT_BUTTON_SURFACE_HEIGHT;
+	// Title text object name
+	static const Char OBJECTIVESWINDOW_OBJ_NAME[];
+	// Title text object name
+	static const Char OBJECTIVESWINDOW_TITLE_TEXT_OBJ_NAME[];
+	// Button tab object name
+	static const Char OBJECTIVESWINDOW_BUTTON_TAB_OBJ_NAME[];
+	// Info tab object name
+	static const Char OBJECTIVESWINDOW_INFO_TAB_OBJ_NAME[];
+	// Upper separator object name
+	static const Char OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME[];
+	// Lower separator object name
+	static const Char OBJECTIVESWINDOW_LOWER_SEPARATOR_OBJ_NAME[];
+	// Objective button object name
+	static const Char OBJECTIVESWINDOW_OBJECTIVE_BUTTON_OBJ_NAME[];
+	// Objective text tab object name
+	static const Char OBJECTIVESWINDOW_OBJECTIVE_TEXT_TAB_OBJ_NAME[];
+	// Default description text tab object name
+	static const Char OBJECTIVESWINDOW_DEFAULT_DESCRIPTION_TEXT_TAB_OBJ_NAME[];
+	// Exit button object name
+	static const Char OBJECTIVESWINDOW_EXIT_BUTTON_OBJ_NAME[];
+	// Window description file
+	static const Char OBJECTIVESWINDOW_DESC_FILE[];
 	// Script subfolder name
 	static const Char OBJECTIVESWINDOW_SCRIPT_SUBFOLDER_NAME[];
 	// Base script name
 	static const Char OBJECTIVESWINDOW_SCRIPT_NAME[];
-	// Color of highlighted buttons for this window
-	static const color32_t OBJECTIVESWINDOW_BUTTON_NEW_COLOR;
-	// Title text default schema set name
-	static const Char OBJECTIVESWINDOW_TITLE_TEXTSCHEMA_NAME[];
-	// Text default font schema name
-	static const Char OBJECTIVESWINDOW_TEXTSCHEMA_NAME[];
 
 public:
 	CGameUIObjectivesWindow( Int32 flags, Int32 originX, Int32 originY, Uint32 width, Uint32 height );
@@ -86,7 +82,7 @@ public:
 
 public:
 	// Initializes the window
-	void init( void ) override;
+	bool init( const ui_windowdescription_t* pWindowDesc, const ui_objectinfo_t* pWindowObject ) override;
 	// Think function for window
 	void think( void ) override;
 
@@ -101,6 +97,9 @@ public:
 	// Manages an event
 	void ManageEvent( objectivesbuttonevent_t event );
 
+	// Creates instance of window
+	static CGameUIObjectivesWindow* CreateInstance( void );
+
 private:
 	// Title text
 	CGameUIText* m_pWindowTitleText;
@@ -114,27 +113,6 @@ private:
 	button_t* m_pCurrentObjective;
 	// Bitflags marking which entries are new
 	Int32 m_newObjectivesBitflags;
-
-	// Edge thickness used
-	Float m_usedEdgeThickness;
-	// Button base X position used
-	Uint32 m_buttonXPos;
-	// Button base Y position used
-	Uint32 m_buttonYPos;
-
-	// Button width used
-	Uint32 m_buttonWidth;
-	// Button height used
-	Uint32 m_buttonHeight;
-
-	// Info surface height used
-	Uint32 m_infoSurfaceHeight;
-	// Text inset used
-	Uint32 m_textInset;
-	// Tab Y inset used
-	Uint32 m_tabYSpacing;
-	// Tab width
-	Uint32 m_tabWidth;
 
 	// Button tab
 	CGameUIScrollableSurface* m_pButtonsTab;
@@ -177,4 +155,3 @@ private:
 };
 
 #endif //GAMEUIOBJECTIVESWINDOW_H
-#endif

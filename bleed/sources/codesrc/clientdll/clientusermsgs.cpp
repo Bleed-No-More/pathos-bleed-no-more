@@ -1642,6 +1642,7 @@ MSGFN MsgFunc_CreateGameUIWindow( const Char* pstrName, const byte* pdata, Uint3
 			}
 		}
 		break;
+#endif
 	case GAMEUI_OBJECTIVESWINDOW:
 		{
 			// Read nb of objectives
@@ -1684,7 +1685,6 @@ MSGFN MsgFunc_CreateGameUIWindow( const Char* pstrName, const byte* pdata, Uint3
 			}
 		}
 		break;
-#endif
 	case GAMEUI_DOCUMENTSWINDOW:
 		{
 			// Read nb of objectives

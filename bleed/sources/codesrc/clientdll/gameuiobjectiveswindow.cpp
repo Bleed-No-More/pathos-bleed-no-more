@@ -6,7 +6,7 @@ Copyright 2016
 All Rights Reserved.
 ===============================================
 */
-#if 0
+
 #include "includes.h"
 #include "huddraw.h"
 #include "r_interface.h"
@@ -19,38 +19,32 @@ All Rights Reserved.
 #include "snd_shared.h"
 #include "gameui_shared.h"
 
-// Object x inset for objectives window
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_TAB_X_INSET = 30;
-// Object y inset for objectives window
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_TAB_Y_INSET = 60;
-// Object y spacing for objectives window
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_TAB_Y_SPACING = 20;
-// Object x spacing for objectives window
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_TAB_X_SPACING = 80;
-// Text inset for objectives window
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_TAB_TEXT_INSET = 10;
-// Default text color
-const color32_t CGameUIObjectivesWindow::OBJECTIVESWINDOW_TEXT_COLOR = color32_t(255, 255, 255, 255);
-// Height of the title surface
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_TITLE_SURFACE_HEIGHT = 50;
-// Height of the button surface
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_BUTTON_SURFACE_HEIGHT = 350;
-// Height of the info surface
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_INFO_SURFACE_HEIGHT = 200;
-// Height of the exit button surface
-const Uint32 CGameUIObjectivesWindow::OBJECTIVESWINDOW_EXIT_BUTTON_SURFACE_HEIGHT = 100;
-// Number of objective buttons
-const Uint32 CGameUIObjectivesWindow::MAX_NB_OBJECTIVE_BUTTONS = 32;
+// Title text object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_OBJ_NAME[] = "GameUIObjectivesWindow";
+// Title text object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_TITLE_TEXT_OBJ_NAME[] = "GameUIObjectivesWindowTitleText";
+// Button tab object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_BUTTON_TAB_OBJ_NAME[] = "GameUIObjectivesWindowButtonTab";
+// Info tab object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_INFO_TAB_OBJ_NAME[] = "GameUIObjectivesWindowInfoTab";
+// Upper separator object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME[] = "GameUIObjectivesWindowUpperSeparator";
+// Lower separator object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_LOWER_SEPARATOR_OBJ_NAME[] = "GameUIObjectivesWindowLowerSeparator";
+// Objective button object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_OBJECTIVE_BUTTON_OBJ_NAME[] = "GameUIObjectivesWindowObjectiveButton";
+// Objective text tab object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_OBJECTIVE_TEXT_TAB_OBJ_NAME[] = "GameUIObjectivesWindowObjectiveTextTab";
+// Default description default description text object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_DEFAULT_DESCRIPTION_TEXT_TAB_OBJ_NAME[] = "GameUIObjectivesWindowDefaultDescriptionText";
+// Exit button object name
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_EXIT_BUTTON_OBJ_NAME[] = "GameUIObjectivesWindowExitButton";
+// Window description file
+const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_DESC_FILE[] = "gameuiobjectiveswindow.txt";
 // Script subfolder name
 const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_SCRIPT_SUBFOLDER_NAME[] = "objectives";
 // Base script name
 const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_SCRIPT_NAME[] = "defaults.txt";
-// Color of highlighted buttons for this window
-const color32_t CGameUIObjectivesWindow::OBJECTIVESWINDOW_BUTTON_NEW_COLOR = color32_t(0, 255, 0, 100);
-// Title text default schema set name
-const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_TITLE_TEXTSCHEMA_NAME[] = "objectivestitle";
-// Text default font schema name
-const Char CGameUIObjectivesWindow::OBJECTIVESWINDOW_TEXTSCHEMA_NAME[] = "objectivestext";
 
 //====================================
 //
@@ -59,18 +53,8 @@ CGameUIObjectivesWindow::CGameUIObjectivesWindow( Int32 flags, Int32 originX, In
 	CGameUIWindow(flags, originX, originY, width, height),
 	m_pWindowTitleText(nullptr),
 	m_pDefaultDescription(nullptr),
-	m_pExitButton(nullptr),
 	m_pCurrentObjective(nullptr),
 	m_newObjectivesBitflags(0),
-	m_usedEdgeThickness(0),
-	m_buttonXPos(0),
-	m_buttonYPos(0),
-	m_buttonWidth(0),
-	m_buttonHeight(0),
-	m_infoSurfaceHeight(0),
-	m_textInset(0),
-	m_tabYSpacing(0),
-	m_tabWidth(0),
 	m_pButtonsTab(nullptr),
 	m_pInfoTab(nullptr),
 	m_pFontSet(nullptr)
@@ -87,146 +71,185 @@ CGameUIObjectivesWindow::~CGameUIObjectivesWindow( void )
 //====================================
 //
 //====================================
-void CGameUIObjectivesWindow::init( void )
+bool CGameUIObjectivesWindow::init( const ui_windowdescription_t* pWindowDesc, const ui_objectinfo_t* pWindowObject )
 {
-	// Init basic window elements
-	Uint32 verticalbarheight, middlebarwidth, barThickness;
-	CGameUIWindow::initBackground(verticalbarheight, middlebarwidth, barThickness);
-
-	Uint32 tabTopInset = gHUDDraw.ScaleX(GAMEUIWINDOW_TAB_TOP_INSET);
-	Uint32 hBarYOrigin = gHUDDraw.ScaleY(GAMEUIWINDOW_H_BAR_Y_ORIGIN);
-	Uint32 tabSideInset = gHUDDraw.ScaleX(GAMEUIWINDOW_TAB_SIDE_INSET);
-	Uint32 mainTabMaxWidth = gHUDDraw.ScaleX(GAMEUIWINDOW_MAIN_TAB_MAX_WIDTH);
-	Uint32 titleSurfaceHeight = gHUDDraw.ScaleY(OBJECTIVESWINDOW_TITLE_SURFACE_HEIGHT);
-	Uint32 buttonSurfaceHeight = gHUDDraw.ScaleY(OBJECTIVESWINDOW_BUTTON_SURFACE_HEIGHT);
-	Uint32 exitButtonSurfaceHeight = gHUDDraw.ScaleY(OBJECTIVESWINDOW_EXIT_BUTTON_SURFACE_HEIGHT);
-	Uint32 tabXSpacing = gHUDDraw.ScaleX(OBJECTIVESWINDOW_TAB_X_SPACING);
-
-	m_usedEdgeThickness = gHUDDraw.ScaleX(GAMEUIWINDOW_EDGE_THICKNESS);
-	m_infoSurfaceHeight = gHUDDraw.ScaleY(OBJECTIVESWINDOW_INFO_SURFACE_HEIGHT);
-	m_tabYSpacing = gHUDDraw.ScaleY(OBJECTIVESWINDOW_TAB_Y_SPACING);
-	m_textInset = gHUDDraw.ScaleY(OBJECTIVESWINDOW_TAB_TEXT_INSET);
+	// Initialize schema for surface object
+	if(!CGameUISurface::initSchema(pWindowObject->getSchema().c_str()))
+		return false;
 
 	//
 	// Create the title text object
 	//
-	Uint32 screenWidth, screenHeight;
-	cl_renderfuncs.pfnGetScreenSize(screenWidth, screenHeight);
+	const ui_objectinfo_t* pTitleTextObject = pWindowDesc->getObject(UI_OBJECT_TEXT, OBJECTIVESWINDOW_TITLE_TEXT_OBJ_NAME);
+	if(!pTitleTextObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_TITLE_TEXT_OBJ_NAME);
+		return false;
+	}
 
-	const font_set_t* pTitleFont = cl_engfuncs.pfnGetResolutionSchemaFontSet(OBJECTIVESWINDOW_TITLE_TEXTSCHEMA_NAME, screenHeight);
+	const font_set_t* pTitleFont = g_pGUIManager->GetSchemaResolutionFont(pTitleTextObject->getTextSchemaName().c_str());
 	if(!pTitleFont)
 		pTitleFont = gGameUIManager.GetDefaultFontSet();
 
+	m_pWindowTitleText = new CGameUIText(
+		pTitleTextObject->getFlags(), 
+		pTitleTextObject->getTextColor(), 
+		pTitleFont, 
+		pWindowObject->getXInset() + pTitleTextObject->getXOrigin(), 
+		pWindowObject->getYInset() + pTitleTextObject->getYOrigin());
+
+	m_pWindowTitleText->setParent(this);
+	m_pWindowTitleText->setText(pTitleTextObject->getText().c_str());
+
 	//
-	// Create the tab objects
+	// Create upper separator
 	//
-	m_tabWidth = middlebarwidth - barThickness*2 - tabSideInset*2;
-	if(m_tabWidth > mainTabMaxWidth)
-		m_tabWidth = mainTabMaxWidth;
+	const ui_objectinfo_t* pUpperSeparatorObject = pWindowDesc->getObject(UI_OBJECT_SEPARATOR_H, OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+	if(!pUpperSeparatorObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
 
-	Int32 tabOriginX = m_width / 2.0 - m_tabWidth / 2.0;
-	Int32 tabOriginY = hBarYOrigin + barThickness + tabTopInset;
+	CGameUIHorizontalSeparator* pUpperSeparator = new CGameUIHorizontalSeparator(
+		pUpperSeparatorObject->getFlags(), 
+		pUpperSeparatorObject->getWidth(), 
+		pUpperSeparatorObject->getHeight(), 
+		pWindowObject->getXInset() + pUpperSeparatorObject->getXOrigin(), 
+		pWindowObject->getYInset() + pUpperSeparatorObject->getYOrigin());
+	pUpperSeparator->setParent(this);
 
-	// Create the title tab
-	CGameUISurface* pTitleTab = new CGameUISurface(UIEL_FL_NO_BOTTOM_BORDER,
-		m_usedEdgeThickness,
-		GAMEUIWINDOW_MAIN_TAB_COLOR,
-		GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-		tabOriginX,
-		tabOriginY,
-		m_tabWidth,
-		titleSurfaceHeight);
-	pTitleTab->setParent(this);
+	if(!pUpperSeparator->initSchema(pUpperSeparatorObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
 
-	// Add the title for the window
-	m_pFontSet = cl_engfuncs.pfnGetResolutionSchemaFontSet(OBJECTIVESWINDOW_TEXTSCHEMA_NAME, screenHeight);
-	if (!m_pFontSet)
-		m_pFontSet = gGameUIManager.GetDefaultFontSet();
+	//
+	// Create the tab object
+	//
+	const ui_objectinfo_t* pButtonTabObject = pWindowDesc->getObject(UI_OBJECT_TAB, OBJECTIVESWINDOW_BUTTON_TAB_OBJ_NAME);
+	if(!pButtonTabObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_BUTTON_TAB_OBJ_NAME);
+		return false;
+	}
 
-	// Create the buttons tab
-	tabOriginY += titleSurfaceHeight;
-	m_pButtonsTab = new CGameUIScrollableSurface(UIEL_FL_NO_BOTTOM_BORDER,
-		m_usedEdgeThickness,
-		GAMEUIWINDOW_MAIN_TAB_COLOR,
-		GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-		GAMEUIWINDOW_BUTTON_HIGHLIGHT_COLOR,
-		m_pFontSet,
-		tabOriginX,
-		tabOriginY,
-		m_tabWidth,
-		buttonSurfaceHeight,
-		m_tabYSpacing);
+	m_pButtonsTab = new CGameUIScrollableSurface(pButtonTabObject->getFlags(), 
+		pButtonTabObject->getFont(),
+		pWindowObject->getXInset() + pButtonTabObject->getXOrigin(),
+		pWindowObject->getYInset() + pButtonTabObject->getYOrigin(),
+		pButtonTabObject->getWidth(),
+		pButtonTabObject->getHeight(),
+		pButtonTabObject->getListPostSpacing());
 	m_pButtonsTab->setParent(this);
 
-	// Create the info tab
-	tabOriginY += buttonSurfaceHeight;
-	m_pInfoTab = new CGameUISurface(UIEL_FL_NO_BOTTOM_BORDER,
-		m_usedEdgeThickness,
-		GAMEUIWINDOW_MAIN_TAB_COLOR,
-		GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-		tabOriginX,
-		tabOriginY,
-		m_tabWidth,
-		m_infoSurfaceHeight);
+	if(!m_pButtonsTab->initSchema(pButtonTabObject->getSchema().c_str(), pButtonTabObject->getButtonSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUITextTab'.\n");
+		return false;
+	}
+
+	//
+	// Create the info tab object
+	//
+	const ui_objectinfo_t* pInfoTabObject = pWindowDesc->getObject(UI_OBJECT_TAB, OBJECTIVESWINDOW_INFO_TAB_OBJ_NAME);
+	if(!pInfoTabObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_INFO_TAB_OBJ_NAME);
+		return false;
+	}
+
+	m_pInfoTab = new CGameUISurface(pInfoTabObject->getFlags(),
+		pWindowObject->getXInset() + pInfoTabObject->getXOrigin(),
+		pWindowObject->getYInset() + pInfoTabObject->getYOrigin(),
+		pInfoTabObject->getWidth(),
+		pInfoTabObject->getHeight());
 	m_pInfoTab->setParent(this);
 
-	// Create the exit button tab
-	tabOriginY += m_infoSurfaceHeight;
-	CGameUISurface* pExitButtonTab = new CGameUISurface(UIEL_FL_NONE,
-		m_usedEdgeThickness,
-		GAMEUIWINDOW_MAIN_TAB_COLOR,
-		GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-		tabOriginX,
-		tabOriginY,
-		m_tabWidth,
-		exitButtonSurfaceHeight);
-	pExitButtonTab->setParent(this);
+	if(!m_pInfoTab->initSchema(pInfoTabObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUITextTab'.\n");
+		return false;
+	}
 
-	m_pWindowTitleText = new CGameUIText(UIEL_FL_ALIGN_CH|UIEL_FL_ALIGN_CV,
-		OBJECTIVESWINDOW_TEXT_COLOR,
-		m_pFontSet,
-		0,
-		0);
-	m_pWindowTitleText->setParent(pTitleTab);
+	//
+	// Create the title text object
+	//
+	const ui_objectinfo_t* pDefaultDescriptionObject = pWindowDesc->getObject(UI_OBJECT_TEXT, OBJECTIVESWINDOW_DEFAULT_DESCRIPTION_TEXT_TAB_OBJ_NAME);
+	if(!pDefaultDescriptionObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_DEFAULT_DESCRIPTION_TEXT_TAB_OBJ_NAME);
+		return false;
+	}
 
-	// Create the buttons
-	Uint32 buttonWidth = m_buttonWidth = m_tabWidth - 2*tabXSpacing;
-	Uint32 buttonHeight = m_buttonHeight = (buttonSurfaceHeight - m_tabYSpacing * 7)/6;
+	const font_set_t* pDescriptionFont = g_pGUIManager->GetSchemaResolutionFont(pDefaultDescriptionObject->getTextSchemaName().c_str());
+	if(!pDescriptionFont)
+		pDescriptionFont = gGameUIManager.GetDefaultFontSet();
 
-	Int32 buttonXPos = m_buttonXPos = tabXSpacing;
-	Int32 buttonYPos = m_buttonYPos = m_tabYSpacing;
+	m_pDefaultDescription = new CGameUIText(
+		pDefaultDescriptionObject->getFlags(), 
+		pDefaultDescriptionObject->getTextColor(), 
+		pDescriptionFont, 
+		pWindowObject->getXInset() + pDefaultDescriptionObject->getXOrigin(), 
+		pWindowObject->getYInset() + pDefaultDescriptionObject->getYOrigin());
 
-	// Create default description
-	m_pDefaultDescription = new CGameUIText(UIEL_FL_NONE,
-		OBJECTIVESWINDOW_TEXT_COLOR,
-		m_pFontSet,
-		"",
-		0,
-		0,
-		m_tabWidth,
-		m_infoSurfaceHeight,
-		m_textInset);
-	m_pDefaultDescription->setParent(m_pInfoTab);
-	m_pDefaultDescription->setVisible(true);
+	m_pDefaultDescription->setParent(this);
+	m_pDefaultDescription->setText(pDefaultDescriptionObject->getText().c_str());
 
-	// Create the exit button
-	buttonYPos = m_tabYSpacing;
-	buttonHeight = exitButtonSurfaceHeight - m_tabYSpacing * 2;
+	//
+	// Create lower separator
+	//
+	const ui_objectinfo_t* pLowerSeparatorObject = pWindowDesc->getObject(UI_OBJECT_SEPARATOR_H, OBJECTIVESWINDOW_LOWER_SEPARATOR_OBJ_NAME);
+	if(!pLowerSeparatorObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_LOWER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
 
-	CGameUIObjectivesWindowCallbackEvent* pClearEvent = new CGameUIObjectivesWindowCallbackEvent(this,  OBJ_BUTTON_EXIT);
-	CGameUIButton* pClearButton = new CGameUIButton(UIEL_FL_NONE, 
-		pClearEvent,
-		SDLK_DELETE,
-		m_usedEdgeThickness,
-		GAMEUIWINDOW_MAIN_TAB_COLOR,
-		GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-		GAMEUIWINDOW_BUTTON_HIGHLIGHT_COLOR,
-		buttonXPos,
-		buttonYPos,
-		buttonWidth,
-		buttonHeight);
-	pClearButton->setParent(pExitButtonTab);
-	pClearButton->setText("Exit");
+	CGameUIHorizontalSeparator* pLowerSeparator = new CGameUIHorizontalSeparator(
+		pLowerSeparatorObject->getFlags(), 
+		pLowerSeparatorObject->getWidth(), 
+		pLowerSeparatorObject->getHeight(), 
+		pWindowObject->getXInset() + pLowerSeparatorObject->getXOrigin(), 
+		pWindowObject->getYInset() + pLowerSeparatorObject->getYOrigin());
+	pLowerSeparator->setParent(this);
+
+	if(!pLowerSeparator->initSchema(pLowerSeparatorObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", OBJECTIVESWINDOW_LOWER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
+
+	//
+	// Create the "Exit" button
+	//
+	const ui_objectinfo_t* pExitButtonObject = pWindowDesc->getObject(UI_OBJECT_BUTTON, OBJECTIVESWINDOW_EXIT_BUTTON_OBJ_NAME);
+	if(!pExitButtonObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_EXIT_BUTTON_OBJ_NAME);
+		return false;
+	}
+
+	CGameUIObjectivesWindowCallbackEvent* pExitEvent = new CGameUIObjectivesWindowCallbackEvent(this, OBJ_BUTTON_EXIT);
+	CGameUIButton* pExitButton = new CGameUIButton(pExitButtonObject->getFlags(), 
+		pExitEvent, 
+		SDLK_RETURN,
+		pWindowObject->getXInset() + pExitButtonObject->getXOrigin(),
+		pWindowObject->getYInset() + pExitButtonObject->getYOrigin(),
+		pExitButtonObject->getWidth(),
+		pExitButtonObject->getHeight());
+
+	if(!pExitButton->initSchema(pExitButtonObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIButton'.\n");
+		return false;
+	}
+
+	pExitButton->setText(pExitButtonObject->getText().c_str());
+	pExitButton->setParent(this);
+
+	return true;
 }
 
 //====================================
@@ -273,6 +296,48 @@ void CGameUIObjectivesWindow::think( void )
 //====================================
 bool CGameUIObjectivesWindow::initData( const CArray<CString>& objectivesArray, const Char* pstrActiveObjectiveName, Int32& newObjectivesBitflags )
 {
+	// Get schema for the buttons and the documents tab
+	ui_windowdescription_t* pWindowDesc = g_pGUIManager->LoadWindowDescriptionFile(OBJECTIVESWINDOW_OBJ_NAME, OBJECTIVESWINDOW_DESC_FILE);
+ 	if(!pWindowDesc)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to load window description '%s' for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_OBJ_NAME);
+		return nullptr;
+	}
+
+	const ui_objectinfo_t* pInfoTabObject = pWindowDesc->getObject(UI_OBJECT_TAB, OBJECTIVESWINDOW_INFO_TAB_OBJ_NAME);
+	if(!pInfoTabObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_INFO_TAB_OBJ_NAME);
+		return false;
+	}
+
+	const ui_objectinfo_t* pButtonTabObject = pWindowDesc->getObject(UI_OBJECT_TAB, OBJECTIVESWINDOW_BUTTON_TAB_OBJ_NAME);
+	if(!pButtonTabObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_BUTTON_TAB_OBJ_NAME);
+		return false;
+	}
+
+	//
+	// Get the objective button object definition
+	//
+	const ui_objectinfo_t* pObjectiveButtonObject = pWindowDesc->getObject(UI_OBJECT_BUTTON, OBJECTIVESWINDOW_OBJECTIVE_BUTTON_OBJ_NAME);
+	if(!pObjectiveButtonObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_OBJECTIVE_BUTTON_OBJ_NAME);
+		return false;
+	}
+
+	//
+	// Get the objective button object definition
+	//
+	const ui_objectinfo_t* pObjectiveTextTabObject = pWindowDesc->getObject(UI_OBJECT_TEXT_TAB, OBJECTIVESWINDOW_OBJECTIVE_TEXT_TAB_OBJ_NAME);
+	if(!pObjectiveTextTabObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_OBJECTIVE_TEXT_TAB_OBJ_NAME);
+		return false;
+	}
+
 	// Load the base script
 	CString scriptFilePath;
 	scriptFilePath << GAMEUI_SCRIPT_BASE_PATH << PATH_SLASH_CHAR << OBJECTIVESWINDOW_SCRIPT_SUBFOLDER_NAME << PATH_SLASH_CHAR << OBJECTIVESWINDOW_SCRIPT_NAME;
@@ -378,8 +443,7 @@ bool CGameUIObjectivesWindow::initData( const CArray<CString>& objectivesArray, 
 	m_pDefaultDescription->setText(defaultDescription.c_str());
 	m_newObjectivesBitflags = newObjectivesBitflags;
 
-	Int32 buttonXPos = m_buttonXPos;
-	Int32 buttonYPos = m_buttonYPos;
+	Int32 buttonYPos = pButtonTabObject->getListPostSpacing();
 
 	// Track separately to avoid issues if a file is missing/bad
 	Uint32 nbAdded = 0;
@@ -472,37 +536,41 @@ bool CGameUIObjectivesWindow::initData( const CArray<CString>& objectivesArray, 
 		button_t& newButton = m_buttonsArray[addIndex];
 
 		CGameUIObjectivesWindowCallbackEvent* pEvent = new CGameUIObjectivesWindowCallbackEvent(this, OBJ_BUTTON_0 + addIndex);
-		newButton.pButton = new CGameUIButton(UIEL_FL_NONE,
+		newButton.pButton = new CGameUIButton(pObjectiveButtonObject->getFlags(),
 			pEvent,
-			m_usedEdgeThickness,
-			GAMEUIWINDOW_MAIN_TAB_COLOR,
-			GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-			GAMEUIWINDOW_BUTTON_HIGHLIGHT_COLOR,
-			buttonXPos,
-			buttonYPos,
-			m_buttonWidth,
-			m_buttonHeight);
+			pButtonTabObject->getXInset() + pObjectiveButtonObject->getXOrigin(),
+			pButtonTabObject->getYInset() + pObjectiveButtonObject->getYOrigin() + buttonYPos,
+			pObjectiveButtonObject->getWidth(),
+			pObjectiveButtonObject->getHeight());
 		newButton.pButton->setParent(m_pButtonsTab);
 		newButton.pButton->setVisible(false);
 
-		newButton.pDescription = new CGameUITextTab(UIEL_FL_NONE,
-			m_pFontSet,
-			m_textInset,
-			m_usedEdgeThickness,
-			GAMEUIWINDOW_MAIN_TAB_COLOR,
-			GAMEUIWINDOW_MAIN_TAB_BG_COLOR,
-			GAMEUIWINDOW_BUTTON_HIGHLIGHT_COLOR,
-			GAMEUIWINDOW_DEFAULT_TEXT_COLOR,
-			0,
-			0,
-			m_tabWidth,
-			m_infoSurfaceHeight);
+		if(!newButton.pButton->initSchema(pObjectiveButtonObject->getSchema().c_str()))
+		{
+			cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+			return false;
+		}
+
+		newButton.pDescription = new CGameUITextTab(pObjectiveTextTabObject->getFlags(),
+			pObjectiveTextTabObject->getFont(),
+			pObjectiveTextTabObject->getTextInset(),
+			pObjectiveTextTabObject->getTextColor(),
+			pInfoTabObject->getXInset() + pObjectiveTextTabObject->getXOrigin(),
+			pInfoTabObject->getYInset() + pObjectiveTextTabObject->getYOrigin(),
+			pObjectiveTextTabObject->getWidth(),
+			pObjectiveTextTabObject->getHeight());
 
 		newButton.pDescription->setParent(m_pInfoTab);
 		newButton.pDescription->setVisible(false);
 
+		if(!newButton.pDescription->initSchema(pObjectiveTextTabObject->getSchema().c_str(), pObjectiveTextTabObject->getButtonSchema().c_str()))
+		{
+			cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", OBJECTIVESWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+			return false;
+		}
+
 		// Set button properties
-		buttonYPos += m_buttonHeight + m_tabYSpacing;
+		buttonYPos += pObjectiveButtonObject->getHeight() + pButtonTabObject->getListPostSpacing();
 
 		newButton.objectiveName = objectivesArray[i];
 		newButton.pButton->setText(objectiveTitle.c_str());
@@ -513,7 +581,7 @@ bool CGameUIObjectivesWindow::initData( const CArray<CString>& objectivesArray, 
 		if(pstrActiveObjectiveName && !qstrcmp(objectivesArray[i], pstrActiveObjectiveName))
 			m_pCurrentObjective = &newButton;
 		else if(m_newObjectivesBitflags & (1<<i))
-			newButton.pButton->setBgColor(OBJECTIVESWINDOW_BUTTON_NEW_COLOR);
+			newButton.pButton->setDrawFlags(GUIEL_DF_MARK_NEW);
 
 		// Set pointer
 		pstr = pstrend+1;
@@ -564,7 +632,7 @@ void CGameUIObjectivesWindow::ManageEvent( objectivesbuttonevent_t event )
 
 		if (m_pCurrentObjective)
 		{
-			m_pCurrentObjective->pButton->setHighlighted(false);
+			m_pCurrentObjective->pButton->removeDrawFlags(GUIEL_DF_MARK_HIGHLIGHT);
 			m_pCurrentObjective->pDescription->setVisible(false);
 		}
 
@@ -577,12 +645,12 @@ void CGameUIObjectivesWindow::ManageEvent( objectivesbuttonevent_t event )
 		{
 			m_pCurrentObjective = &button;
 			m_pCurrentObjective->pDescription->setVisible(true);
-			m_pCurrentObjective->pButton->setHighlighted(true);
+			m_pCurrentObjective->pButton->setDrawFlags(GUIEL_DF_MARK_HIGHLIGHT);
 
 			if (m_newObjectivesBitflags & (1 << buttonIndex))
 			{
-				m_pCurrentObjective->pButton->setBgColor(GAMEUIWINDOW_MAIN_TAB_BG_COLOR);
 				m_newObjectivesBitflags &= ~(1 << buttonIndex);
+				m_pCurrentObjective->pButton->removeDrawFlags(GUIEL_DF_MARK_NEW);
 
 				Uint32 msgid = g_pGUIManager->GetServerUIMessageId();
 				if (!msgid)
@@ -611,6 +679,46 @@ void CGameUIObjectivesWindow::ManageEvent( objectivesbuttonevent_t event )
 //====================================
 //
 //====================================
+CGameUIObjectivesWindow* CGameUIObjectivesWindow::CreateInstance( void )
+{
+	// Load the schema file
+	ui_windowdescription_t* pWinDesc = g_pGUIManager->LoadWindowDescriptionFile(OBJECTIVESWINDOW_OBJ_NAME, OBJECTIVESWINDOW_DESC_FILE);
+ 	if(!pWinDesc)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to load window description '%s' for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_OBJ_NAME);
+		return nullptr;
+	}
+
+	const ui_objectinfo_t* pWindowObject = pWinDesc->getObject(UI_OBJECT_WINDOW, OBJECTIVESWINDOW_OBJ_NAME);
+	if(!pWindowObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", OBJECTIVESWINDOW_DESC_FILE, OBJECTIVESWINDOW_OBJ_NAME);
+		return nullptr;
+	}
+
+	Uint32 screenWidth, screenHeight;
+	cl_renderfuncs.pfnGetScreenSize(screenWidth, screenHeight);
+
+	Uint32 relativeWidth = gHUDDraw.ScaleY(pWindowObject->getWidth());
+	Uint32 relativeHeight = gHUDDraw.ScaleY(pWindowObject->getHeight());
+
+	Int32 xPosition = (screenWidth / 2) - (relativeWidth / 2);
+	Int32 yPosition = (screenHeight / 2) - (relativeHeight / 2);
+
+	CGameUIObjectivesWindow* pNewWindow = new CGameUIObjectivesWindow(CGameUIWindow::FL_WINDOW_NONE, xPosition, yPosition, relativeWidth, relativeHeight);
+	if(!pNewWindow->init(pWinDesc, pWindowObject))
+	{
+		cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUIObjectivesWindow'.\n", __FUNCTION__);
+		delete pNewWindow;
+		return nullptr;
+	}
+
+	return pNewWindow;
+}
+
+//====================================
+//
+//====================================
 void CGameUIObjectivesWindowCallbackEvent::PerformAction( Float param )
 {
 	if(!m_pWindow)
@@ -618,4 +726,3 @@ void CGameUIObjectivesWindowCallbackEvent::PerformAction( Float param )
 
 	m_pWindow->ManageEvent(m_eventType);
 }
-#endif

@@ -24,7 +24,7 @@ const Char CGameUITextWindow::TEXTWINDOW_OBJ_NAME[] = "GameUITextWindow";
 // Window title text object name
 const Char CGameUITextWindow::TEXTWINDOW_TITLE_TEXT_OBJ_NAME[] = "GameUITextWindowTitleText";
 // Window title text tab object name
-const Char CGameUITextWindow::TEXTWINDOW_TITLE_TEXT_TAB_OBJ_NAME[] = "GameUITextWindowTextTab";
+const Char CGameUITextWindow::TEXTWINDOW__TEXT_TAB_OBJ_NAME[] = "GameUITextWindowTextTab";
 // Window exit button object name
 const Char CGameUITextWindow::TEXTWINDOW_EXIT_BUTTON_OBJ_NAME[] = "GameUITextWindowExitButton";
 
@@ -91,10 +91,10 @@ bool CGameUITextWindow::init( const ui_windowdescription_t* pWindowDesc, const u
 	//
 	// Create the text tab object
 	//
-	const ui_objectinfo_t* pTextTabObject = pWindowDesc->getObject(UI_OBJECT_TEXT_TAB, TEXTWINDOW_TITLE_TEXT_TAB_OBJ_NAME);
+	const ui_objectinfo_t* pTextTabObject = pWindowDesc->getObject(UI_OBJECT_TEXT_TAB, TEXTWINDOW__TEXT_TAB_OBJ_NAME);
 	if(!pTextTabObject)
 	{
-		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", TEXTWINDOW_DESC_FILE, TEXTWINDOW_TITLE_TEXT_TAB_OBJ_NAME);
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", TEXTWINDOW_DESC_FILE, TEXTWINDOW__TEXT_TAB_OBJ_NAME);
 		return false;
 	}
 

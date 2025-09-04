@@ -30,7 +30,7 @@ public:
 	// Window exit button object name
 	static const Char TEXTWINDOW_EXIT_BUTTON_OBJ_NAME[];
 	// Window title text tab object name
-	static const Char TEXTWINDOW_TITLE_TEXT_TAB_OBJ_NAME[];
+	static const Char TEXTWINDOW__TEXT_TAB_OBJ_NAME[];
 
 private:
 	explicit CGameUITextWindow( Int32 flags, Int32 originX, Int32 originY, Uint32 width, Uint32 height );

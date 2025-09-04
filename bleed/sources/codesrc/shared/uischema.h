@@ -96,6 +96,7 @@ enum ui_elem_flags_t
 	UIEL_FL_DRAW_LINKED_HIGHLIGHT_ONLY	= (1<<17),	// Draw linked elements only if highlighted by mouse
 	UIEL_FL_NO_BOTTOM_BORDER			= (1<<18),	// Do not draw bottom border part
 	UIEL_FL_RESOLUTION_RELATIVE			= (1<<19),	// Sizes and origins are relative to screen resolution
+	UIEL_FL_NO_TOP_BORDER				= (1<<20),	// Do not draw bottom border part
 };
 
 enum ui_scroller_align_t

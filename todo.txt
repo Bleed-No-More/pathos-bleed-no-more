@@ -1,3 +1,7 @@
 Editor:
- - Add rotation buttons to face edit(45, 60, 90).
- - Fix VM tool issues.
+ - XT - Add rotation buttons to face edit(45, 60, 90).
+ - XT - Fix VM tool issues.
+ - Modify CGameUIScroller to be a surface, not a textured object.
+ - Fix Game UI scrollers not having borders.
+ - Port the subway window over to the new GUI.
+ - Fix up GUI windows to not look like ass.

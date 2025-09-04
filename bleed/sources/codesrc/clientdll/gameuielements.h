@@ -78,6 +78,8 @@ public:
 	Int32 getDrawFlags( void ) const;
 	// Set draw flags
 	void setDrawFlags( Int32 flags );
+	// Set draw flags
+	void removeDrawFlags( Int32 flags );
 
 	// Adds a child object
 	virtual void addChild( CGameUIObject* pchild );
