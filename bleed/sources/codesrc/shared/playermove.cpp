@@ -120,40 +120,18 @@ void CPlayerMovement::DropPunchAngle( void )
 //=============================================
 void CPlayerMovement::CheckParameters( void )
 {
-	float speed = (m_userCmd.sidemove * m_userCmd.sidemove) 
+	float speed = (m_userCmd.forwardmove * m_userCmd.forwardmove)
+		+ (m_userCmd.sidemove * m_userCmd.sidemove) 
 		+ (m_userCmd.upmove * m_userCmd.upmove);
-
-	// Cap forward velocity to main velocity limit when walking backwards
-	// No sprinting backwards basically
-	if(m_userCmd.forwardmove < 0)
-		speed += (m_userCmd.forwardmove * m_userCmd.forwardmove);
 
 	speed = SDL_sqrt(speed);
 	if(speed != 0 && speed > m_maxSpeed)
 	{
 		Float ratio = m_maxSpeed / speed;
 
-		// Cap forward velocity to main velocity limit when walking backwards
-		// No sprinting backwards basically
-		if(m_userCmd.forwardmove < 0)
-			m_userCmd.forwardmove *= ratio;
-
+		m_userCmd.forwardmove *= ratio;
 		m_userCmd.sidemove *= ratio;
 		m_userCmd.upmove *= ratio;
-	}
-
-	// If we're moving forward, then cap at m_maxForwardSpeed, which changes
-	// with sprint states
-	if(m_userCmd.forwardmove > 0)
-	{
-		Float fwishspeed = m_userCmd.forwardmove * m_userCmd.forwardmove;
-		fwishspeed = SDL_sqrt(fwishspeed);
-
-		if(fwishspeed != 0 && fwishspeed > m_maxForwardSpeed)
-		{
-			Float ratio = m_maxForwardSpeed / fwishspeed;
-			m_userCmd.forwardmove *= ratio;
-		}
 	}
 
 	if(m_pPlayerState->flags & (FL_FROZEN|FL_ON_LADDER|FL_PARALYZED) || m_userCmd.buttons & IN_LEAN)
@@ -456,7 +434,7 @@ void CPlayerMovement::Move_Toss_Bounce( void )
 		}
 
 		Float velocity = Math::DotProduct(m_pPlayerState->velocity, m_pPlayerState->velocity);
-		if(velocity < 900)
+		if(velocity < 900 || m_pPlayerState->movetype != MOVETYPE_BOUNCE)
 		{
 			m_pPlayerState->groundent = trace.hitentity;
 			m_pPlayerState->velocity.Clear();
@@ -544,7 +522,7 @@ Int32 CPlayerMovement::Move_Fly( void )
 		numplanes++;
 
 		// Reflect player velocity
-		if(numplanes == 1 && m_pPlayerState->movetype == MOVETYPE_WALK && (m_pPlayerState->groundent == NO_ENTITY_INDEX || m_pPlayerState->friction != 1))
+		if(m_pPlayerState->movetype == MOVETYPE_WALK && (m_pPlayerState->groundent == NO_ENTITY_INDEX || m_pPlayerState->friction != 1))
 		{
 			Vector newvelocity;
 			for(Int32 j = 0; j < numplanes; j++)
@@ -622,7 +600,7 @@ Int32 CPlayerMovement::ClipVelocity( const Vector& in, const Vector& normal, Vec
 	Int32 blocked = BLOCKED_NOT;
 	if(angle > 0)
 		blocked |= BLOCKED_FLOOR;
-	if(!angle)
+	else if(!angle)
 		blocked |= BLOCKED_WALL;
 
 	Float backoff = Math::DotProduct(in, normal)*overbounce;
@@ -656,7 +634,7 @@ void CPlayerMovement::PreventMegaBunnyJumping( void )
 	if(speed <= bunnyJumpMaxSpeedFactor)
 		return;
 
-	Float frac = (m_maxSpeed/speed) * 0.65;
+	Float frac = (maxScaledSpeed/speed) * 0.65;
 	Math::VectorScale(m_pPlayerState->velocity, frac, m_pPlayerState->velocity);
 }
 
@@ -671,7 +649,10 @@ void CPlayerMovement::Move_Walk( void )
 
 	// Clear this
 	vforward[2] = 0;
-	vforward = vforward.Normalize();
+	vforward.Normalize();
+
+	vright[2] = 0;
+	vright.Normalize();
 
 	// Do not add in wishvel when on bike and not onground
 	Vector wishvel;
@@ -779,7 +760,6 @@ void CPlayerMovement::Move_Walk( void )
 	// (I really need to take the time to learn how this logic fucking works)
 	Move_Fly();
 
-	// I really have trouble following this logic...
 	dest = m_pPlayerState->origin;
 	dest[2] -= m_pMovevars->stepsize;
 
@@ -1048,7 +1028,9 @@ void CPlayerMovement::FixupGravityVelocity( void )
 	if(m_pPlayerState->waterjumptime)
 		return;
 
-	m_pPlayerState->velocity[2] -= (m_pMovevars->gravity * m_frameTime * 0.5);
+	Float entGravity = (m_pPlayerState->gravity) ? m_pPlayerState->gravity : 1.0;
+	m_pPlayerState->velocity[2] -= (entGravity * m_frameTime * 0.5);
+
 	CheckVelocity();
 }
 
@@ -1068,21 +1050,6 @@ void CPlayerMovement::Jump( void )
 	// Handle water movement
 	if(m_pPlayerState->waterlevel >= WATERLEVEL_MID)
 	{
-		if(m_pPlayerState->groundent == NO_ENTITY_INDEX && !CheckWaterJump(false))
-		{
-			Vector testpos = m_pPlayerState->origin;
-			Math::VectorAdd(testpos, (m_pPlayerState->flags & FL_DUCKING) ? VEC_DUCK_VIEW : VEC_VIEW, testpos);
-
-			// Remove waterdist
-			testpos[2] -= m_pMovevars->waterdist;
-
-			if(m_traceInterface.pfnPointContents(testpos, nullptr, false) != CONTENTS_WATER)
-			{
-				m_pPlayerState->velocity[2] = 0;
-				return;
-			}
-		}
-
 		// Remove groundent if we're in water
 		m_pPlayerState->groundent = NO_ENTITY_INDEX;
 
@@ -1152,11 +1119,8 @@ void CPlayerMovement::Jump( void )
 	// Add a punch to the player's view angles
 	m_pPlayerState->punchamount[0] = Common::RandomFloat(25, 50);
 
-	Vector direction = m_pPlayerState->velocity;
-	Math::VectorNormalize(direction);
-
 	// Add in jump velocity
-	m_pPlayerState->velocity[2] = sqrt(2*800*55.0);
+	m_pPlayerState->velocity[2] = sqrt(2 * 800 * 45.0);
 
 	// NOTES: Do we really need this?
 	FixupGravityVelocity();
@@ -1362,15 +1326,12 @@ void CPlayerMovement::Accelerate( const Vector& wishdir, Float wishspeed, Float 
 //=============================================
 void CPlayerMovement::Move_Air( void )
 {
-	Vector forward = m_vForward;
-	Vector right = m_vRight;
-
 	// Zero out z
-	forward[2] = right[2] = 0;
+	m_vForward[2] = m_vRight[2] = 0;
 
 	Vector wishvel;
 	for(Int32 i = 0; i < 2; i++)
-		wishvel[i] = forward[i]*m_userCmd.forwardmove + right[i]*m_userCmd.sidemove;
+		wishvel[i] = m_vForward[i]*m_userCmd.forwardmove + m_vRight[i]*m_userCmd.sidemove;
 
 	// Zero out Z
 	wishvel[2] = 0;
@@ -2009,9 +1970,9 @@ void CPlayerMovement::RunPlayerMove( void )
 			else
 			{
 				// Jump if possible
-				if(m_userCmd.buttons & IN_JUMP)
+				if(m_userCmd.buttons & IN_JUMP && !m_pLadder)
 					Jump();
-				else
+				else if(!(m_userCmd.buttons & IN_JUMP))
 					m_pPlayerState->oldbuttons &= ~IN_JUMP;
 
 				// Add friction
@@ -2131,11 +2092,6 @@ void CPlayerMovement::RunMovement( const usercmd_t& cmd, pm_info_t* pminfo, bool
 		{
 			m_maxSpeed = PLAYER_SNEAK_SPEED;
 			m_maxForwardSpeed = PLAYER_SNEAK_SPEED;
-		}
-		else if(m_pPlayerState->flags & FL_DUCKING)
-		{
-			m_maxSpeed = PLAYER_CROUCH_SPEED;
-			m_maxForwardSpeed = PLAYER_CROUCH_SPEED;
 		}
 		else
 		{

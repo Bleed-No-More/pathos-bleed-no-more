@@ -16,6 +16,7 @@ All Rights Reserved.
 #include "constants.h"
 #include "vbmformat.h"
 #include "com_math.h"
+#include "winding.h"
 
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4237 )
@@ -359,6 +360,7 @@ namespace smdl
 		CString vtaname;
 		flexmodel_t *pflexmodel;
 
+		CString collisionsmdname;
 		Float scale;
 		bool reverseTriangles;
 	};
@@ -450,6 +452,7 @@ namespace smdl
 
 		CString submodelname;
 		CString flexname;
+		CString collisionsmdname;
 
 		bool reverseTriangles;
 		Float scale;
@@ -465,7 +468,7 @@ namespace smdl
 	};
 };
 
-// Type specific to vbm compiler
+// Types specific to vbm compiler
 namespace vbm
 {
 	struct ref_frameinfo_t
@@ -498,6 +501,57 @@ namespace vbm
 
 		Float minvalue;
 		Float maxvalue;
+	};
+};
+
+// Datatypes used by MCD compiler
+namespace mcd
+{
+	struct vertex_t
+	{
+		vertex_t():
+			boneindex(NO_POSITION)
+		{}
+
+		Vector origin;
+		Int32 boneindex;
+	};
+
+	struct triangle_t
+	{
+		Uint32 vertexes[3];
+		Int32 skinref;
+	};
+
+	struct submodel_t
+	{
+		submodel_t();
+		void addTriangle( const triangle_t& triangle );
+		Int32 addVertex( const mcd::vertex_t& vertex );
+
+		CString name;
+
+		CArray<triangle_t> triangles;
+		Uint32 nbtriangles;
+
+		CArray<vertex_t> vertexes;
+		Uint32 nbvertexes;
+
+		CArray<smdl::bone_node_t> nodes;
+		CArray<smdl::bone_t> bones;
+		CArray<Int32> boneimap;
+
+		CArray<CWinding*> windings;
+
+		bool reversetriangles;
+	};
+
+	struct bodypart_t
+	{
+		CString name;
+		Int32 base;
+
+		CArray<submodel_t*> psubmodels;
 	};
 };
 #endif //COMPILER_TYPES_H

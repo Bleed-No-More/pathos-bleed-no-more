@@ -304,9 +304,9 @@ void CL_InitInput( void )
 	cl_engfuncs.pfnCreateCommand("impulse", Cmd_Impulse, nullptr);
 
 	// Player movement related cvars
-	g_pCvarSideSpeed = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "cl_sidespeed", "300", "Sideways movement speed for players.");
-	g_pCvarForwardSpeed = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "cl_forwardspeed", "300", "Forward movement speed for players.");
-	g_pCvarBackSpeed = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "cl_backspeed", "300", "Backwards movement speed for players.");
+	g_pCvarSideSpeed = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "cl_sidespeed", "320", "Sideways movement speed for players.");
+	g_pCvarForwardSpeed = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "cl_forwardspeed", "400", "Forward movement speed for players.");
+	g_pCvarBackSpeed = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "cl_backspeed", "400", "Backwards movement speed for players.");
 
 	// Mouse input related cvars
 	g_pCvarSensitivity = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), MOUSE_SENSITIVITY_CVAR_NAME, "4", "Mouse sensitivity.");
@@ -315,8 +315,8 @@ void CL_InitInput( void )
 	g_pCvarReverseMouse = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), MOUSE_REVERSE_CVAR_NAME, "1", "Reverse mouse Y axis.");
 	g_pCvarMouseYaw = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "m_yaw", "1", "Mouse yaw turn speed.");
 	g_pCvarMousePitch = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "m_pitch", "1", "Mouse pitch turn speed.");
-	g_pCvarMousePitchUp = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "m_pitchup", "80", "Mouse pitch turn min limit.");
-	g_pCvarMousePitchDown = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "m_pitchdown", "80", "Mouse pitch turn max limit.");
+	g_pCvarMousePitchUp = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "m_pitchup", "90", "Mouse pitch turn min limit.");
+	g_pCvarMousePitchDown = cl_engfuncs.pfnCreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "m_pitchdown", "90", "Mouse pitch turn max limit.");
 	g_pCvarDefaultFOV = cl_engfuncs.pfnGetCVarPointer(DEFAULT_FOV_CVAR_NAME);
 	g_pCvarReferenceFOV = cl_engfuncs.pfnGetCVarPointer(REFERENCE_FOV_CVAR_NAME);
 }

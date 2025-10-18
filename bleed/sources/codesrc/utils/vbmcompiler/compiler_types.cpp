@@ -16,7 +16,9 @@ All Rights Reserved.
 #include "compiler_types.h"
 
 // Triangle allocation count
-static const Uint32 TRIVERTEX_ALLOCATION_COUNT = 256*3;
+static const Uint32 TRIANGLE_ALLOCATION_COUNT = 256;
+// Triangle vertex allocation count
+static const Uint32 TRIVERTEX_ALLOCATION_COUNT = TRIANGLE_ALLOCATION_COUNT*3;
 // Normal allocation count
 static const Uint32 NORMAL_ALLOCATION_COUNT = 256;
 // Weight info allocation count
@@ -699,5 +701,62 @@ namespace vbm
 
 		if(!bonetransforms.empty())
 			bonetransforms.clear();
+	}
+};
+
+namespace mcd
+{
+	//===============================================
+	// @brief Constructor for submodel_t
+	//
+	//===============================================
+	submodel_t::submodel_t():
+		nbtriangles(0),
+		nbvertexes(0),
+		reversetriangles(false)
+	{
+	}
+
+	//===============================================
+	// @brief Adds a triangle's vertex indexes to the 
+	// triangle vertex index array
+	//
+	// @param ptrianglesverts Pointer to triangle vertexes array
+	//===============================================
+	void submodel_t::addTriangle( const triangle_t& triangle )
+	{
+		if(nbtriangles >= triangles.size())
+			triangles.resize(triangles.size() + TRIANGLE_ALLOCATION_COUNT);
+
+		for(Uint32 i = 0; i < 3; i++)
+			triangles[nbtriangles+i] = triangle;
+
+		nbtriangles++;
+	}
+
+	//===============================================
+	// @brief Adds a vertex indexes to the vertexes array
+	//
+	// @param vertex Adds a new vertex to the array
+	//===============================================
+	Int32 submodel_t::addVertex( const mcd::vertex_t& vertex )
+	{
+		// Try and merge with an existing weight
+		for(Uint32 i = 0; i < nbvertexes; i++)
+		{
+			const vertex_t& curVertex = vertexes[i];
+			if(curVertex.boneindex == vertex.boneindex && Math::VectorCompare(curVertex.origin, vertex.origin))
+				return i;
+		}
+
+		// Resize if needed
+		if(nbvertexes >= vertexes.size())
+			vertexes.resize(vertexes.size() + VERTEX_ALLOCATION_COUNT);
+
+		Int32 vertexIndex = nbvertexes;
+		vertexes[vertexIndex] = vertex;
+		nbvertexes++;
+
+		return vertexIndex;
 	}
 };

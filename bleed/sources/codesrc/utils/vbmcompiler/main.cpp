@@ -32,6 +32,7 @@ All Rights Reserved.
 #include "qcparser.h"
 #include "logfile.h"
 #include "filefuncs.h"
+#include "mcdcompiler.h"
 
 // Size of buffer for message prints
 static const Uint32 PRINT_MSG_BUFFER_SIZE = 16384;
@@ -313,7 +314,11 @@ int _tmain(Int32 argc, _TCHAR* argv[])
 	CString logFilePath;
 	logFilePath << folderPath << PATH_SLASH_CHAR << basename << ".log";
 
-	g_pLogFile = new CLogFile(logFilePath.c_str(), Msg, g_fileInterface, true);
+	// Ensure previous log is deleted
+	if(g_fileInterface.pfnFileExists(logFilePath.c_str()))
+		remove(logFilePath.c_str());
+
+	g_pLogFile = new CLogFile(logFilePath.c_str(), Msg, g_fileInterface, true, false);
 	if(!g_pLogFile->Init())
 	{
 		WarningMsg("Failed to open log file '%s'.\n", logFilePath.c_str());
@@ -553,6 +558,19 @@ int _tmain(Int32 argc, _TCHAR* argv[])
 		ErrorMsg("Error encountered while compiling VBM file.'\n");
 		OnExitApplication();
 		return -1;
+	}
+
+	// See if we have any collision data to compile
+	if(g_pStudioModelCompiler->HasCollisionMeshes())
+	{
+		// Pointer to MCD compiler instance
+		CMCDCompiler mcdCompiler((*g_pStudioModelCompiler));
+		if(!mcdCompiler.CreateMCDFile())
+		{
+			ErrorMsg("Error encountered while compiling VBM file.'\n");
+			OnExitApplication();
+			return -1;
+		}
 	}
 
 	// Clear this AFTER creating the VBM file

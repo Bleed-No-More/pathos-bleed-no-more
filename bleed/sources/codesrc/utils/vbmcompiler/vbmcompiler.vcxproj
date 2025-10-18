@@ -253,7 +253,7 @@
     <ClInclude Include="..\..\common\clinkedlist_inline.hpp" />
     <ClInclude Include="..\..\common\common.h" />
     <ClInclude Include="..\..\common\common_inline.hpp" />
-    <ClInclude Include="..\..\common\const.h" />
+    <ClInclude Include="..\..\common\constants.h" />
     <ClInclude Include="..\..\common\crc32.h" />
     <ClInclude Include="..\..\common\cstring.h" />
     <ClInclude Include="..\..\common\cstringpool.h" />
@@ -266,13 +266,17 @@
     <ClInclude Include="..\..\common\tgaformat.h" />
     <ClInclude Include="..\..\common\vector.h" />
     <ClInclude Include="..\..\common\vector_inline.hpp" />
+    <ClInclude Include="..\..\common\winding.h" />
+    <ClInclude Include="..\..\shared\mcdformat.h" />
     <ClInclude Include="..\..\shared\studio.h" />
     <ClInclude Include="..\..\shared\vbmformat.h" />
     <ClInclude Include="..\..\shared\vbm_shared.h" />
+    <ClInclude Include="collisionsmdparser.h" />
     <ClInclude Include="compiler_math.h" />
     <ClInclude Include="compiler_types.h" />
     <ClInclude Include="filefuncs.h" />
     <ClInclude Include="main.h" />
+    <ClInclude Include="mcdcompiler.h" />
     <ClInclude Include="options.h" />
     <ClInclude Include="parserbase.h" />
     <ClInclude Include="qcparser.h" />
