@@ -1,0 +1,99 @@
+window "GameUISubwayWindow"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags resolution_relative
+	$title "Login Window"
+	$width 800
+	$height 700
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUISubwayWindowTitleText"
+{
+	$text "Select a destination"
+	$originx 0
+	$originy 50
+	$flags align_center_horizontal resolution_relative
+	$textschema "subwaytitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUISubwayWindowUpperSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 750
+	$originy 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUISubwayWindowMiddleSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 750
+	$originy 400
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+separator_h "GameUISubwayWindowLowerSeparator"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$width 750
+	$originy 600
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUISubwayWindowDestinationButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$originx 0
+	$originy 110
+	$text "NA"
+	$width 600
+	$height 55
+	$basescreenwidth 1920
+	$basescreenheight 1080
+	$postspacing 20
+}
+text "GameUISubwayWindowDestinationText"
+{
+	$text "Dummy"
+	$originx 0
+	$originy 420
+	$width 700
+	$height 300
+	$flags align_center_horizontal resolution_relative
+	$textschema "subwaytext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUISubwayWindowDefaultText"
+{
+	$text "Dummy"
+	$originx 0
+	$originy 420
+	$width 700
+	$height 300
+	$flags align_center_horizontal resolution_relative
+	$textschema "subwaytext"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUISubwayWindowExitButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_top align_center_horizontal resolution_relative
+	$originy 620
+	$text "Exit"
+	$width 200
+	$height 60
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}

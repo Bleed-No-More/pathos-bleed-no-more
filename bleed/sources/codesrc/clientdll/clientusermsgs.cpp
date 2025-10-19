@@ -1605,7 +1605,6 @@ MSGFN MsgFunc_CreateGameUIWindow( const Char* pstrName, const byte* pdata, Uint3
 			}
 		}
 		break;
-#if 0
 	case GAMEUI_SUBWAYWINDOW:
 		{
 			// Read text file path
@@ -1642,7 +1641,6 @@ MSGFN MsgFunc_CreateGameUIWindow( const Char* pstrName, const byte* pdata, Uint3
 			}
 		}
 		break;
-#endif
 	case GAMEUI_OBJECTIVESWINDOW:
 		{
 			// Read nb of objectives

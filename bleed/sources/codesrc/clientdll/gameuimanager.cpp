@@ -200,11 +200,9 @@ CGameUIWindow* CGameUIManager::SpawnWindow( gameui_windows_t windowtype )
 	case GAMEUI_LOGINWINDOW:
 			pWindow = CGameUILoginWindow::CreateInstance();
 		break;
-#if 0
 	case GAMEUI_SUBWAYWINDOW:
-			pWindow = new CGameUISubwayWindow(flags, 0, 0, screenwidth, screenheight);
+			pWindow = CGameUISubwayWindow::CreateInstance();
 		break;
-#endif
 	case GAMEUI_OBJECTIVESWINDOW:
 			pWindow = CGameUIObjectivesWindow::CreateInstance();
 		break;

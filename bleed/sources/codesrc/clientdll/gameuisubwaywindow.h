@@ -6,7 +6,7 @@ Copyright 2016
 All Rights Reserved.
 ===============================================
 */
-#if 0
+
 #ifndef GAMEUISUBWAYWINDOW_H
 #define GAMEUISUBWAYWINDOW_H
 
@@ -69,30 +69,26 @@ public:
 	};
 
 public:
-	// Object x inset for login window
-	static const Uint32 SUBWAYWINDOW_TAB_X_INSET;
-	// Object y inset for login window
-	static const Uint32 SUBWAYWINDOW_TAB_Y_INSET;
-	// Object y spacing for login window
-	static const Uint32 SUBWAYWINDOW_TAB_X_SPACING;
-	// Object x spacing for login window
-	static const Uint32 SUBWAYWINDOW_TAB_Y_SPACING;
-	// Text inset for subway window
-	static const Uint32 SUBWAYWINDOW_TAB_TEXT_INSET;
-	// Default text color
-	static const color32_t SUBWAYWINDOW_TEXT_COLOR;
-	// Height of the title surface
-	static const Uint32 SUBWAYWINDOW_TITLE_SURFACE_HEIGHT;
-	// Height of the button surface
-	static const Uint32 SUBWAYWINDOW_BUTTON_SURFACE_HEIGHT;
-	// Height of the info surface
-	static const Uint32 SUBWAYWINDOW_INFO_SURFACE_HEIGHT;
-	// Height of the exit button surface
-	static const Uint32 SUBWAYWINDOW_EXIT_BUTTON_SURFACE_HEIGHT;
-	// Title text default schema set name
-	static const Char SUBWAYWINDOW_TITLE_TEXTSCHEMA_NAME[];
-	// Text default font schema name
-	static const Char SUBWAYWINDOW_TEXTSCHEMA_NAME[];
+	// Window description file
+	static const Char SUBWAYWINDOW_DESC_FILE[];
+	// Title text object name
+	static const Char SUBWAYWINDOW_OBJ_NAME[];
+	// Title text object name
+	static const Char SUBWAYWINDOW_TITLE_TEXT_OBJ_NAME[];
+	// Upper separator object name
+	static const Char SUBWAYWINDOW_UPPER_SEPARATOR_OBJ_NAME[];
+	// Middle separator object name
+	static const Char SUBWAYWINDOW_MIDDLE_SEPARATOR_OBJ_NAME[];
+	// Lower separator object name
+	static const Char SUBWAYWINDOW_LOWER_SEPARATOR_OBJ_NAME[];
+	// Destination button object name
+	static const Char SUBWAYWINDOW_DESTINATION_BUTTON_OBJ_NAME[];
+	// Destination text object name
+	static const Char SUBWAYWINDOW_DESTINATION_TEXT_OBJ_NAME[];
+	// Default text object name
+	static const Char SUBWAYWINDOW_DEFAULT_TEXT_OBJ_NAME[];
+	// Exit button object name
+	static const Char SUBWAYWINDOW_EXIT_BUTTON_OBJ_NAME[];
 
 public:
 	CGameUISubwayWindow( Int32 flags, Int32 originX, Int32 originY, Uint32 width, Uint32 height );
@@ -100,7 +96,7 @@ public:
 
 public:
 	// Initializes the window
-	void init( void ) override;
+	bool init( const ui_windowdescription_t* pWindowDesc, const ui_objectinfo_t* pWindowObject ) override;
 	// Think function for window
 	void think( void ) override;
 
@@ -114,6 +110,9 @@ public:
 public:
 	// Manages an event
 	void ManageEvent( subwaybuttonevent_t event );
+
+	// Creates instance of window
+	static CGameUISubwayWindow* CreateInstance( void );
 
 private:
 	// Title text
@@ -165,4 +164,3 @@ private:
 };
 
 #endif //GAMEUISUBWAYWINDOW_H
-#endif
