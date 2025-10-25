@@ -697,7 +697,7 @@
  - Fix for AI navigation errors when checking whether a node can be traversed to with a single traceline.
  - Modified env_rot_light entity to not use the spotlight texture, but to instead rely solely on spotlight coefficient calculations for rendering spotlights.
  - Fix for "dangersounds" field not being read properly in CScriptedSequence::KeyValue.
- - Simplify VBM mesh bone list compatibility check to reduce the chance of human error in the future. 
+ - Simplify VBM mesh bone list compatibility check to reduce the chance of human error in the future.
  
 2025 August 14th:
  - First release of the VBM Compiler tool, which is meant to replace studiomdl.
@@ -708,12 +708,12 @@
  - Added support for decals to be applied to static model entities handled by the engine.
  - Fix for incorrect max vertex counts on temp vertex array for VBMs.
  - Removed static-sized array use from some of the VBM related functions.
- 
+
 2025 August 14th:
  - Fix for crash in VBM renderer caused by recent changes.
  - Fix for no-blend bones not being handled properly by vbmcompiler.
- 
- 2025 August 17th:
+
+2025 August 17th:
  - Performance optimization for Mod_FindTouchedLeaves to reduce array resizings during runtime.
  - Removed native limits on the max number of bones used by VBM/Studio models by replaxing fixed size arrays with CArray types, and separating leaf counting into a separate variable from the CArray object.
  - Added support for legacy Quake 1 particle/dynamic light effects for models specified via the "$flags" QC command.
@@ -726,7 +726,7 @@
  - Reduction in memory use by having bone caching only allocate the required number of bones by an entity.
  - Fix crash in Pathos Model Viewer when loading a WAV file in the Flex Scripting editor tab after another has already been loaded.
  - Set VBM Compiler to auto-deploy to progs/vbmcompiler directory.
- 
+
 2025 August 17th 2nd:
  - Fix for transition issue causing player weapons to end up broken.
  
@@ -742,6 +742,46 @@
  - Fix for VBM Compiler not exiting with an error if the activity mappings cannot be loaded.
  - Fix in VTA parser for transforming normal offsets instead of just rotating them.
 
+2025 September 4th:
+ - Fix Q1 particle trail effects having incorrect lifetimes.
+ - Small style/name changes for certain code.
+ - Small change for how shader compile prompts are spaced.
+ - Fix issue in VBM Compiler where case-sensitive comparisons caused issues.
+
+2025 October 10th:
+ - Add case-insensitive option o CString::find function.
+ - Fix env_implosion being broken after save-reload.
+ - Fix env_tracereffect being broken after save-reload.
+ - Remove use of MAX_SUBMODEL_NAME_LENGTH from code.
+ - Make sequence name checks case insensitive in VBM code.
+ - Optimization to VBM rendering by flagging if a model uses a scope or blended texture.
+ - Add code in SMD parsers for VBM compiler to not append ".vbm" format tag if already present.
+ - Optimize CompilerMath::SetupBoneTransforms parameters list.
+ - Add fix to delete previous log file contents for VBM Compiler.
+ - Modify VBM compiler to use case-insensitive checks on SMD and VTA file contents.
+ - Fix for frameRotationalMotion not being a reference when motion is extracted in ExtractSequenceMotion.
+ - Fix incorrect constants.h file entry in VBM Compiler project file.
+
+2025 October 18th:
+ - Fix error messages for CGameUIDocumentsWindow
+ - Fix viewmodel shadows not showing for player-attached dynamic lights.
+ - Add fading out for legacy Quake 1 particles.
+ - Cleanup code and remove unused variables.
+ - Add new save file structure to allow non-static saving of cvars.
+ - Fix some comments in the server code.
+ - Numerous fixes to CPlayerMovement code to make it more like in Half-Life.
+ - Fix crash in VBM Compiler when LODs are used.
+
 2025 October 19th:
  - Fix save-load being broken due to time not being restored.
- - Finish porting CGameUISubwayWindow class to new Game UI code.
+ 
+2025 October 25th:
+ - Fix heap corruption in CString class when appending float, double or negative int
+ - Fix issue with VBM entities that have transparent parts not having shadows rendered.
+ - Turn legacy particle ramp values into readable decimal values.
+ - Remove unused CGameUIText object from CGameUISubwayWindow class.
+ - Use proper float max/min value in NULL_MINS and NULL_MAXS.
+ - Add missing Q1 particle fadeout code.
+ - Remove unused CNM_BOXSIZE from the world normal smoothing code.
+ - Optimize MAX_TEMP_VBM_INDEXES and MAX_TEMP_VBM_VERTEXES constants in VBM renderer.
+ - Add MCD file implementation in VBM Compiler.

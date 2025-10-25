@@ -60,9 +60,6 @@
     <ClInclude Include="..\..\common\common_inline.hpp">
       <Filter>Header Files\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\common\const.h">
-      <Filter>Header Files\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\common\cstring.h">
       <Filter>Header Files\common</Filter>
     </ClInclude>
@@ -253,9 +250,6 @@
     </ClCompile>
     <ClCompile Include="filefuncs.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\common\winding.cpp">
-      <Filter>Source Files\common</Filter>
     </ClCompile>
     <ClCompile Include="mcdcompiler.cpp">
       <Filter>Source Files</Filter>

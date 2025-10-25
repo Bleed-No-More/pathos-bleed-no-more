@@ -139,6 +139,20 @@ bool CCollisionSMDParser::ProcessFile( const Char* pstrFilename )
 		return false;
 	}
 
+	// Set up bone mappings
+	if(!SetBoneIndexMappings())
+	{
+		ErrorMsg("Error while setting up bone index mappings for '%s'.\n", m_scriptFileName.c_str());
+		return false;
+	}
+
+	// Ensure we have a closed mesh
+	if(!CheckTriangleNeighbors())
+	{
+		ErrorMsg("Error while checking for holes on collision mesh '%s'.\n", m_scriptFileName.c_str());
+		return false;
+	}
+
 	return true;
 }
 
@@ -151,7 +165,7 @@ bool CCollisionSMDParser::ParseTriangles( void )
 {
 	if(m_boneTransformInfoArray.empty() || m_pSubModel->bones.empty())
 	{
-		ErrorMsg("Bone list was empty for ParseTriangles.\n");
+		ErrorMsg("Bone list was empty for %s.\n", __FUNCTION__);
 		return false;
 	}
 
@@ -191,7 +205,7 @@ bool CCollisionSMDParser::ParseTriangles( void )
 			textureName = pstrRename;
 
 		// Get texture and mesh pointers
-		Int32 skinref = m_mcdCompiler.GetTextureIndex(textureName.c_str());
+		triangle.skinref = m_mcdCompiler.GetTextureIndex(textureName.c_str());
 
 		for(i = 0; i < 3; i++)
 		{

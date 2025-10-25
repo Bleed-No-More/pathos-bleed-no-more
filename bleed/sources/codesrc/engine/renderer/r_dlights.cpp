@@ -1114,7 +1114,7 @@ bool CDynamicLightManager::DrawProjectivePass( cl_dlight_t *dl, cl_entity_t** pv
 
 	// Draw any view objects for shadows
 	entindex_t localPlayerIndex = CL_GetLocalPlayer()->entindex;
-	if(!dl->isStatic() && SDL_abs(dl->key) != localPlayerIndex)
+	if(!dl->isStatic() && SDL_abs(dl->key) == localPlayerIndex)
 	{
 		if(!cls.dllfuncs.pfnDrawViewObjectsForVSM(dl))
 			return false;
@@ -1897,7 +1897,7 @@ bool CDynamicLightManager::ShouldRedrawShadowMap( cl_dlight_t *dl, dlight_scenei
 		}
 		
 		// No transparents
-		if(R_IsEntityTransparent((*pvisentity)))
+		if(R_IsEntityTransparent((*pvisentity), true))
 			continue;
 
 		// Check bbox

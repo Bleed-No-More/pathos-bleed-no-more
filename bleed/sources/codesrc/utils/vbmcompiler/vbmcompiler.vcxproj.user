@@ -20,10 +20,10 @@
     <LocalDebuggerWorkingDirectory>D:\Games\Reckoning\</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>"D:\Boss Nass\shotgun\v_shotgun.qc" -q -w -l -h -e 4096 -p 28</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"D:\Games\Bleed No More\bleed\sources\modelsrc\error\error.qc" -q -w -l -h</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerAttach>false</LocalDebuggerAttach>
-    <LocalDebuggerCommand>D:\Games\Reckoning\reckon\sources\codesrc\utils\vbmcompiler\Debug\vbmcompiler.exe</LocalDebuggerCommand>
-    <LocalDebuggerWorkingDirectory>D:\Games\Reckoning\reckon\sources\progs\vbmcompiler\</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommand>D:\Games\Bleed No More\bleed\sources\progs\vbmcompiler\vbmcompiler.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>D:\Games\Bleed No More\bleed\sources\progs\vbmcompiler\</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
 </Project>

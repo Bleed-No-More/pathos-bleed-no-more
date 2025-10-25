@@ -15,6 +15,7 @@ All Rights Reserved.
 
 #include "compiler_types.h"
 #include "studiocompiler.h"
+#include "mcdformat.h"
 
 /*
 =======================
@@ -43,7 +44,13 @@ public:
 
 private:
 	// Creates clipping hull data from triangle data
-	bool CreateSubmodelClippingHulls( void );
+	void CreateSubmodelBVH( void );
+	// Updates bounds of a BVH node
+	void UpdateBVHNodeBounds( mcd::bvhnode_t* pnode );
+	// Subdivides a BVH node
+	void SubdivideBVHNode( mcd::bvhnode_t* pnode );
+	// Writes the final output
+	bool WriteFile( void );
 
 private:
 	// Studiomodel compiler object
@@ -57,20 +64,15 @@ private:
 	CArray<mcd::bodypart_t*> m_pBodyPartsArray;
 	// Array of textures
 	CArray<CString> m_texturesArray;
+	// Array of bones
+	CArray<mcd::bone_t> m_bonesArray;
 
 	// Current submodel
 	mcd::submodel_t* m_pSubModel;
-	// Submodel windings array
-	CArray<CWinding*> m_submodelWindingsArray;
-	// Submodel vertex array holding vertices in final positions
-	CArray<Vector> m_submodelVertexArray;
-
-	// Clipping hull sizes
-	Vector m_clipHullMins[MAX_MAP_HULLS][2];
-	// Clipping hull sizes
-	Vector m_clipHullMaxs[MAX_MAP_HULLS][2];
 
 	// File buffer for writing the MCD file
 	CBuffer* m_pFileBuffer;
+	// MCD header we're writing to
+	mcdheader_t* m_pMCDHeader;
 };
 #endif //MCDCOMPILER_H

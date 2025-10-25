@@ -16,7 +16,6 @@ All Rights Reserved.
 #include "constants.h"
 #include "vbmformat.h"
 #include "com_math.h"
-#include "winding.h"
 
 #pragma warning( disable : 4244 )
 #pragma warning( disable : 4237 )
@@ -507,6 +506,18 @@ namespace vbm
 // Datatypes used by MCD compiler
 namespace mcd
 {
+	struct bone_t
+	{
+		bone_t():
+			parentindex(NO_POSITION)
+		{}
+
+		CString name;
+		Vector position;
+		Vector rotation;
+		Int32 parentindex;
+	};
+
 	struct vertex_t
 	{
 		vertex_t():
@@ -519,13 +530,42 @@ namespace mcd
 
 	struct triangle_t
 	{
+		triangle_t():
+			skinref(NO_POSITION)
+		{
+			for(Uint32 i = 0; i < 3; i++)
+				vertexes[i] = NO_POSITION;
+		}
+
+		Vector centroid;
 		Uint32 vertexes[3];
 		Int32 skinref;
+	};
+
+	struct bvhnode_t
+	{
+		bvhnode_t():
+			index(NO_POSITION),
+			isleaf(false)
+		{
+			for(Uint32 i = 0; i < 2; i++)
+				childindexes[i] = NO_POSITION;
+		}
+
+		Int32 index;
+		Vector mins;
+		Vector maxs;
+
+		Int32 childindexes[2];
+		bool isleaf;
+
+		CArray<Int32> triindexesarray;
 	};
 
 	struct submodel_t
 	{
 		submodel_t();
+		~submodel_t();
 		void addTriangle( const triangle_t& triangle );
 		Int32 addVertex( const mcd::vertex_t& vertex );
 
@@ -541,7 +581,7 @@ namespace mcd
 		CArray<smdl::bone_t> bones;
 		CArray<Int32> boneimap;
 
-		CArray<CWinding*> windings;
+		CArray<bvhnode_t*> pbvhnodes;
 
 		bool reversetriangles;
 	};

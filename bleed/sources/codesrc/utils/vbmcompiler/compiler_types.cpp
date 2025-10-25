@@ -718,6 +718,21 @@ namespace mcd
 	}
 
 	//===============================================
+	// @brief Destructor for submodel_t
+	//
+	//===============================================
+	submodel_t::~submodel_t()
+	{
+		if(!pbvhnodes.empty())
+		{
+			for(Uint32 i = 0; i < pbvhnodes.size(); i++)
+				delete pbvhnodes[i];
+
+			pbvhnodes.clear();
+		}
+	}
+
+	//===============================================
 	// @brief Adds a triangle's vertex indexes to the 
 	// triangle vertex index array
 	//

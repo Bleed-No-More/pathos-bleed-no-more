@@ -239,6 +239,11 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <OutputFile>.\Debug/vbmcompiler.bsc</OutputFile>
     </Bscmake>
+    <CustomBuildStep>
+      <Command>copy /Y "$(OutDir)/vbmcompiler.exe" "$(SolutionDir)/../../../progs/vbmcompiler/vbmcompiler.exe"</Command>
+      <Message>Copy "$(OutDir)/vbmcompiler.exe" to working "$(SolutionDir)/../../../progs/vbmcompiler/vbmcompiler.exe"</Message>
+      <Outputs>vbmcompiler.exe</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\common\bmp.h" />
@@ -302,10 +307,12 @@
     <ClCompile Include="..\..\common\r_common.cpp" />
     <ClCompile Include="..\..\common\tga.cpp" />
     <ClCompile Include="..\..\shared\vbm_shared.cpp" />
+    <ClCompile Include="collisionsmdparser.cpp" />
     <ClCompile Include="compiler_math.cpp" />
     <ClCompile Include="compiler_types.cpp" />
     <ClCompile Include="filefuncs.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="mcdcompiler.cpp" />
     <ClCompile Include="options.cpp" />
     <ClCompile Include="parserbase.cpp" />
     <ClCompile Include="qcparser.cpp" />
