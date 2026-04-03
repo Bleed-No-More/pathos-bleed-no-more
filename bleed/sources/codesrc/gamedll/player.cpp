@@ -454,7 +454,7 @@ LINK_ENTITY_TO_CLASS(player, CPlayerEntity);
 //
 //=============================================
 CPlayerEntity::CPlayerEntity( edict_t* pedict ):
-	CBaseEntity( pedict ),
+	CAnimatingEntity( pedict ),
 	m_pCameraEntity(nullptr),
 	m_dayStage(DAYSTAGE_NORMAL),
 	m_clientDayStageState(DAYSTAGE_NORMAL),
@@ -505,6 +505,7 @@ CPlayerEntity::CPlayerEntity( edict_t* pedict ):
 	m_pBikeEntity(nullptr),
 	m_prevFlags(0),
 	m_prevButtons(0),
+	m_changedButtons(0),
 	m_leanTime(0),
 	m_leanState(0),
 	m_pActiveWeapon(nullptr),
@@ -535,13 +536,17 @@ CPlayerEntity::CPlayerEntity( edict_t* pedict ):
 	m_nextPainSoundTime(0),
 	m_drownDamageAmount(0),
 	m_drownDamageHealed(0),
+	m_lastDmgViewPunchTime(0),
 	m_isUnderwaterSoundPlaying(false),
 	m_underwaterTime(0),
 	m_lastWaterDamageTime(0),
 	m_lastWaterDamage(0),
 	m_nextSwimSoundTime(0),
 	m_prevWaterLevel(WATERLEVEL_NONE),
-	m_dialougePlaybackTime(0),
+	m_deathMotionBlurTime(0),
+	m_idealActivity(ACT_RESET),
+	m_currentActivity(ACT_RESET),
+	m_dialoguePlaybackTime(0),
 	m_tapeTrackFile(NO_STRING_VALUE),
 	m_tapeTrackPlayBeginTime(0),
 	m_tapeTrackDuration(0),
@@ -601,10 +606,11 @@ CPlayerEntity::~CPlayerEntity()
 void CPlayerEntity::DeclareSaveFields( void )
 {
 	// Call base class to handle it's own
-	CBaseEntity::DeclareSaveFields();
+	CAnimatingEntity::DeclareSaveFields();
 
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_flashlightBattery, EFIELD_INT32));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_prevButtons, EFIELD_INT32));
+	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_changedButtons, EFIELD_INT32));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_buttonsPressed, EFIELD_INT32));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_buttonsReleased, EFIELD_INT32));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_numMedkits, EFIELD_INT32));
@@ -686,7 +692,7 @@ void CPlayerEntity::DeclareSaveFields( void )
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_countdownTimerTitle, EFIELD_STRING));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_delayedGlobalTriggerTime, EFIELD_TIME));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_delayedGlobalTriggerTarget, EFIELD_STRING));
-	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_dialougePlaybackTime, EFIELD_TIME));
+	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_dialoguePlaybackTime, EFIELD_TIME));
 
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_isChromaticAberrationActive, EFIELD_BOOLEAN));
 	DeclareSaveField(DEFINE_DATA_FIELD(CPlayerEntity, m_chromaticAberrationStrength, EFIELD_FLOAT));
@@ -717,7 +723,9 @@ void CPlayerEntity::DeclareSaveFields( void )
 //=============================================
 bool CPlayerEntity::Spawn( void )
 {
-	if(!CBaseEntity::Spawn())
+	m_pFields->modelname = gd_engfuncs.pfnAllocString("models/player.mdl");
+
+	if(!CAnimatingEntity::Spawn())
 		return false;
 
 	InitStepSounds();
@@ -746,9 +754,6 @@ bool CPlayerEntity::Spawn( void )
 	m_pState->deadstate = DEADSTATE_NONE;
 	m_pState->friction = 1.0;
 
-	if(!SetModel("models/player.mdl", false))
-		return false;
-
 	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
 
 	if(m_pState->flags & FL_DUCKING)
@@ -759,6 +764,12 @@ bool CPlayerEntity::Spawn( void )
 	// Set these
 	m_flashlightBattery = 1.0;
 	m_forceWeaponUpdate = true;
+
+	// Set basic stuff
+	InitBoneControllers();
+
+	for(Uint32 i = 0; i < MAX_BLENDING; i++)
+		SetBlending(i, 0);
 
 	return true;
 }
@@ -821,7 +832,7 @@ void CPlayerEntity::Precache( void )
 //=============================================
 bool CPlayerEntity::Restore( void )
 {
-	if(!CBaseEntity::Restore())
+	if(!CAnimatingEntity::Restore())
 		return false;
 
 	if(m_pState->flags & FL_DUCKING)
@@ -1213,10 +1224,15 @@ bool CPlayerEntity::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker,
 		if(m_pState->health < 30)
 		{
 			// Critical damage
-			ApplyAxisPunch(0, -35);
-			ApplyAxisPunch(1, -25);
-			ApplyDirectAxisPunch(0, 1.0);
-			ApplyDirectAxisPunch(1, 0.7);
+			if(g_pGameVars->time - m_lastDmgViewPunchTime > 1.3)
+			{
+				ApplyAxisPunch(0, -35);
+				ApplyAxisPunch(1, -25);
+				ApplyDirectAxisPunch(0, 1.0);
+				ApplyDirectAxisPunch(1, 0.7);
+
+				m_lastDmgViewPunchTime = g_pGameVars->time;
+			}
 
 			// Apply screen fade
 			Util::ScreenFadePlayer(m_pEdict, PAIN_SCREENFADE_COLOR, 2, 0, 140, FL_FADE_IN|FL_FADE_MODULATE, 1);
@@ -1224,10 +1240,15 @@ bool CPlayerEntity::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker,
 		else if(m_lastDmgAmount > 25)
 		{
 			// Major damage
-			ApplyAxisPunch(0, -25);
-			ApplyAxisPunch(1, -15);
-			ApplyDirectAxisPunch(0, 0.8);
-			ApplyDirectAxisPunch(1, 0.4);
+			if(g_pGameVars->time - m_lastDmgViewPunchTime > 0.8)
+			{
+				ApplyAxisPunch(0, -25);
+				ApplyAxisPunch(1, -15);
+				ApplyDirectAxisPunch(0, 0.8);
+				ApplyDirectAxisPunch(1, 0.4);
+
+				m_lastDmgViewPunchTime = g_pGameVars->time;
+			}
 
 			// Apply screen fade
 			Util::ScreenFadePlayer(m_pEdict, PAIN_SCREENFADE_COLOR, 1, 0, 120, FL_FADE_IN|FL_FADE_MODULATE, 1);
@@ -1373,6 +1394,8 @@ void CPlayerEntity::Killed( CBaseEntity* pAttacker, gibbing_t gibbing, deathmode
 	if(m_pActiveWeapon)
 		m_pActiveWeapon->Holster();
 
+	SetAnimation(PLAYER_ANM_DIE);
+
 	// Clear player sounds
 	gAISounds.ClearEmitterSounds(this);
 
@@ -1405,12 +1428,7 @@ void CPlayerEntity::Killed( CBaseEntity* pAttacker, gibbing_t gibbing, deathmode
 	{
 		Util::ScreenFadePlayer(m_pEdict, color24_t(0, 0, 0), 4, 4, 255, FL_FADE_OUT | FL_FADE_MODULATE | FL_FADE_CLEARGAME);
 		m_reloadTime = g_pGameVars->time + 7;
-
-		gd_engfuncs.pfnUserMessageBegin(MSG_ONE, g_usermsgs.motionblur, nullptr, m_pEdict);
-			gd_engfuncs.pfnMsgWriteByte(TRUE);
-			gd_engfuncs.pfnMsgWriteSmallFloat(0);
-			gd_engfuncs.pfnMsgWriteByte(FALSE);
-		gd_engfuncs.pfnUserMessageEnd();
+		m_deathMotionBlurTime = g_pGameVars->time + Common::RandomFloat(0.8, 2);
 
 		PlayDeathSound();
 
@@ -1452,7 +1470,7 @@ void CPlayerEntity::Killed( CBaseEntity* pAttacker, gibbing_t gibbing, deathmode
 		forward[2] = 0;
 		forward.Normalize();
 
-		const Vector& attackDirection = gMultiDamage.GetAttackDirection();
+		const Vector& attackDirection = gMultiDamage.GetDamageDirection();
 		Float dp = Math::DotProduct(forward, attackDirection);
 
 		Vector originOffset;
@@ -1879,6 +1897,9 @@ void CPlayerEntity::PlayerUse( void )
 //=============================================
 void CPlayerEntity::Jump( void )
 {
+	if(!(m_changedButtons & IN_JUMP))
+		return;
+
 	// No jumping on env_ladders
 	if(m_pLadderEntity || (m_pState->flags & FL_WATERJUMP) || !(m_pState->buttons & IN_FORWARD))
 		return;
@@ -1899,6 +1920,8 @@ void CPlayerEntity::Jump( void )
 		m_pState->velocity = m_pState->velocity + m_pState->basevelocity;
 
 	m_stepSoundRadius += (m_pState->flags & IN_DUCK) ? 100: 500;
+
+	SetAnimation(PLAYER_ANM_JUMP);
 }
 
 //=============================================
@@ -2177,6 +2200,9 @@ void CPlayerEntity::PreCmdThink( void )
 	m_buttonsPressed = buttonsChanged & m_pState->buttons;
 	m_buttonsReleased = buttonsChanged & (~m_pState->buttons);
 
+	m_changedButtons = ( m_prevButtons ^ m_pState->buttons );
+	m_prevButtons = m_pState->buttons;
+
 	if(m_pState->flags & FL_DUCKING || m_pState->health <= 0)
 		gd_engfuncs.pfnSetMinsMaxs(m_pEdict, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX);
 	else
@@ -2274,6 +2300,10 @@ void CPlayerEntity::PreCmdThink( void )
 	if(m_pState->buttons & IN_JUMP)
 		Jump();
 
+	// Set animation for ducking
+	if(((m_pState->buttons & IN_DUCK) || (m_pState->flags & FL_DUCKING)) && m_bikeState == BIKE_SV_INACTIVE && m_idealActivity != ACT_HOP)
+		SetAnimation(PLAYER_ANM_WALK);
+
 	// Set fall velocity
 	if(!(m_pState->flags & FL_ONGROUND))
 		m_fallingVelocity = -m_pState->velocity.z;
@@ -2311,6 +2341,18 @@ void CPlayerEntity::PreCmdThink( void )
 //=============================================
 void CPlayerEntity::PostCmdThink( void )
 {
+	// Set motion blur if needed
+	if(m_deathMotionBlurTime && m_deathMotionBlurTime <= g_pGameVars->time)
+	{
+		gd_engfuncs.pfnUserMessageBegin(MSG_ONE, g_usermsgs.motionblur, nullptr, m_pEdict);
+			gd_engfuncs.pfnMsgWriteByte(TRUE);
+			gd_engfuncs.pfnMsgWriteSmallFloat(0);
+			gd_engfuncs.pfnMsgWriteByte(FALSE);
+		gd_engfuncs.pfnUserMessageEnd();
+
+		m_deathMotionBlurTime = 0;
+	}
+
 	if(!IsAlive())
 		return;
 
@@ -2350,6 +2392,9 @@ void CPlayerEntity::PostCmdThink( void )
 				TakeDamage(nullptr, nullptr, falldmg, DMG_FALL);
 			}
 		}
+
+		if(IsAlive())
+			SetAnimation(PLAYER_ANM_WALK);
 	}
 
 	if(m_pState->flags & FL_ONGROUND)
@@ -2359,6 +2404,16 @@ void CPlayerEntity::PostCmdThink( void )
 		
 		// Reset falling velocity
 		m_fallingVelocity = 0;
+	}
+
+	if(IsAlive())
+	{
+		if(!m_pState->velocity.x && !m_pState->velocity.y)
+			SetAnimation(PLAYER_ANM_IDLE);
+		else if((m_pState->velocity.x || m_pState->velocity.y) && (m_pState->flags & FL_ONGROUND))
+			SetAnimation(PLAYER_ANM_WALK);
+		else
+			SetAnimation(PLAYER_ANM_WALK);
 	}
 
 	// Emit NPC awareness sound
@@ -2486,6 +2541,10 @@ void CPlayerEntity::WeaponPostFrameThink( void )
 		m_pActiveWeapon = nullptr;
 		m_pNextWeapon = GetNextBestWeapon(pFree);
 		RemoveWeapon(pFree);
+
+		// Remove and destroy weapon
+		pFree->DropWeapon(true);
+		pFree->SetNextWeapon(nullptr);
 		return;
 	}
 
@@ -2789,6 +2848,171 @@ void CPlayerEntity::UpdateClientData( void )
 
 	// Update ammo counts
 	UpdateClientAmmoCounts();
+}
+
+//=============================================
+// @brief Set animation for player model
+//
+//=============================================
+void CPlayerEntity::SetAnimation( player_animation_t animation )
+{
+	Float speed;
+	if(m_pState->flags & FL_FROZEN)
+		speed = 0;
+	else
+		speed = m_pState->velocity.Length2D();
+
+	switch(animation)
+	{
+	case PLAYER_ANM_JUMP:
+		{
+			SetIdealActivity(ACT_HOP);
+		}
+		break;
+	case PLAYER_ANM_DIE:
+		{
+			SetIdealActivity(ACT_DIESIMPLE);
+		}
+		break;
+	case PLAYER_ANM_ATTACK1:
+		{
+			if(m_currentActivity != ACT_HOVER
+				&& m_currentActivity != ACT_SWIM
+				&& m_currentActivity != ACT_HOP
+				&& m_currentActivity != ACT_DIESIMPLE)
+			{
+				SetIdealActivity(ACT_RANGE_ATTACK1);
+			}
+		}
+		break;
+	case PLAYER_ANM_IDLE:
+	case PLAYER_ANM_WALK:
+		{
+			if(m_pState->flags & FL_ONGROUND)
+			{
+				if(m_pState->waterlevel > 1)
+					SetIdealActivity((speed != 0) ? ACT_SWIM : ACT_HOVER);
+				else
+					SetIdealActivity(ACT_WALK);
+			}
+		}
+		break;
+	}
+
+	Int32 desiredAnimation = 0;
+	switch(m_idealActivity)
+	{
+	case ACT_HOVER:
+	case ACT_HOP:
+	case ACT_DIESIMPLE:
+	case ACT_SWIM:
+	default:
+		{
+			if(m_idealActivity == m_currentActivity)
+				return;
+
+			m_currentActivity = m_idealActivity;
+			desiredAnimation = FindActivity(m_currentActivity);
+			if(desiredAnimation == m_pState->sequence)
+				return;
+
+			m_pState->sequence = desiredAnimation;
+			m_pState->gaitsequence = 0;
+			m_pState->frame = 0;
+			ResetSequenceInfo();
+			return;
+		}
+		break;
+	case ACT_RANGE_ATTACK1:
+		{
+			CString seqname;
+			if(m_pState->flags & FL_DUCKING)
+				seqname << "crouch_shoot_" << m_animExtension;
+			else
+				seqname << "ref_shoot_" << m_animExtension;
+
+			desiredAnimation = FindSequence(seqname.c_str());
+			if(desiredAnimation == NO_SEQUENCE_VALUE)
+				desiredAnimation = 0;
+
+			m_currentActivity = m_idealActivity;
+
+			if(m_pState->sequence != desiredAnimation || !m_isSequenceLooped)
+				m_pState->frame = 0;
+
+			if(!m_isSequenceLooped)
+				m_pState->effects |= EF_NOINTERP;
+
+			m_currentActivity = m_idealActivity;
+			m_pState->sequence = desiredAnimation;
+			ResetSequenceInfo();
+		}
+		break;
+	case ACT_WALK:
+		{
+			if(m_currentActivity != ACT_RANGE_ATTACK1 || m_isSequenceFinished)
+			{
+				CString seqname;
+				if(m_pState->flags & FL_DUCKING)
+					seqname << "crouch_aim_" << m_animExtension;
+				else
+					seqname << "ref_aim_" << m_animExtension;
+
+				desiredAnimation = FindSequence(seqname.c_str());
+				if(desiredAnimation == NO_SEQUENCE_VALUE)
+					desiredAnimation = 0;
+
+				m_currentActivity = ACT_WALK;
+			}
+			else
+			{
+				// Reset this to the current one
+				desiredAnimation = m_pState->sequence;
+			}
+		}
+		break;
+	}
+
+	if(m_pState->flags & FL_DUCKING)
+	{
+		// Set for crouching
+		if(!speed)
+			m_pState->gaitsequence = FindActivity(ACT_CROUCH_IDLE);
+		else
+			m_pState->gaitsequence = FindActivity(ACT_CROUCH);
+	}
+	else if(speed > 220)
+	{
+		// Running animation
+		m_pState->gaitsequence = FindActivity(ACT_RUN);
+	}
+	else if(speed > 0)
+	{
+		// Walking speed
+		m_pState->gaitsequence = FindActivity(ACT_WALK);
+	}
+	else
+	{
+		// Deep idle animation when standing still
+		m_pState->gaitsequence = FindSequence("deep_idle");
+	}
+
+	// Change animation if needed
+	if(m_pState->sequence != desiredAnimation)
+	{
+		m_pState->sequence = desiredAnimation;
+		m_pState->frame = 0;
+		ResetSequenceInfo();
+	}
+}
+
+//=============================================
+// @brief Set ideal activity to use
+//
+//=============================================
+void CPlayerEntity::SetIdealActivity( activity_t activity )
+{
+	m_idealActivity = activity;
 }
 
 //=============================================
@@ -4125,7 +4349,7 @@ bool CPlayerEntity::CanHaveWeapon( CPlayerWeapon* pWeapon ) const
 // @brief
 //
 //=============================================
-bool CPlayerEntity::AddPlayerWeapon( CPlayerWeapon* pWeapon )
+bool CPlayerEntity::AddPlayerWeapon( CPlayerWeapon* pWeapon, bool& triggerTarget )
 {
 	if (!CanPickupWeapon(pWeapon->GetHUDSlot(), (weaponid_t)pWeapon->GetId()))
 	{
@@ -4142,7 +4366,10 @@ bool CPlayerEntity::AddPlayerWeapon( CPlayerWeapon* pWeapon )
 					const Char* pstrAmmoType = pPlayerWeapon->GetAmmoTypeName();
 					if (!qstrcmp(pstrAmmoType, pstrAddAmmoType))
 					{
-						pWeapon->ExtractAmmo(pPlayerWeapon);
+						if(!pWeapon->ExtractAmmo(pPlayerWeapon))
+							return false;
+
+						triggerTarget = true;
 						break;
 					}
 
@@ -4167,6 +4394,8 @@ bool CPlayerEntity::AddPlayerWeapon( CPlayerWeapon* pWeapon )
 
 				if(pWeapon->ShouldRemove(pPlayerWeapon))
 					pWeapon->FlagForRemoval();
+
+				triggerTarget = true;
 			}
 
 			return false;
@@ -4179,6 +4408,7 @@ bool CPlayerEntity::AddPlayerWeapon( CPlayerWeapon* pWeapon )
 	pWeapon->AddToPlayer(this);
 	pWeapon->SetNextWeapon(m_pWeaponsList);
 	m_pWeaponsList = pWeapon;
+	triggerTarget = true;
 
 	// Emit sound
 	if(!pWeapon->HasSpawnFlag(CPlayerWeapon::FL_WEAPON_NO_NOTICE))
@@ -4187,6 +4417,7 @@ bool CPlayerEntity::AddPlayerWeapon( CPlayerWeapon* pWeapon )
 	if(!m_pActiveWeapon || (pWeapon->GetWeaponFlags() & FL_WEAPON_AUTO_DRAW) && m_pActiveWeapon->CanHolster())
 		SwitchToWeapon(pWeapon);
 
+	pWeapon->PostWeaponPickup();
 	return true;
 }
 
@@ -4547,7 +4778,7 @@ bool CPlayerEntity::TakeHealth( Float amount, Int32 damageFlags )
 
 	// Clear out damages on these types
 	m_damageTypes &= ~(damageFlags & DMG_TIMEBASED);
-	return CBaseEntity::TakeHealth(amount, damageFlags);
+	return CAnimatingEntity::TakeHealth(amount, damageFlags);
 }
 
 //=============================================
@@ -4685,6 +4916,7 @@ void CPlayerEntity::RemoveAllWeapons( void )
 			CPlayerWeapon* pFree = pWeapon;
 			pWeapon = pFree->GetNextWeapon();
 
+			pFree->SetNextWeapon(nullptr);
 			pFree->DropWeapon(true);
 		}
 		m_pWeaponsList = nullptr;
@@ -5570,8 +5802,8 @@ void CPlayerEntity::AutoAimThink( void )
 
 			// Clear on client
 			gd_engfuncs.pfnUserMessageBegin(MSG_ONE, g_usermsgs.setautoaimvector, nullptr, m_pEdict);
-				gd_engfuncs.pfnMsgWriteSmallFloat(0);
-				gd_engfuncs.pfnMsgWriteSmallFloat(0);
+				gd_engfuncs.pfnMsgWriteFloat(0);
+				gd_engfuncs.pfnMsgWriteFloat(0);
 				gd_engfuncs.pfnMsgWriteByte(FALSE);
 			gd_engfuncs.pfnUserMessageEnd();
 		}
@@ -6456,12 +6688,12 @@ void CPlayerEntity::TapePlaybackThink( void )
 }
 
 //=============================================
-// @brief Sets dialouge duration for player
+// @brief Sets dialogue duration for player
 //
 //=============================================
-void CPlayerEntity::SetDialougeDuration( Float duration )
+void CPlayerEntity::SetDialogueDuration( Float duration )
 {
-	m_dialougePlaybackTime = g_pGameVars->time + duration;
+	m_dialoguePlaybackTime = g_pGameVars->time + duration;
 }
 
 //=============================================

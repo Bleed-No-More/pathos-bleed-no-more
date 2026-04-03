@@ -1,0 +1,76 @@
+	// See if we can cheap out and test against axial planes only
+	Uint32 i;
+	for(i = 0; i < 3; i++)
+	{
+		if(SDL_fabs(ptriangle->normal[i]) > (1.0 - COLLISION_EPSILON))
+			break;
+	}
+
+	if(i != 3)
+	{
+		// This is an(almost totally) axial plane if
+		// it's beyond the epsilon value in any axis
+		Float startdist = 0;
+		Float enddist = 0;
+		Float closevalue;
+
+		if(direction[i] < 0.0f)
+		{
+			closevalue = -1e30f;
+
+			for(Uint32 j = 0; j < 3; j++)
+			{
+				const mcdvertex_t* pvertex = &pvertexes[ptriangle->trivertexes[j]];
+				if(pvertex->origin[i] > closevalue)
+					closevalue = pvertex->origin[i];
+			}
+
+			closevalue += extents[i];
+			startdist = start[i] - closevalue;
+			enddist = end[i] - closevalue;
+		}
+		else
+		{
+			closevalue = 1e30f;
+
+			for(Uint32 j = 0; j < 3; j++)
+			{
+				const mcdvertex_t* pvertex = &pvertexes[ptriangle->trivertexes[j]];
+				if(pvertex->origin[i] < closevalue)
+					closevalue = pvertex->origin[i];
+			}
+
+			closevalue -= extents[i];
+			startdist = (start[i] - closevalue) * -1;
+			enddist = (end[i] - closevalue) * -1;
+		}
+
+		if(startdist > COLLISION_EPSILON && enddist < -COLLISION_EPSILON)
+		{
+			Float _frac = (startdist - COLLISION_EPSILON) / (startdist - enddist);
+			if(_frac < fraction)
+			{
+				Math::VectorMA(start, _frac, direction, impactPosition);
+
+				fraction = _frac;
+				impactNormal.Clear();
+				impactNormal[i] = 1.0;
+				planeDistance = closevalue;
+			}
+		}
+		else if(startdist < -COLLISION_EPSILON && enddist > COLLISION_EPSILON)
+		{
+			Float _frac = (startdist + COLLISION_EPSILON) / (startdist - enddist);
+			if(_frac < fraction)
+			{
+				Math::VectorMA(start, _frac, direction, impactPosition);
+
+				fraction = _frac;
+				impactNormal.Clear();
+				impactNormal[i] = 1.0;
+				planeDistance = closevalue;
+			}
+		}
+
+		return (fraction == 1.0) ? false : true;
+	}

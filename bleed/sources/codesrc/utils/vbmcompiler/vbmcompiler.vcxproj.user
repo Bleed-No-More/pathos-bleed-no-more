@@ -7,10 +7,10 @@
     <LocalDebuggerCommand>D:\Games\Reckoning\reckon\sources\codesrc\utils\vbmcompiler\Release\vbmcompiler.exe</LocalDebuggerCommand>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>D:\crapcasket\old D:\crapkasket\new</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>"D:\Games\Bleed No More\bleed\sources\modelsrc\error\error.qc" -q -w -l -h -m</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
-    <LocalDebuggerWorkingDirectory>D:\Games\Reckoning\reckon\sources\codesrc\utils\vbmcompiler\Release</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerCommand>D:\Games\Reckoning\reckon\sources\codesrc\utils\vbmcompiler\Release\vbmcompiler.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>D:\Games\Bleed No More\bleed\sources\progs\vbmcompiler\</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommand>D:\Games\Bleed No More\bleed\sources\progs\vbmcompiler\vbmcompiler.exe</LocalDebuggerCommand>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LocalDebuggerCommandArguments>D:\test\models D:\test\out\models</LocalDebuggerCommandArguments>

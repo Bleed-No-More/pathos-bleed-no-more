@@ -154,19 +154,196 @@ void EV_EjectBullet( const Vector& attachment, const mstudioevent_t *pevent, con
 	Vector forward, right, up;
 	Math::AngleVectors(angles, &forward, &right, &up);
 
+	// Values set by parameters or defaulted
 	Vector origin(attachment);
-	if(pentity->entindex != VIEWMODEL_ENTITY_INDEX)
-		origin -= forward * 8;
+	CString submodelName;
+	CString soundtypestr;
+	bool bouyancyset = false;
+	Float bouyancy = 0;
+	bool waterfrictionset = false;
+	Float waterfriction = 0;
+	bool fadeout = false;
+	Float rightvel = 0;
+	bool rightvelset = false;
+	Float upvel = 0;
+	bool upvelset = false;
+	Float rightvelsign = 1;
 
-	Float upvel = Common::RandomFloat(50, 70);
-	Float rightvel = Common::RandomFloat(70, 90);
+	// Parse the option string
+	CString options = pevent->options;
+	Int32 lastpos = 0;
+	while(lastpos < options.length())
+	{
+		Int32 nextpos = options.find(lastpos, ";");
 
-	for(Uint32 i = 0; i < 3; i++)
-		velocity[i] = velocity[i] + right[i] * rightvel + up[i] * upvel + forward[i] * 20;
+		Uint32 length;
+		if(nextpos == CString::CSTRING_NO_POSITION)
+			length = options.length() - lastpos;
+		else
+			length = nextpos - lastpos;
 
-	const vbmheader_t* pvbmheader = pmodel->getVBMCache()->pvbmhdr;
+		const Char* pstr = options.c_str() + lastpos;
+		CString option(pstr, length);
+
+		// Read parameter name
+		CString token;
+		const Char* pscanstr = Common::Parse(option.c_str(), token);
+
+		if(!qstrcmp(token, "reverse_dir") || !qstrcmp(token, "rdir"))
+		{
+			// Reverse the velocity direction
+			rightvelsign = -1;
+		}
+		else if(!qstrcmp(token, "fade") || !qstrcmp(token, "fadeout"))
+		{
+			// Fade out before dying
+			fadeout = true;
+		}
+		else if(!qstrcmp(token, "attachment") || !qstrcmp(token, "att"))
+		{
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value
+			Common::Parse(pscanstr, token);
+			if(!Common::IsNumber(token))
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Token 'attachment' value '%s' on model '%s' is not a number.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				continue;
+			}
+
+			Int32 attachmentIndex = SDL_atoi(token.c_str());
+			if(attachmentIndex < 0 || attachmentIndex >= MAX_ATTACHMENTS)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Token 'attachment' value '%s' on model '%s' is an invalid attachment index, maximum is %d.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str(), MAX_ATTACHMENTS);
+				continue;
+			}
+
+			// Set attachment to use
+			origin = pentity->attachments[attachmentIndex];
+		}
+		else if(!qstrcmp(token, "submodel") || !qstrcmp(token, "sm"))
+		{
+			// When explicitly stated
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value directly into submodelName
+			Common::Parse(pscanstr, submodelName);
+		}
+		else if(!qstrcmp(token, "soundtype") || !qstrcmp(token, "st"))
+		{
+			// When explicitly stated
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value directly into soundtypestr
+			Common::Parse(pscanstr, soundtypestr);
+		}
+		else if(!qstrcmp(token, "bouyancy") || !qstrcmp(token, "byc"))
+		{
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value
+			Common::Parse(pscanstr, token);
+			if(!Common::IsNumber(token))
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Token 'attachment' value '%s' on model '%s' is not a number.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				continue;
+			}
+
+			bouyancy = SDL_atof(token.c_str());
+			bouyancyset = true;
+		}
+		else if(!qstrcmp(token, "waterfriction") || !qstrcmp(token, "wfr"))
+		{
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value
+			Common::Parse(pscanstr, token);
+			if(!Common::IsNumber(token))
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Token 'attachment' value '%s' on model '%s' is not a number.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				continue;
+			}
+
+			waterfriction = SDL_atof(token.c_str());
+			waterfrictionset = true;
+		}
+		else if(!qstrcmp(token, "rightvel") || !qstrcmp(token, "rvel"))
+		{
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value
+			Common::Parse(pscanstr, token);
+			if(!Common::IsNumber(token))
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Token 'attachment' value '%s' on model '%s' is not a number.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				continue;
+			}
+
+			rightvel = SDL_atof(token.c_str());
+			rightvelset = true;
+		}
+		else if(!qstrcmp(token, "upvel"))
+		{
+			if(!pscanstr)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Incomplete 'attachment' token on model '%s'.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				return;
+			}
+
+			// Read parameter value
+			Common::Parse(pscanstr, token);
+			if(!Common::IsNumber(token))
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Token 'attachment' value '%s' on model '%s' is not a number.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+				continue;
+			}
+
+			upvel = SDL_atof(token.c_str());
+			upvelset = true;
+		}
+		else if(submodelName.empty())
+		{
+			// Always assume first non-option token is submodel name
+			submodelName = token;
+		}
+		else
+		{
+			cl_engfuncs.pfnCon_Printf("%s - Token '%s' on model '%s' not recognized.\n", __FUNCTION__, token.c_str(), pentity->pmodel->name.c_str());
+		}
+
+		// If reached end, then stop
+		if(nextpos == CString::CSTRING_NO_POSITION)
+			break;
+
+		lastpos = nextpos + 1;
+	}
 
 	Int64 bodyvalue = -1;
+	const vbmheader_t* pvbmheader = pmodel->getVBMCache()->pvbmhdr;
 	for(Uint32 i = 0; i < pvbmheader->numbodyparts; i++)
 	{
 		const vbmbodypart_t* pbodypart = pvbmheader->getBodyPart(i);
@@ -174,7 +351,7 @@ void EV_EjectBullet( const Vector& attachment, const mstudioevent_t *pevent, con
 		for(; j < pbodypart->numsubmodels; j++)
 		{
 			const vbmsubmodel_t* psubmodel = pbodypart->getSubmodel(pvbmheader, j);
-			if(!qstrcmp(psubmodel->name, pevent->options))
+			if(!qstrcmp(psubmodel->name, submodelName))
 			{
 				bodyvalue = j*pbodypart->base;
 				break;
@@ -187,18 +364,81 @@ void EV_EjectBullet( const Vector& attachment, const mstudioevent_t *pevent, con
 
 	if(bodyvalue == -1)
 	{
-		cl_engfuncs.pfnCon_Printf("%s - Submodel '%s' not found in '%s'.\n", __FUNCTION__, pevent->options, BULLETS_MODEL_FILENAME);
-		return;
+		// Find partial match
+		for(Uint32 i = 0; i < pvbmheader->numbodyparts; i++)
+		{
+			const vbmbodypart_t* pbodypart = pvbmheader->getBodyPart(i);
+			Uint32 j = 0;
+			for(; j < pbodypart->numsubmodels; j++)
+			{
+				const vbmsubmodel_t* psubmodel = pbodypart->getSubmodel(pvbmheader, j);
+				if(qstrstr(psubmodel->name, submodelName.c_str()))
+				{
+					bodyvalue = j*pbodypart->base;
+					break;
+				}
+			}
+
+			if(j != (Uint32)pbodypart->numsubmodels)
+				break;
+		}
+
+		if(bodyvalue == -1)
+		{
+			cl_engfuncs.pfnCon_Printf("%s - Submodel '%s' not found in '%s'.\n", __FUNCTION__, submodelName.c_str(), BULLETS_MODEL_FILENAME);
+			return;
+		}
 	}
 
-	bool isBuckshot = !qstrcmp(pevent->options, "buckshot_reference") ? true : false;
+	if(!upvelset)
+		upvel = Common::RandomFloat(50, 70);
 
-	// Set params
-	Int32 soundtype = isBuckshot ? TE_BOUNCE_SHOTSHELL : TE_BOUNCE_SHELL;
-	Float bouyancy = isBuckshot ? 500 : 300;
-	Float waterfriction = isBuckshot ? 1.0 : 0.3;
+	if(!rightvelset)
+		rightvel = Common::RandomFloat(70, 90) * rightvelsign;
 
-	tempentity_t* ptempentity = cl_efxapi.pfnTempModel(origin, velocity, pentity->curstate.angles, 10, pmodel->cacheindex, soundtype, bouyancy, waterfriction, 0);
+	for(Uint32 i = 0; i < 3; i++)
+		velocity[i] = velocity[i] + right[i] * rightvel + up[i] * upvel + forward[i] * 20;
+
+	// Offset a bit for NPCs
+	if(pentity->entindex != VIEWMODEL_ENTITY_INDEX)
+		origin -= forward * 8;
+
+	Int32 soundtype = TE_BOUNCE_NONE;
+	if(!soundtypestr.empty())
+	{
+		if(!qstrcmp(soundtypestr, "glass"))
+			soundtype = TE_BOUNCE_GLASS;
+		else if(!qstrcmp(soundtypestr, "metal"))
+			soundtype = TE_BOUNCE_METAL;
+		else if(!qstrcmp(soundtypestr, "flesh"))
+			soundtype = TE_BOUNCE_FLESH;
+		else if(!qstrcmp(soundtypestr, "wood"))
+			soundtype = TE_BOUNCE_WOOD;
+		else if(!qstrcmp(soundtypestr, "shell"))
+			soundtype = TE_BOUNCE_SHELL;
+		else if(!qstrcmp(soundtypestr, "concrete") || !qstrcmp(soundtypestr, "conc"))
+			soundtype = TE_BOUNCE_CONCRETE;
+		else if(!qstrcmp(soundtypestr, "shotshell") || !qstrcmp(soundtypestr, "sshell"))
+			soundtype = TE_BOUNCE_SHOTSHELL;
+		else
+			cl_engfuncs.pfnCon_Printf("%s - Sound type '%s' on model '%s' not recognized.\n", __FUNCTION__, soundtypestr.c_str(), pentity->pmodel->name.c_str());
+	}
+	else
+	{
+		// Default value
+		soundtype = TE_BOUNCE_SHELL;
+	}
+
+	// Legacy support
+	if(!bouyancyset)
+		bouyancy = 300;
+
+	// Default value
+	if(!waterfrictionset)
+		waterfriction = 0.3;
+
+	Int32 flags = fadeout ? TE_FL_FADEOUT : TE_FL_NONE;
+	tempentity_t* ptempentity = cl_efxapi.pfnTempModel(origin, velocity, pentity->curstate.angles, 10, pmodel->cacheindex, soundtype, bouyancy, waterfriction, flags);
 	if(ptempentity)
 		ptempentity->entity.curstate.body = bodyvalue;
 }

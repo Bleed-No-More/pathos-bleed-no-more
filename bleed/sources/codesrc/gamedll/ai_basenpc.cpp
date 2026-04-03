@@ -1572,7 +1572,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 			else
 			{
 				// Just set an arbitrary position
-				m_enemyLastKnownPosition = m_pState->origin + gMultiDamage.GetAttackDirection() * 64;
+				m_enemyLastKnownPosition = m_pState->origin + gMultiDamage.GetDamageDirection() * 64;
 			}
 
 			// Push this enemy instantly
@@ -1792,7 +1792,7 @@ void CBaseNPC::TraceAttack( CBaseEntity* pAttacker, Float damage, const Vector& 
 		if(_dmgAmount >= NPC_LIGHT_DAMAGE_TRESHOLD)
 			SpawnBloodDecals(damage, direction, tr, damageFlags);
 
-		if(tr.hitgroup == HITGROUP_HEAD)
+		if(tr.hitgroup == HITGROUP_HEAD && !(damageFlags & DMG_MELEE))
 		{
 			Vector traceEndPosition = tr.endpos + direction * 256;
 
@@ -3292,10 +3292,10 @@ void CBaseNPC::CorpseFallThink( void )
 void CBaseNPC::SetNPCState( npcstate_t state )
 {
 	// Drop any enemies when going to idle
-	if(state == NPC_STATE_IDLE && m_enemy)
+	if((state == NPC_STATE_IDLE || state == NPC_STATE_ALERT) && m_enemy)
 	{
+		Util::EntityConDPrintf(m_pEdict, "Enemy was stripped when changing to idle AI state.\n");
 		m_enemy.reset();
-		Util::EntityConPrintf(m_pEdict, "Enemy was stripped when changing to idle AI state.\n");
 	}
 
 	m_npcState = state;
@@ -3362,8 +3362,11 @@ npcstate_t CBaseNPC::GetIdealNPCState( void )
 				ClearCondition(AI_COND_BLOCKING_PATH);
 
 			// This shouldn't happen
-			if(!m_enemy)
+			if(!m_enemy || !m_enemy->IsAlive())
 			{
+				if(m_enemy)
+					m_enemy.reset();
+
 				m_idealNPCState = NPC_STATE_ALERT;
 				Util::EntityConPrintf(m_pEdict, "Combat state with no enemy.\n");
 			}
@@ -6009,7 +6012,7 @@ bool CBaseNPC::GetNextEnemy( void )
 		// Get the most optimal best enemy
 		pNewEnemy = GetBestVisibleEnemy();
 
-		if(pNewEnemy != m_enemy && pNewEnemy && m_pSchedule)
+		if((m_npcState == NPC_STATE_IDLE || pNewEnemy != m_enemy) && pNewEnemy && m_pSchedule)
 		{
 			if(m_pSchedule->GetInterruptMask().test(AI_COND_NEW_ENEMY))
 			{
@@ -8871,7 +8874,7 @@ activity_t CBaseNPC::GetDeathActivity( void )
 
 	Vector forward;
 	Math::AngleVectors(m_pState->angles, &forward);
-	Float dp = Math::DotProduct(forward, gMultiDamage.GetAttackDirection() * -1);
+	Float dp = Math::DotProduct(forward, gMultiDamage.GetDamageDirection() * -1);
 
 	if(m_damageBits & DMG_EXPLOSION || m_lastHitGroup == HITGROUP_GENERIC)
 	{
@@ -9135,7 +9138,10 @@ void CBaseNPC::SetLastActivityTime( Double time )
 //=============================================
 void CBaseNPC::SetCurrentActivity( activity_t activity )
 {
+	// Force whatever value we want to use
 	m_currentActivity = (activity_t)activity;
+	// Ensure this is set
+	SetYawSpeed();
 }
 
 //=============================================

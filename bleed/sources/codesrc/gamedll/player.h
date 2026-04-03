@@ -10,7 +10,7 @@ All Rights Reserved.
 #ifndef PLAYER_H
 #define PLAYER_H
 
-#include "baseentity.h"
+#include "animatingentity.h"
 #include "stepsound.h"
 #include "weapons_shared.h"
 #include "ehandle.h"
@@ -45,7 +45,7 @@ CPlayerEntity
 
 =======================
 */
-class CPlayerEntity : public CBaseEntity
+class CPlayerEntity : public CAnimatingEntity
 {
 public:
 	enum timebaseddmgtypes_t
@@ -57,6 +57,14 @@ public:
 		TBD_FREEZE,
 
 		NUM_TIMEBASED_DMG
+	};
+	enum player_animation_t
+	{
+		PLAYER_ANM_IDLE = 0,
+		PLAYER_ANM_WALK,
+		PLAYER_ANM_JUMP,
+		PLAYER_ANM_DIE,
+		PLAYER_ANM_ATTACK1
 	};
 	struct cheatinfo_t
 	{
@@ -308,8 +316,8 @@ public:
 	// Sets nightstage state
 	virtual void SetDayStage( daystage_t daystage ) override;
 
-	// Sets dialouge duration for player
-	virtual void SetDialougeDuration( Float duration ) override;
+	// Sets dialogue duration for player
+	virtual void SetDialogueDuration( Float duration ) override;
 
 	// Adds a medkit to the player
 	virtual bool AddMedkit( const Char* pstrClassname, bool noNotice ) override;
@@ -357,7 +365,7 @@ public:
 	// Sets ammo count for a type
 	virtual void SetAmmoCount( Int32 ammotype, Int32 ammocount ) override;
 	// Adds item to player
-	virtual bool AddPlayerWeapon( CPlayerWeapon* pWeapon ) override;
+	virtual bool AddPlayerWeapon( CPlayerWeapon* pWeapon, bool& triggerTarget ) override;
 
 	// Sets the save-game title
 	virtual void SetSaveGameTitle( const Char* pstrtitle ) override;
@@ -441,6 +449,12 @@ public:
 
 	// Updates client data
 	void UpdateClientData( void );
+
+public:
+	// Set animation for player model
+	void SetAnimation( player_animation_t animation );
+	// Set ideal activity to use
+	void SetIdealActivity( activity_t activity );
 
 public:
 	// Returns the passcode for an id
@@ -774,15 +788,8 @@ private:
 	Double						m_reloadTime;
 	// Time at which we died
 	Double						m_deathTime;
-	// Stamina on client
-	Float						m_clientStamina;
 	// Kevlar on client
 	Float						m_clientKevlar;
-
-	// Sprint stamina drain multiplier
-	Float						m_sprintStaminaDrainMultiplier;
-	// Normal walking movement stamina drain factor
-	Float						m_normalMovementStaminaDrainFactor;
 
 	// Current falling velocity
 	Float						m_fallingVelocity;
@@ -842,6 +849,8 @@ private:
 	Int64						m_prevFlags;
 	// Previous buttons
 	Int32						m_prevButtons;
+	// Changed buttons
+	Int32						m_changedButtons;
 
 	// Ideal lean offset
 	Vector						m_idealLeanOffset;
@@ -934,6 +943,8 @@ private:
 	Float						m_drownDamageAmount;
 	// Drown damage healed
 	Float						m_drownDamageHealed;
+	// Next damage view punch time
+	Double						m_lastDmgViewPunchTime;
 	// TRUE if underwater sound is playing
 	bool						m_isUnderwaterSoundPlaying;
 	// Time we went underwater
@@ -946,14 +957,23 @@ private:
 	Double						m_nextSwimSoundTime;
 	// Last water level
 	Int32						m_prevWaterLevel;
+	// Death motion blur delay
+	Double						m_deathMotionBlurTime;
+
+	// Ideal activity to set
+	Int32						m_idealActivity;
+	// Current activity used
+	Int32						m_currentActivity;
+	// Animation extension string
+	CString						m_animExtension;
 
 	// Damage values for time based damages
 	Double						m_timeBasedDmgTime[NUM_TIMEBASED_DMG];
 	// Last time we were hurt by time based dmg
 	Double						m_lastTimeBasedDmgTime[NUM_TIMEBASED_DMG];
 
-	// Dialouge playback timer
-	Double						m_dialougePlaybackTime;
+	// Dialogue playback timer
+	Double						m_dialoguePlaybackTime;
 
 private:
 	// Music playback info

@@ -1,0 +1,413 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 75,
+                  "startColumn": 41,
+                  "endLine": 75,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_S8_to_F32_Scalar",
+                  "decoratedName": "SDL_Convert_S8_to_F32_Scalar",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 94,
+                  "startColumn": 41,
+                  "endLine": 94,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_U8_to_F32_Scalar",
+                  "decoratedName": "SDL_Convert_U8_to_F32_Scalar",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 113,
+                  "startColumn": 41,
+                  "endLine": 113,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_S16_to_F32_Scalar",
+                  "decoratedName": "SDL_Convert_S16_to_F32_Scalar",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 132,
+                  "startColumn": 41,
+                  "endLine": 132,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_U16_to_F32_Scalar",
+                  "decoratedName": "SDL_Convert_U16_to_F32_Scalar",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 301,
+                  "startColumn": 41,
+                  "endLine": 301,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_S8_to_F32_SSE2",
+                  "decoratedName": "SDL_Convert_S8_to_F32_SSE2",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 360,
+                  "startColumn": 41,
+                  "endLine": 360,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_U8_to_F32_SSE2",
+                  "decoratedName": "SDL_Convert_U8_to_F32_SSE2",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 421,
+                  "startColumn": 41,
+                  "endLine": 421,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_S16_to_F32_SSE2",
+                  "decoratedName": "SDL_Convert_S16_to_F32_SSE2",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+                },
+                "region": {
+                  "startLine": 469,
+                  "startColumn": 41,
+                  "endLine": 469,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_Convert_U16_to_F32_SSE2",
+                  "decoratedName": "SDL_Convert_U16_to_F32_SSE2",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.38.33133.0",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_audiotypecvt.c"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "3ced1907d68c62a4ffecd969bcd9fa0412c68678742c66b70fe1987f353a08c3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/sdl_internal.h"
+          },
+          "hashes": {
+            "sha-256": "83d3d78bfb942f85f247ae2d732ac1c7999f5241c173e3273450ff81ccdab356"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi.h"
+          },
+          "hashes": {
+            "sha-256": "024494e17db39607e720bad399a8a29ba0a34c66aeaa0888d35a4910ef5153b3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi_overrides.h"
+          },
+          "hashes": {
+            "sha-256": "739d3d416910966c57361d30c332e6bd5e44a07cd67cfe9f661daa93337412d4"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config.h"
+          },
+          "hashes": {
+            "sha-256": "86a1689a2ee033f2d7463b9169ee5ddc3fd228b04a9ab3c0a7a4e05be39d9158"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_platform.h"
+          },
+          "hashes": {
+            "sha-256": "47a303749d9951df4518a45e19d244e98c87c2a7336fdf632bdfc80d6e7d0262"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/begin_code.h"
+          },
+          "hashes": {
+            "sha-256": "250ef5cd3c00a77133236d9a04fdf0f3461811cc4d05117cff40e4a8edfda03a"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/close_code.h"
+          },
+          "hashes": {
+            "sha-256": "a05d08d1d7100ef2dcb84220ab1f701108aea8747928ba2ad7384bfc02b981e8"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config_windows.h"
+          },
+          "hashes": {
+            "sha-256": "e883dcb78a26924c7b15cf5b480a69e110aa3896d1658380020bd901b08cd963"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_audio.h"
+          },
+          "hashes": {
+            "sha-256": "dfca1028223e329c224a076a83f61405207a71fce95d79eabf8a0f1127170c33"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_stdinc.h"
+          },
+          "hashes": {
+            "sha-256": "24c5d1124a5a28c773878220673487ca9e6f6c869adc88ef8058df5330cde98e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_error.h"
+          },
+          "hashes": {
+            "sha-256": "7abae8b28558083e3952f415ccbe0b99fab8782420f766bac54674eb60c610be"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_endian.h"
+          },
+          "hashes": {
+            "sha-256": "efb86fd1022a96b6bff2071017cd5a0303f6d7f64000d2a221a25157540af269"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_mutex.h"
+          },
+          "hashes": {
+            "sha-256": "58a53c83b6d50f72a940482f5ee506acf706e61820f8bc10060ccb4027925538"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_thread.h"
+          },
+          "hashes": {
+            "sha-256": "6fb683847f56e7b9f29fdbbec57ae5036909563f75c0500069f50fd3b9e9858d"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_atomic.h"
+          },
+          "hashes": {
+            "sha-256": "9fdac603ccd71716ac527374cad80b2d6996d820c2b4a05e18965c7c1fa77d17"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_rwops.h"
+          },
+          "hashes": {
+            "sha-256": "29ec25675e0527a09f2e377b1037352a5552894848b763fd777a7654426e5140"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/audio/sdl_audio_c.h"
+          },
+          "hashes": {
+            "sha-256": "2253aec950384e56eb6439b40da68b65d29431d372209b2a27d48c4a14e49338"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_cpuinfo.h"
+          },
+          "hashes": {
+            "sha-256": "d1e45f1001fe57f74bfba1872a691bcdc99e47d9c849f9a30467283a7f09f49f"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_assert.h"
+          },
+          "hashes": {
+            "sha-256": "b6e4b5f02ec0d756a4a87f4c593d165826faabb91c17ded48b9385c0db5217f9"
+          }
+        }
+      ]
+    }
+  ]
+}

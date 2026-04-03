@@ -41,6 +41,7 @@ CGameUIManager gGameUIManager;
 //=============================================
 CGameUIManager::CGameUIManager( void ):
 	m_pActiveWindow(nullptr),
+	m_pBackground(nullptr),
 	m_pSchemaManager(nullptr),
 	m_blurFadeTime(0),
 	m_isBlurActive(false),

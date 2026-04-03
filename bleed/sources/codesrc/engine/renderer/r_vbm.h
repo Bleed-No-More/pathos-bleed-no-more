@@ -27,17 +27,17 @@ struct cache_model_t;
 struct entity_extrainfo_t;
 
 // Max dynamic lights affecting a model entity
-static constexpr Uint32 MAX_ENT_ACTIVE_DLIGHTS		= 4;
+static constexpr Uint32 MAX_ENT_ACTIVE_DLIGHTS			= 4;
 // Max dynamic lights affecting a model entity
-static constexpr Uint32 MAX_ENT_DLIGHTS				= 12;
+static constexpr Uint32 MAX_ENT_DLIGHTS					= 12;
 // Max studio decals total
-static constexpr Uint32 MAX_VBM_TOTAL_DECALS		= 512;
+static constexpr Uint32 MAX_VBM_TOTAL_DECALS			= 512;
 // Max temporary indexes for decal creation
-static constexpr Uint32 MAX_TEMP_VBM_INDEXES		= 32768;
+static constexpr Uint32 MAX_TEMP_VBM_INDEXES			= 32768;
 // Max temporary vertexes for special render stuff
-static constexpr Uint32 MAX_TEMP_VBM_VERTEXES		= 16354;
+static constexpr Uint32 MAX_TEMP_VBM_VERTEXES			= 16354;
 // Maximum submodels rendered at once
-static constexpr Uint32 MAX_VBM_RENDERED_SUBMODELS	= 64;
+static constexpr Uint32 RENDERED_SUBMODELS_ALLOC_SIZE	= 64;
 
 enum vbm_shtype
 {
@@ -480,6 +480,13 @@ private:
 	// Tells if the model should re-calculate bones
 	bool ShouldAnimate( void );
 
+	// Process gait animation
+	void ProcessGait( void );
+	// Estimate gait animation related info
+	void EstimateGait( Double dt );
+	// Calculate player blending
+	void CalcPlayerBlend( const mstudioseqdesc_t* pseqdesc, Float& blend, Float& pitch );
+
 	// Calculates attachment positions
 	void CalculateAttachments( void );
 	// Updates currently fetched light values
@@ -502,7 +509,7 @@ private:
 
 private:
 	// Calls main render routines
-	bool Render( void );
+	bool Render( Int32 flags );
 	// Sets up rendering routines
 	bool SetupRenderer( void );
 	// Restores rendering states
@@ -584,7 +591,7 @@ private:
 	// Builds the VBO
 	void BuildVBO( void );
 	// Adds a VBM file to the VBO object
-	void AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, vbm_glvertex_t* pvertexbuffer, Uint32* pindexbuffer, Uint32& vertexoffset, Uint32& indexoffset );
+	void AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, mcdheader_t* pmcd, vbm_glvertex_t* pvertexbuffer, Uint32* pindexbuffer, Uint32& vertexoffset, Uint32& indexoffset );
 
 private:
 	// Toggles rendering of models
@@ -603,6 +610,8 @@ private:
 	CCVar* m_pCvarUseBumpData;
 	// Lighting ratio used for non-bump lightdata fetches
 	CCVar* m_pCvarLightRatio;
+	// Toggles rendering of local player model
+	CCVar* m_pCvarDrawPlayer;
 
 private:
 	// GLSL shader object
@@ -656,14 +665,14 @@ private:
 
 private:
 	// Model cache pointer for entity
-	cache_model_t *m_pCacheModel;
+	const cache_model_t *m_pCacheModel;
 	// Current rendered entity
 	cl_entity_t *m_pCurrentEntity;
 
 	// Studio data pointer
-	studiohdr_t *m_pStudioHeader;
+	const studiohdr_t *m_pStudioHeader;
 	// VBM data pointer
-	vbmheader_t *m_pVBMHeader;
+	const vbmheader_t *m_pVBMHeader;
 	// Pointer to entity extradata
 	entity_extrainfo_t *m_pExtraInfo;
 	// Entity alpha used for rendering
@@ -680,6 +689,8 @@ private:
 	Vector m_mins;
 	// Entity absolute maxs
 	Vector m_maxs;
+	// Bounding box corners
+	Vector m_bboxCorners[8];
 
 	// Tells if UBOs are supported
 	bool m_areUBOsSupported;
@@ -714,7 +725,7 @@ private:
 
 private:
 	// List of submodels to render
-	const vbmsubmodel_t *m_pSubmodelDrawList[MAX_VBM_RENDERED_SUBMODELS];
+	CArray<const vbmsubmodel_t*> m_pSubmodelDrawList;
 	// Amount of batched submodels
 	Uint32 m_numDrawSubmodels;
 
@@ -768,6 +779,11 @@ private:
 	CArray<vec4_t>	m_boneQuaternions5;
 	// Used for bone transform calculations
 	Float	m_boneMatrix[3][4];
+
+	// Gait estimate
+	Float	m_gaitEstimate;
+	// Gait movement
+	Float	m_gaitMovement;
 
 private:
 	// Used for uploading modellight data to the modellight UBO

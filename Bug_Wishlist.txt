@@ -1,0 +1,40 @@
+-----------------EDITOR
+
+//
+// Fixed:
+//
+Disappearing/
+Broken brushes (?) - Every so often some brushes will De-Render at certain angles or while panning around,
+                     on rare occasion brushes will freak out and disappear, or break in a bizarre way.
+                     This has only ever happened to me once in JACK with the Half-Life Prefabs map, where
+                     random brushes will become stretched or twisted, stretch infinitely into the distance etc.
+                     
+Right Click - Right click function in 3D view
+Flip Brush - Flip Brush Horizonal and Vertical in right click menu
+
+General Lag - Editor chugs hard when there's a lot  going on in the viewports or moving a lot of brushes,
+              or moving complex brushes (more testing needed, might be a Jord specific problem)
+
+Vertex Tool - Selecting single points in 3D View grabs a random node from a random brush selected,
+              brush updating in real time as opposed to an outline would be a neat option
+
+Rotate Clockwise/Counter Clockwise by 90 degrees - In the 2D dropdown menu
+Scale up by 2x - Button for Face Edit dialog
+
+//			  
+// Pending:
+//
+
+
+			  
+-----------------ENGINE
+
+//			  
+// Fixed:
+//
+Jump - is Directional rather than just up: tapping W then space, even when the player is near slowing down,
+       will send them flying forward, or whatever direction they last pushed.
+
+       (Video Explaining the different B-Hop implementations: 
+
+        https://youtu.be/gRqoXy-0d84?si=p_C5nBX5mpdWzjVU)

@@ -39,6 +39,7 @@ All Rights Reserved.
 #include "flexmanager.h"
 #include "vbmtrace.h"
 #include "r_lightstyles.h"
+#include "mcdformat.h"
 
 // Notes:
 // Part of this implementation is based on the implementation in the Half-Life SDK
@@ -105,6 +106,7 @@ CVBMRenderer::CVBMRenderer( void ):
 	m_pCvarSampleOffset(nullptr),
 	m_pCvarUseBumpData(nullptr),
 	m_pCvarLightRatio(nullptr),
+	m_pCvarDrawPlayer(nullptr),
 	m_pShader(nullptr),
 	m_pVBO(nullptr),
 	m_drawBufferIndex(0),
@@ -133,6 +135,7 @@ CVBMRenderer::CVBMRenderer( void ):
 	m_numDynamicLights(0),
 	m_isMultiPass(false),
 	m_isAuraPass(false),
+	m_pSubmodelDrawList(RENDERED_SUBMODELS_ALLOC_SIZE),
 	m_numDrawSubmodels(0),
 	m_numVBMDecals(0),
 	m_numTempIndexes(0),
@@ -141,11 +144,12 @@ CVBMRenderer::CVBMRenderer( void ):
 	m_vCache_Base(0),
 	m_iCache_Index(0),
 	m_iCache_Base(0),
+	m_gaitEstimate(0),
+	m_gaitMovement(0),
 	m_pFlexManager(nullptr)
 {
 	memset(m_pInternalRotationMatrix, 0, sizeof(m_pInternalRotationMatrix));
 	memset(m_pDynamicLights, 0, sizeof(m_pDynamicLights));
-	memset(m_pSubmodelDrawList, 0, sizeof(m_pSubmodelDrawList));
 	memset(m_flexTexels, 0, sizeof(m_flexTexels));
 	memset(m_uboBoneMatrixData, 0, sizeof(m_uboBoneMatrixData));
 
@@ -198,6 +202,7 @@ bool CVBMRenderer::Init( void )
 	m_pCvarSkyLighting = gConsole.CreateCVar(CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_model_skylight", "1", "Controls whether models take sky lighting.");
 	m_pCvarUseBumpData = gConsole.CreateCVar(CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_model_bumpdata", "0", "Controls whether models should use BSP bump data for lighting.");
 	m_pCvarLightRatio = gConsole.CreateCVar(CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_model_light_ratio", "0.5", "Controls division ratio between ambient and direct lighting for non-bump mapped lighting fetches.");
+	m_pCvarDrawPlayer = gConsole.CreateCVar(CVAR_FLOAT, FL_CV_CLIENT, "r_drawlocalplayer", "0", "Controls the rendering of the local player model. For debug purposes.");
 
 	CString minvalue;
 	minvalue << DEFAULT_LIGHTMAP_SAMPLE_OFFSET;
@@ -806,7 +811,7 @@ bool CVBMRenderer::SetupBones( Int32 flags )
 		if(m_pBoneTransform->size() < m_pStudioHeader->numbones)
 			m_pBoneTransform->resize(m_pStudioHeader->numbones);
 	}
-	else if(m_pBoneTransform->size() != m_pStudioHeader->numbones)
+	else if(m_pBoneTransform->size() != static_cast<Uint32>(m_pStudioHeader->numbones))
 		m_pBoneTransform->resize(m_pStudioHeader->numbones);
 
 	if(m_pWeightBoneTransform == &m_internalWeightBoneTransform)
@@ -814,7 +819,7 @@ bool CVBMRenderer::SetupBones( Int32 flags )
 		if(m_pWeightBoneTransform->size() < m_pStudioHeader->numbones)
 			m_pWeightBoneTransform->resize(m_pStudioHeader->numbones);
 	}
-	else if(m_pWeightBoneTransform->size() != m_pStudioHeader->numbones)
+	else if(m_pWeightBoneTransform->size() != static_cast<Uint32>(m_pStudioHeader->numbones))
 		m_pWeightBoneTransform->resize(m_pStudioHeader->numbones);
 
 	// Determine interpolation time
@@ -839,7 +844,7 @@ bool CVBMRenderer::SetupBones( Int32 flags )
 
 	// Get sequence data
 	const mstudioseqdesc_t* pseqdesc = m_pStudioHeader->getSequence(m_pCurrentEntity->curstate.sequence);
-	Float frame = VBM_EstimateFrame(pseqdesc, m_pCurrentEntity->curstate, rns.time);
+	Float frame = VBM_EstimateFrame(pseqdesc, rns.time, m_pCurrentEntity->curstate.frame, m_pCurrentEntity->curstate.animtime, m_pCurrentEntity->curstate.framerate, m_pCurrentEntity->curstate.effects);
 
 	// Get animation and calc rotations
 	const mstudioanim_t* panim = VBM_GetAnimation(m_pStudioHeader, pseqdesc);
@@ -925,6 +930,30 @@ bool CVBMRenderer::SetupBones( Int32 flags )
 	{
 		// Make sure this gets set
 		m_pCurrentEntity->latched.frame = frame;
+	}
+
+	// Calculate gait sequence if present
+	if(m_pCurrentEntity->curstate.gaitsequence < 0 || m_pCurrentEntity->curstate.gaitsequence >= m_pStudioHeader->numseq)
+		m_pCurrentEntity->curstate.gaitsequence = 0;
+
+	if(m_pCurrentEntity->curstate.gaitsequence > 0)
+	{
+		pseqdesc = m_pStudioHeader->getSequence(m_pCurrentEntity->curstate.gaitsequence);
+		panim = VBM_GetAnimation(m_pStudioHeader, pseqdesc);
+		frame = VBM_EstimateFrame(pseqdesc, rns.time, m_pCurrentEntity->curstate.gaitframe, m_pCurrentEntity->curstate.gaitanimtime, m_pCurrentEntity->curstate.framerate, m_pCurrentEntity->curstate.effects);
+
+		VBM_CalculateRotations(m_pStudioHeader, rns.time, m_pCurrentEntity->curstate.gaitanimtime, m_pCurrentEntity->latched.gaitanimtime, m_bonePositions2, m_boneQuaternions2, pseqdesc, panim, frame, m_pCurrentEntity->curstate.controllers, m_pCurrentEntity->latched.controllers, m_pCurrentEntity->mouth.mouthopen);
+
+		// TODO: Find a solution to mark special bones
+		for(Uint32 i = 0; i < m_pStudioHeader->numbones; i++)
+		{
+			const mstudiobone_t* pbone = m_pStudioHeader->getBone(static_cast<Uint32>(i));
+			if(!qstrcmp(pbone->name, "Bip01 Spine"))
+				break;
+
+			m_bonePositions1[i] = m_bonePositions2[i];
+			m_boneQuaternions1[i] = m_boneQuaternions2[i];
+		}
 	}
 
 	// Calculate bone matrices
@@ -1018,7 +1047,7 @@ bool CVBMRenderer::ShouldAnimate( void )
 	if(!m_pExtraInfo)
 		return true;
 
-	if (m_pCurrentEntity->curstate.sequence >=  m_pStudioHeader->numseq) 
+	if(m_pCurrentEntity->curstate.sequence < 0 || m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq)
 		m_pCurrentEntity->curstate.sequence = 0;
 
 	if(m_pCurrentEntity->curstate.renderfx == RenderFx_Distort || m_pCurrentEntity->curstate.renderfx == RenderFx_Diary)
@@ -1061,7 +1090,7 @@ bool CVBMRenderer::ShouldAnimate( void )
 
 	// Leave this for last, as it's the most expensive
 	const mstudioseqdesc_t *pseqdesc = m_pStudioHeader->getSequence(m_pCurrentEntity->curstate.sequence);
-	if(m_pExtraInfo->paniminfo->lastframe != VBM_EstimateFrame( pseqdesc, m_pCurrentEntity->curstate, rns.time ))
+	if(m_pExtraInfo->paniminfo->lastframe != VBM_EstimateFrame( pseqdesc, rns.time, m_pCurrentEntity->curstate.frame, m_pCurrentEntity->curstate.animtime, m_pCurrentEntity->curstate.framerate, m_pCurrentEntity->curstate.effects ))
 		return true;
 
 	Float interptime = VBM_SEQ_BLEND_TIME;
@@ -1074,6 +1103,172 @@ bool CVBMRenderer::ShouldAnimate( void )
 		return true;
 
 	return false;
+}
+
+//=============================================
+//
+//
+//=============================================
+void CVBMRenderer::CalcPlayerBlend( const mstudioseqdesc_t* pseqdesc, Float& blend, Float& pitch )
+{
+	blend = pitch * 3;
+	if(blend < pseqdesc->blendstart[0])
+	{
+		pitch -= (pseqdesc->blendstart[0] / 3.0f);
+		blend = 0;
+	}
+	else if(blend > pseqdesc->blendend[0])
+	{
+		pitch -= (pseqdesc->blendend[0] / 3.0f);
+		blend = 255;
+	}
+	else
+	{
+		if((pseqdesc->blendend[0] - pseqdesc->blendstart[0]) < 0.1f)
+			blend = 127;
+		else
+			blend = 255 * (blend - pseqdesc->blendstart[0]) / (pseqdesc->blendend[0] - pseqdesc->blendstart[0]);
+
+		pitch = 0;
+	}
+}
+
+//=============================================
+//
+//
+//=============================================
+void CVBMRenderer::ProcessGait( void )
+{
+	if(m_pCurrentEntity->curstate.sequence < 0 || m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq)
+		m_pCurrentEntity->curstate.sequence = 0;
+
+	// Calculate blending
+	Float playerBlend = 0;
+	const mstudioseqdesc_t *pseqdesc = m_pStudioHeader->getSequence(m_pCurrentEntity->curstate.sequence);
+	CalcPlayerBlend(pseqdesc, playerBlend, m_pCurrentEntity->curstate.angles[PITCH]);
+
+	m_pCurrentEntity->latched.angles[PITCH] = m_pCurrentEntity->curstate.angles[PITCH];
+	m_pCurrentEntity->curstate.blending[0] = playerBlend;
+
+	m_pCurrentEntity->latched.blending[0] = m_pCurrentEntity->curstate.blending[0];
+	m_pCurrentEntity->latched.prevseqblending[0] = m_pCurrentEntity->curstate.blending[0];
+
+	// Estimate gait
+	Double dt = cls.cl_time - cls.cl_oldtime;
+	dt = clamp(dt, 0, 1);
+	EstimateGait(dt);
+
+	// Calculate the yaw value
+	Float yaw = m_pCurrentEntity->curstate.angles[YAW] - m_pCurrentEntity->curstate.gaityaw;
+	yaw = yaw - SDL_floor(yaw / 360.0f) * 360.0f;
+
+	if(yaw < -180.0f)
+		yaw += 360.0f;
+	else if(yaw > 180.0f)
+		yaw -= 360.0f;
+
+	if(yaw > 120.0f)
+	{
+		m_pCurrentEntity->curstate.gaityaw = m_pCurrentEntity->curstate.gaityaw - 180.0f;
+		m_gaitMovement = -m_gaitMovement;
+		yaw -= 180.0f;
+	}
+	else if(yaw < -120.0f)
+	{
+		m_pCurrentEntity->curstate.gaityaw = m_pCurrentEntity->curstate.gaityaw + 180.0f;
+		m_gaitMovement = -m_gaitMovement;
+		yaw += 180.0f;
+	}
+
+	// Adjust the torso controllers
+	Float controllerValue = ((yaw / static_cast<Float>(MAX_CONTROLLERS)) + 30) / (60.0f / 255.0f);
+
+	for(Uint32 i = 0; i < MAX_CONTROLLERS; i++)
+	{
+		m_pCurrentEntity->curstate.controllers[i] = controllerValue;
+		m_pCurrentEntity->latched.controllers[i] = m_pCurrentEntity->curstate.controllers[i];
+	}
+
+	m_pCurrentEntity->curstate.angles[YAW] = m_pCurrentEntity->curstate.gaityaw;
+	if(m_pCurrentEntity->curstate.angles[YAW] < -0)
+		m_pCurrentEntity->curstate.angles[YAW] += 360.0f;
+
+	m_pCurrentEntity->latched.angles[YAW] = m_pCurrentEntity->curstate.angles[YAW];
+
+	if(m_pCurrentEntity->curstate.gaitsequence < 0 || m_pCurrentEntity->curstate.gaitsequence >= m_pStudioHeader->numseq)
+		m_pCurrentEntity->curstate.gaitsequence = 0;
+
+	pseqdesc = m_pStudioHeader->getSequence(m_pCurrentEntity->curstate.gaitsequence);
+
+	if(pseqdesc->linearmovement[0] > 0)
+		m_pCurrentEntity->curstate.gaitframe += (m_gaitMovement / pseqdesc->linearmovement[0]) * pseqdesc->numframes;
+	else
+		m_pCurrentEntity->curstate.gaitframe += pseqdesc->fps * dt;
+
+	m_pCurrentEntity->curstate.gaitframe = m_pCurrentEntity->curstate.gaitframe - SDL_floor(m_pCurrentEntity->curstate.gaitframe / pseqdesc->numframes) * pseqdesc->numframes;
+	if(m_pCurrentEntity->curstate.gaitframe < 0)
+		m_pCurrentEntity->curstate.gaitframe += pseqdesc->numframes; 
+}
+
+//=============================================
+//
+//
+//=============================================
+void CVBMRenderer::EstimateGait( Double dt )
+{
+	if(!dt || m_pCurrentEntity->curstate.renderframe == rns.framecount_main)
+	{
+		// No gait movement
+		m_gaitMovement = 0;
+	}
+	else
+	{
+		Vector estimatedVelocity;
+		if(m_gaitEstimate)
+		{
+			estimatedVelocity = m_pCurrentEntity->curstate.origin - m_pCurrentEntity->latched.prevgaitorigin;
+			m_pCurrentEntity->latched.prevgaitorigin = m_pCurrentEntity->curstate.origin;
+			m_gaitMovement = estimatedVelocity.Length();
+			if(dt <= 0 || (m_gaitMovement / dt) < 5.0f)
+			{
+				m_gaitMovement = 0;
+
+				for(Uint32 i = 0; i < 1; i++)
+					estimatedVelocity[i] = 0;
+			}
+		}
+		else
+		{
+			estimatedVelocity = m_pCurrentEntity->curstate.velocity;
+			m_gaitMovement = estimatedVelocity.Length() * dt;
+		}
+
+		if(!estimatedVelocity[1] && !estimatedVelocity[0])
+		{
+			Float yawDiff = m_pCurrentEntity->curstate.angles[YAW] - m_pCurrentEntity->curstate.gaityaw;
+			yawDiff = yawDiff - SDL_floor(yawDiff / 360.0f) * 360.0f;
+			if(yawDiff > 180.0f)
+				yawDiff -= 360.0f;
+			else if(yawDiff < -180.0f)
+				yawDiff += 360.0f;
+
+			if(dt < 0.25)
+				yawDiff *= dt * 4;
+			else
+				yawDiff *= dt;
+
+			m_pCurrentEntity->curstate.gaityaw += yawDiff;
+			m_pCurrentEntity->curstate.gaityaw -= SDL_floor(m_pCurrentEntity->curstate.gaityaw / 360.0f) * 360.0f;
+			m_gaitMovement = 0;
+		}
+		else
+		{
+			m_pCurrentEntity->curstate.gaityaw = (SDL_atan2(estimatedVelocity[1], estimatedVelocity[0]) * (180.0f / M_PI));
+			m_pCurrentEntity->curstate.gaityaw = clamp(m_pCurrentEntity->curstate.gaityaw, -180, 180);
+		}
+
+		m_pCurrentEntity->curstate.renderframe = rns.framecount_main;
+	}
 }
 
 //=============================================
@@ -1174,6 +1369,26 @@ bool CVBMRenderer::DrawModel( Int32 flags, cl_entity_t* pentity )
 		}
 	}
 
+	// Set up player-relevant stuff
+	Vector savedAngles;
+	if(m_pCurrentEntity->player)
+	{
+		if(m_pCurrentEntity->curstate.gaitsequence)
+		{
+			// Save angles and process gait animation
+			savedAngles = m_pCurrentEntity->curstate.angles;
+			ProcessGait();
+		}
+		else
+		{
+			for(Uint32 i = 0; i < MAX_CONTROLLERS; i++)
+			{
+				m_pCurrentEntity->curstate.controllers[i] = 127.0f;
+				m_pCurrentEntity->latched.controllers[i] = m_pCurrentEntity->curstate.controllers[i];
+			}
+		}
+	}
+
 	// Set basic infos
 	SetOrientation();
 
@@ -1182,6 +1397,9 @@ bool CVBMRenderer::DrawModel( Int32 flags, cl_entity_t* pentity )
 	{
 		SetupTransformationMatrix();
 		SetupBones(flags);
+
+		if(m_pCurrentEntity->player && m_pCurrentEntity->curstate.gaitsequence)
+			m_pCurrentEntity->curstate.angles = savedAngles;
 	}
 
 	// Leave after calculating bones
@@ -1224,7 +1442,7 @@ bool CVBMRenderer::DrawModel( Int32 flags, cl_entity_t* pentity )
 			m_pFlexManager->UpdateValues( rns.time, m_pCurrentEntity->curstate.health, m_pCurrentEntity->mouth.mouthopen, m_pExtraInfo->pflexstate, false );
 
 		// Draw the model
-		result = Render();
+		result = Render(flags);
 	}
 
 	// For sound engine checks
@@ -1268,7 +1486,7 @@ void CVBMRenderer::CalculateAttachments( void )
 //
 //
 //=============================================
-void CVBMRenderer::AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, vbm_glvertex_t* pvertexbuffer, Uint32* pindexbuffer, Uint32& vertexoffset, Uint32& indexoffset )
+void CVBMRenderer::AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, mcdheader_t* pmcd, vbm_glvertex_t* pvertexbuffer, Uint32* pindexbuffer, Uint32& vertexoffset, Uint32& indexoffset )
 {
 	//
 	// Compile in vertexes
@@ -1328,25 +1546,14 @@ void CVBMRenderer::AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, vbm_glvertex_t*
 	//
 	// Set up textures
 	//
-	CString modelname;
-	Common::Basename(pvbm->name, modelname);
-	modelname.tolower();
-
 	CTextureManager* pTextureManager = CTextureManager::GetInstance();
 
 	for(Int32 i = 0; i < pvbm->numtextures; i++)
 	{
 		vbmtexture_t *ptexture = pvbm->getTexture(static_cast<Uint32>(i));
-
-		CString textureName;
-		Common::Basename(ptexture->name, textureName); 
-		textureName.tolower();
-
-		// Create and assign the group
-		CString materialscriptpath;
-		materialscriptpath << MODEL_MATERIALS_BASE_PATH << modelname << PATH_SLASH_CHAR << textureName.c_str() << PMF_FORMAT_EXTENSION;
-
+		
 		// Retreive material name
+		CString materialscriptpath = GetModelTexturePath(pvbm->name, ptexture->name);
 		en_material_t* pmaterial = pTextureManager->LoadMaterialScript(materialscriptpath.c_str(), RS_GAME_LEVEL);
 		if(!pmaterial)
 			pmaterial = pTextureManager->GetDummyMaterial();
@@ -1364,6 +1571,28 @@ void CVBMRenderer::AddVBM( studiohdr_t *phdr, vbmheader_t *pvbm, vbm_glvertex_t*
 		}
 
 		ptexture->index = pmaterial->index;
+	}
+
+	if(pmcd)
+	{
+		for(Int32 i = 0; i < pmcd->numtextures; i++)
+		{
+			mcdtexture_t *ptexture = pmcd->getTexture(static_cast<Uint32>(i));
+		
+			// Retreive material name
+			CString materialscriptpath = GetModelTexturePath(pvbm->name, ptexture->name);
+			en_material_t* pmaterial = pTextureManager->LoadMaterialScript(materialscriptpath.c_str(), RS_GAME_LEVEL);
+			if(!pmaterial)
+				pmaterial = pTextureManager->GetDummyMaterial();
+
+			if(!pmaterial->containername.empty())
+			{
+				Con_EPrintf("%s - Container name specified for non-world material script '%s'. Texture will be null.\n", __FUNCTION__, materialscriptpath.c_str());
+				pmaterial->ptextures[MT_TX_DIFFUSE] = pTextureManager->GetDummyTexture();
+			}
+
+			ptexture->index = pmaterial->index;
+		}
 	}
 
 	// 
@@ -1455,7 +1684,7 @@ void CVBMRenderer::BuildVBO( void )
 	// Allocate buffers we'll send to the GPU
 	vbm_glvertex_t* pvertexbuffer = new vbm_glvertex_t[finalvertexcount];
 	memset(pvertexbuffer, 0, sizeof(vbm_glvertex_t)*finalvertexcount);
-	Uint32 vertexoffset = 0;
+	Uint32 vertexoffset = MAX_TEMP_VBM_VERTEXES;
 
 	Uint32* pindexbuffer = new Uint32[finalindexcount];
 	memset(pindexbuffer, 0, sizeof(Uint32)*finalindexcount);
@@ -1465,7 +1694,7 @@ void CVBMRenderer::BuildVBO( void )
 	for(Uint32 i = 0; i < finalvbmcount; i++)
 	{
 		const vbmcache_t* pcache = pvbmarray[i];
-		AddVBM(pcache->pstudiohdr, pcache->pvbmhdr, pvertexbuffer, pindexbuffer, vertexoffset, indexoffset);
+		AddVBM(pcache->pstudiohdr, pcache->pvbmhdr, pcache->pmcdheader, pvertexbuffer, pindexbuffer, vertexoffset, indexoffset);
 	}
 
 	m_pVBO = new CVBO(gGLExtF, pvertexbuffer, sizeof(vbm_glvertex_t)*finalvertexcount, pindexbuffer, sizeof(Uint32)*finalindexcount);
@@ -2439,23 +2668,31 @@ void CVBMRenderer::GetDynamicLights( void )
 //=============================================
 bool CVBMRenderer::CheckBBox( void )
 {
-	if (m_pCurrentEntity->curstate.sequence >=  m_pStudioHeader->numseq) 
+	if(m_pCurrentEntity->curstate.sequence < 0 || m_pCurrentEntity->curstate.sequence >= m_pStudioHeader->numseq)
 		m_pCurrentEntity->curstate.sequence = 0;
 
 	// Build full bounding box
 	const mstudioseqdesc_t *pseqdesc = m_pStudioHeader->getSequence(m_pCurrentEntity->curstate.sequence);
 
 	Vector vTemp;
-	static Vector vBounds[8];
 	for (Uint32 i = 0; i < 8; i++)
 	{
-		if ( i & 1 ) vTemp[0] = pseqdesc->bbmin[0];
-		else vTemp[0] = pseqdesc->bbmax[0];
-		if ( i & 2 ) vTemp[1] = pseqdesc->bbmin[1];
-		else vTemp[1] = pseqdesc->bbmax[1];
-		if ( i & 4 ) vTemp[2] = pseqdesc->bbmin[2];
-		else vTemp[2] = pseqdesc->bbmax[2];
-		Math::VectorCopy( vTemp, vBounds[i] );
+		if ( i & 1 ) 
+			vTemp[0] = pseqdesc->bbmin[0];
+		else 
+			vTemp[0] = pseqdesc->bbmax[0];
+
+		if ( i & 2 ) 
+			vTemp[1] = pseqdesc->bbmin[1];
+		else 
+			vTemp[1] = pseqdesc->bbmax[1];
+
+		if ( i & 4 ) 
+			vTemp[2] = pseqdesc->bbmin[2];
+		else 
+			vTemp[2] = pseqdesc->bbmax[2];
+
+		Math::VectorCopy( vTemp, m_bboxCorners[i] );
 	}
 
 	Vector angles = m_pCurrentEntity->curstate.angles;
@@ -2465,8 +2702,8 @@ bool CVBMRenderer::CheckBBox( void )
 
 	for (Uint32 i = 0; i < 8; i++ )
 	{
-		Math::VectorCopy(vBounds[i], vTemp);
-		Math::VectorRotate(vTemp, (*m_pRotationMatrix), vBounds[i]);
+		Math::VectorCopy(m_bboxCorners[i], vTemp);
+		Math::VectorRotate(vTemp, (*m_pRotationMatrix), m_bboxCorners[i]);
 	}
 
 	// Set the bounding box
@@ -2475,14 +2712,20 @@ bool CVBMRenderer::CheckBBox( void )
 	for(Uint32 i = 0; i < 8; i++)
 	{
 		// Mins
-		if(vBounds[i][0] < vMins[0]) vMins[0] = vBounds[i][0];
-		if(vBounds[i][1] < vMins[1]) vMins[1] = vBounds[i][1];
-		if(vBounds[i][2] < vMins[2]) vMins[2] = vBounds[i][2];
+		if(m_bboxCorners[i][0] < vMins[0]) 
+			vMins[0] = m_bboxCorners[i][0];
+		if(m_bboxCorners[i][1] < vMins[1]) 
+			vMins[1] = m_bboxCorners[i][1];
+		if(m_bboxCorners[i][2] < vMins[2]) 
+			vMins[2] = m_bboxCorners[i][2];
 
 		// Maxs
-		if(vBounds[i][0] > vMaxs[0]) vMaxs[0] = vBounds[i][0];
-		if(vBounds[i][1] > vMaxs[1]) vMaxs[1] = vBounds[i][1];
-		if(vBounds[i][2] > vMaxs[2]) vMaxs[2] = vBounds[i][2];
+		if(m_bboxCorners[i][0] > vMaxs[0]) 
+			vMaxs[0] = m_bboxCorners[i][0];
+		if(m_bboxCorners[i][1] > vMaxs[1]) 
+			vMaxs[1] = m_bboxCorners[i][1];
+		if(m_bboxCorners[i][2] > vMaxs[2]) 
+			vMaxs[2] = m_bboxCorners[i][2];
 	}
 
 	// Make sure stuff like barnacles work fine
@@ -2543,60 +2786,63 @@ bool CVBMRenderer::CheckBBox( void )
 //
 //
 //=============================================
-bool CVBMRenderer::Render( void )
+bool CVBMRenderer::Render( Int32 flags )
 {
 	m_isMultiPass = false;
 
-	// Set transparency
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-	glDepthFunc(GL_LEQUAL);
-
-	Int32 trueRenderMode = (m_pCurrentEntity->curstate.rendermode & RENDERMODE_BITMASK);
-	switch(trueRenderMode)
+	if(!(flags & VBM_DEBUG_ONLY))
 	{
-	case RENDER_TRANSADDITIVE:
+		// Set transparency
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_FRONT);
+		glDepthFunc(GL_LEQUAL);
+
+		Int32 trueRenderMode = (m_pCurrentEntity->curstate.rendermode & RENDERMODE_BITMASK);
+		switch(trueRenderMode)
 		{
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-			m_renderAlpha = R_RenderFxBlend(m_pCurrentEntity) / 255.0;
-			m_useBlending = true;
+		case RENDER_TRANSADDITIVE:
+			{
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				m_renderAlpha = R_RenderFxBlend(m_pCurrentEntity) / 255.0;
+				m_useBlending = true;
+			}
+			break;
+		case RENDER_TRANSALPHA: 
+		case RENDER_TRANSTEXTURE:
+			{
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				m_renderAlpha = R_RenderFxBlend(m_pCurrentEntity) / 255.0;
+				m_useBlending = true;
+			}
+			break;
+		default:
+			{
+				m_renderAlpha = 1.0;
+				m_useBlending = false;
+			}
+			break;
 		}
-		break;
-	case RENDER_TRANSALPHA: 
-	case RENDER_TRANSTEXTURE:
+
+		if(!DrawNormalSubmodels())
+			return false;
+
+		if(!DrawFlexedSubmodels())
+			return false;
+
+		if (m_useBlending)
 		{
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			m_renderAlpha = R_RenderFxBlend(m_pCurrentEntity) / 255.0;
-			m_useBlending = true;
+			glDepthMask(GL_TRUE);
+			glDisable(GL_BLEND);
 		}
-		break;
-	default:
-		{
-			m_renderAlpha = 1.0;
-			m_useBlending = false;
-		}
-		break;
+
+		if(!DrawDecals())
+			return false;
+
+		if(!DrawWireframe())
+			return false;
 	}
-
-	if(!DrawNormalSubmodels())
-		return false;
-
-	if(!DrawFlexedSubmodels())
-		return false;
-
-	if (m_useBlending)
-	{
-		glDepthMask(GL_TRUE);
-		glDisable(GL_BLEND);
-	}
-
-	if(!DrawDecals())
-		return false;
-
-	if(!DrawWireframe())
-		return false;
 
 	// Check for drawing special stuff
 	switch(static_cast<Int32>(m_pCvarDrawModels->GetValue()))
@@ -2651,7 +2897,8 @@ bool CVBMRenderer::Render( void )
 bool CVBMRenderer::SetupRenderer( void )
 {
 	// If in water with caustics, add to multipass
-	if(rns.inwater && g_pCvarCaustics->GetValue() >= 1 
+
+	if(rns.inwater && g_pCvarCaustics->GetValue() >= 1 && m_pCurrentEntity->curstate.renderfx != RenderFx_NoDynamicLighting
 		&& gWaterShader.GetWaterQualitySetting() > CWaterShader::WATER_QUALITY_NO_REFLECT_REFRACT)
 	{
 		const water_settings_t* pwatersettings = gWaterShader.GetActiveSettings();
@@ -2961,17 +3208,20 @@ bool CVBMRenderer::DrawFirst( void )
 
 				if(pmaterial->flags & (TX_FL_ADDITIVE|TX_FL_EYEGLINT))
 				{
+					if ( rns.fog.settings.active )
+						m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0.0, 0.0, 0.0);
+
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 					m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, m_renderAlpha);
 				}
 				else if(pmaterial->flags & TX_FL_ALPHABLEND)
 				{
+					if ( rns.fog.settings.active )
+						m_pShader->SetUniform3f(m_attribs.u_fogcolor, rns.fog.settings.color[0], rns.fog.settings.color[1], rns.fog.settings.color[2]);
+					
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, m_renderAlpha*pmaterial->alpha);
 				}
-
-				if ( rns.fog.settings.active )
-					m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0.0, 0.0, 0.0);
 
 				if(!DrawMesh(pmaterial, pmesh, true))
 				{
@@ -3821,6 +4071,19 @@ bool CVBMRenderer::DrawFinal ( void )
 				if(pmaterial->ptextures[MT_TX_SPECULAR])
 					hasSpecular = true;
 
+				if(pmaterial->scrollu || pmaterial->scrollv)
+				{
+					Float scrollu = pmaterial->scrollu ? (rns.time * pmaterial->scrollu) : 0;
+					Float scrollv = pmaterial->scrollv ? (rns.time * pmaterial->scrollv) : 0;
+
+					m_pShader->SetUniform2f(m_attribs.u_scroll, scrollu, scrollv);
+				}
+				else
+				{
+					// No scrolling
+					m_pShader->SetUniform2f(m_attribs.u_scroll, 0, 0);
+				}
+
 				if(pmesh->numbones)
 					SetShaderBoneTransform(m_pWeightBoneTransform, pmesh->getBones(m_pVBMHeader), pmesh->numbones);
 
@@ -3985,9 +4248,6 @@ bool CVBMRenderer::DrawFinal ( void )
 		m_pShader->EnableAttribute(m_attribs.a_texcoord1);
 		m_pShader->EnableAttribute(m_attribs.a_normal);
 
-		if (rns.fog.settings.active)
-			m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0.0, 0.0, 0.0);
-
 		// Set all the uniforms again
 		Vector vtransformed;
 		CMatrix pmatrix(rns.view.modelview.GetInverse());
@@ -4026,11 +4286,17 @@ bool CVBMRenderer::DrawFinal ( void )
 
 				if(pmaterial->flags & (TX_FL_ADDITIVE|TX_FL_EYEGLINT))
 				{
+					if (rns.fog.settings.active)
+						m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0.0, 0.0, 0.0);
+
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 					m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
 				}
 				else if(pmaterial->flags & TX_FL_ALPHABLEND)
 				{
+					if (rns.fog.settings.active)
+						m_pShader->SetUniform3f(m_attribs.u_fogcolor, rns.fog.settings.color[0], rns.fog.settings.color[1], rns.fog.settings.color[2]);
+
 					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, pmaterial->alpha);
 				}
@@ -4257,6 +4523,19 @@ bool CVBMRenderer::DrawFinalSpecular( bool transparentPass )
 
 			if(!m_pShader->VerifyDeterminators())
 				return false;
+
+			if(pmaterial->scrollu || pmaterial->scrollv)
+			{
+				Float scrollu = pmaterial->scrollu ? (rns.time * pmaterial->scrollu) : 0;
+				Float scrollv = pmaterial->scrollv ? (rns.time * pmaterial->scrollv) : 0;
+
+				m_pShader->SetUniform2f(m_attribs.u_scroll, scrollu, scrollv);
+			}
+			else
+			{
+				// No scrolling
+				m_pShader->SetUniform2f(m_attribs.u_scroll, 0, 0);
+			}
 
 			if(pmesh->numbones)
 				SetShaderBoneTransform(m_pWeightBoneTransform, pmesh->getBones(m_pVBMHeader), pmesh->numbones);
@@ -4628,12 +4907,12 @@ void CVBMRenderer::CreateDecal( const Vector& position, const Vector& normal, de
 	Uint32 curstart;
 	for (Int32 i = 0; i < m_pVBMHeader->numbodyparts; i++)
 	{
-		vbmbodypart_t *pbodypart = m_pVBMHeader->getBodyPart(i);
+		const vbmbodypart_t *pbodypart = m_pVBMHeader->getBodyPart(i);
 
 		Uint32 submodelindex = m_pCurrentEntity->curstate.body / pbodypart->base;
 		submodelindex = submodelindex % pbodypart->numsubmodels;
 
-		vbmsubmodel_t* psubmodel = pbodypart->getSubmodel(m_pVBMHeader, submodelindex);
+		const vbmsubmodel_t* psubmodel = pbodypart->getSubmodel(m_pVBMHeader, submodelindex);
 
 		// Allocate a new mesh for this bodygroup
 		if(!pdecalmesh)
@@ -4921,7 +5200,7 @@ bool CVBMRenderer::DecalTriangle( Int32 pbodypartindex, Int32 submodelindex, vbm
 					continue;
 
 				byte boneindex = pboneids[static_cast<byte>(pverts[i]->boneindexes[j] / 3)];
-				Int32 l = 0;
+				Uint32 l = 0;
 				for (; l < numadd; l++)
 				{
 					if (boneindex == addbones[l])
@@ -5213,6 +5492,9 @@ bool CVBMRenderer::DrawDecals( void )
 	glPolygonOffset(-1,-1);
 	glEnable(GL_POLYGON_OFFSET_FILL);
 
+	// Set neutral color as fog color
+	m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0.5, 0.5, 0.5);
+
 	// Last used decal rendermode
 	decal_rendermode_t renderMode = DECAL_RENDERMODE_NONE;
 
@@ -5225,13 +5507,13 @@ bool CVBMRenderer::DrawDecals( void )
 			vbm_decal_mesh_t* pmesh = pnext->meshes[i];
 
 			// Check if the bodypart this decal mesh belongs to is actually visible
-			vbmbodypart_t *pbodypart = m_pVBMHeader->getBodyPart(pmesh->bodypartindex);
+			const vbmbodypart_t *pbodypart = m_pVBMHeader->getBodyPart(pmesh->bodypartindex);
 			Uint32 submodelindex = m_pCurrentEntity->curstate.body / pbodypart->base;
 			submodelindex = submodelindex % pbodypart->numsubmodels;
 
 			// Submodel index matches if this is the actively displayed submodel of this
 			// body part
-			if(submodelindex != pmesh->submodelindex)
+			if(submodelindex != static_cast<Uint32>(pmesh->submodelindex))
 				continue;
 
 			// Determine rendering method required
@@ -5319,6 +5601,8 @@ bool CVBMRenderer::DrawDecals( void )
 
 	if(m_pVBMHeader->flags & VBM_HAS_FLEXES && m_isVertexFetchSupported)
 		m_pShader->DisableAttribute(m_attribs.a_flexcoord);
+
+	m_pShader->SetUniform3f(m_attribs.u_fogcolor, rns.fog.settings.color[0], rns.fog.settings.color[1], rns.fog.settings.color[2]);
 
 	// Ensure this is disabled
 	m_pShader->DisableAttribute(m_attribs.a_texcoord2);
@@ -5425,6 +5709,9 @@ bool CVBMRenderer::DrawNormalSubmodels( void )
 
 		if(m_pVBMSubModel->flexinfoindex != -1)
 			continue;
+
+		if(m_numDrawSubmodels == RENDERED_SUBMODELS_ALLOC_SIZE)
+			m_pSubmodelDrawList.resize(m_pSubmodelDrawList.size()+RENDERED_SUBMODELS_ALLOC_SIZE);
 
 		m_pSubmodelDrawList[m_numDrawSubmodels] = m_pVBMSubModel;
 		m_numDrawSubmodels++;
@@ -5542,7 +5829,7 @@ void CVBMRenderer::UpdateAttachments( cl_entity_t *pEntity )
 		return;
 	}
 
-	vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
+	const vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
 	m_pStudioHeader = pstudiocache->pstudiohdr;
 	m_pVBMHeader = pstudiocache->pvbmhdr;
 
@@ -5578,7 +5865,7 @@ bool CVBMRenderer::GetBonePosition( cl_entity_t *pEntity, const Char *szname, Ve
 		return false;
 	}
 
-	vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
+	const vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
 	m_pStudioHeader = pstudiocache->pstudiohdr;
 	m_pVBMHeader = pstudiocache->pvbmhdr;
 
@@ -5624,7 +5911,7 @@ void CVBMRenderer::TransformVectorByBoneMatrix( cl_entity_t *pEntity, Int32 bone
 		return;
 	}
 
-	vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
+	const vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
 	if(!pstudiocache)
 		return;
 
@@ -5677,7 +5964,7 @@ void CVBMRenderer::RotateVectorByBoneMatrix( cl_entity_t *pEntity, Int32 boneind
 		return;
 	}
 
-	vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
+	const vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
 	if(!pstudiocache)
 		return;
 
@@ -5820,6 +6107,18 @@ bool CVBMRenderer::DrawNormal( void )
 			continue;
 		
 		if(!DrawModel(VBM_RENDER, pEntity))
+		{
+			Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
+			EndDraw();
+			return false;
+		}
+	}
+
+	if(m_pCvarDrawPlayer->GetValue() >= 1)
+	{
+		cl_entity_t* plocalplayer = CL_GetLocalPlayer();
+
+		if(!DrawModel(VBM_RENDER, plocalplayer))
 		{
 			Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
 			EndDraw();
@@ -6086,6 +6385,9 @@ bool CVBMRenderer::DrawVSM( cl_dlight_t *dl, cl_entity_t** pvisents, Uint32 nume
 		if(pvisents[i]->curstate.renderfx == RenderFx_SkyEnt)
 			continue;
 
+		if(pvisents[i]->curstate.renderfx == RenderFx_NoShadow)
+			continue;
+
 		if (pvisents[i]->curstate.renderfx == RenderFx_SkyEntScaled)
 			continue;
 
@@ -6169,7 +6471,7 @@ bool CVBMRenderer::DrawModelVSM( cl_entity_t *pEntity, cl_dlight_t *dl )
 			return false;
 	}
 
-	vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
+	const vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
 	m_pStudioHeader = pstudiocache->pstudiohdr;
 	m_pVBMHeader = pstudiocache->pvbmhdr;
 
@@ -6409,7 +6711,7 @@ bool CVBMRenderer::DrawAura( cl_entity_t *pEntity, const Vector& color, Float al
 			return false;
 	}
 
-	vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
+	const vbmcache_t* pstudiocache = m_pCacheModel->getVBMCache();
 	m_pStudioHeader = pstudiocache->pstudiohdr;
 	m_pVBMHeader = pstudiocache->pvbmhdr;
 
@@ -6465,7 +6767,7 @@ void CVBMRenderer::DispatchClientEvents( void )
 	if(!pseqdesc->numevents)
 		return;
 
-	Float flframe = VBM_EstimateFrame(pseqdesc, m_pCurrentEntity->curstate, rns.time);
+	Float flframe = VBM_EstimateFrame(pseqdesc, rns.time, m_pCurrentEntity->curstate.frame, m_pCurrentEntity->curstate.animtime, m_pCurrentEntity->curstate.framerate, m_pCurrentEntity->curstate.effects);
 
 	// Fixes first-frame event bug
 	if(!flframe) 
@@ -6524,7 +6826,7 @@ void CVBMRenderer::FreeEntityData( const cl_entity_t *pEntity )
 //=============================================
 void CVBMRenderer::SetupModel( Uint32 bodypart, vbmlod_type_t type )
 {
-	vbmbodypart_t *pbodypart = m_pVBMHeader->getBodyPart(bodypart);
+	const vbmbodypart_t *pbodypart = m_pVBMHeader->getBodyPart(bodypart);
 
 	Uint32 index = m_pCurrentEntity->curstate.body / pbodypart->base;
 	index = index % pbodypart->numsubmodels;
@@ -6626,7 +6928,7 @@ bool CVBMRenderer::DrawBones( void )
 
 		Vector parentOrigin;
 		for(Uint32 j = 0; j < 3; j++)
-			worldOrigin[j] = (*m_pBoneTransform)[pbone->parent].matrix[j][3];
+			parentOrigin[j] = (*m_pBoneTransform)[pbone->parent].matrix[j][3];
 
 		Vector temp;
 		Math::VectorSubtract(worldOrigin, parentOrigin, temp);
@@ -6669,6 +6971,7 @@ bool CVBMRenderer::DrawHitBoxes( void )
 		!m_pShader->SetDeterminator(m_attribs.d_shadertype, vbm_solid, true))
 		return false;
 
+	glDepthMask(GL_FALSE);
 	glDisable (GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -6686,13 +6989,14 @@ bool CVBMRenderer::DrawHitBoxes( void )
 
 		// Set color
 		const Float* pcolor = RANDOM_COLOR_ARRAY[pbbox->group%NUM_RANDOM_COLORS];
-		m_pShader->SetUniform4f(m_attribs.u_color, pcolor[0], pcolor[1], pcolor[2], 0.5);
+		m_pShader->SetUniform4f(m_attribs.u_color, pcolor[0], pcolor[1], pcolor[2], 0.25);
 
 		DrawBox(pbbox->bbmin, pbbox->bbmax);
 	}
 
 	glEnable(GL_CULL_FACE);
 	glDisable(GL_BLEND);
+	glDepthMask(GL_TRUE);
 
 	m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
 	return true;
@@ -6715,6 +7019,7 @@ bool CVBMRenderer::DrawBoundingBox( void )
 		!m_pShader->SetDeterminator(m_attribs.d_shadertype, vbm_solid, true))
 		return false;
 
+	glDepthMask(GL_FALSE);
 	glDisable (GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -6730,14 +7035,54 @@ bool CVBMRenderer::DrawBoundingBox( void )
 
 	// Set color
 	const Float* pcolor = RANDOM_COLOR_ARRAY[m_pCurrentEntity->entindex%NUM_RANDOM_COLORS];
-	m_pShader->SetUniform4f(m_attribs.u_color, pcolor[0], pcolor[1], pcolor[2], 0.5);
+	m_pShader->SetUniform4f(m_attribs.u_color, pcolor[0], pcolor[1], pcolor[2], 0.25);
 
 	DrawBox(m_mins, m_maxs);
 
-	glEnable(GL_CULL_FACE);
+	// Draw wireframe outline(do it like Q2 does, cause I like how it looks)
 	glDisable(GL_BLEND);
-
 	m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
+	Vector triverts[3];
+
+	glLineWidth(1.0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	m_numTempVertexes = 0;
+
+	for(Uint32 i = 0; i < 3; i++)
+		matrix[i][3] = m_renderOrigin[i];
+
+	// Set bone transform to move by origin
+	if(m_areUBOsSupported)
+		m_pShader->SetUniformBufferObjectData(m_attribs.ub_bonematrices, matrix, 3*sizeof(vec4_t));
+	else
+		m_pShader->SetUniform4fv(m_attribs.boneindexes[0], reinterpret_cast<Float *>(matrix), 3);
+
+	Uint32 i = 0;
+	for(; i < 3; i++)
+	{
+		triverts[i] = m_bboxCorners[i];
+		BatchVertex(triverts[i]);
+	}
+
+	for(; i < 8; i++)
+	{
+		triverts[0] = triverts[1];
+		triverts[1] = triverts[2];
+		triverts[2] = m_bboxCorners[i];
+
+		for(Uint32 j = 0; j < 3; j++)
+			BatchVertex(triverts[j]);
+	}
+
+	// Draw the planes
+	m_pVBO->VBOSubBufferData(sizeof(vbm_glvertex_t)*m_drawBufferIndex, m_tempVertexes, sizeof(vbm_glvertex_t)*m_numTempVertexes);
+	glDrawArrays(GL_TRIANGLES, m_drawBufferIndex, m_numTempVertexes);
+
+	glEnable(GL_CULL_FACE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glDepthMask(GL_TRUE);
+
 	return true;
 }
 
@@ -7210,6 +7555,9 @@ bool CVBMRenderer::DrawAttachments( void )
 //=============================================
 bool CVBMRenderer::DrawHullBoundingBox( void )
 {
+	if( m_pCurrentEntity->curstate.effects & EF_CLIENTENT )
+		return true;
+
 	if(!m_pShader->SetDeterminator(m_attribs.d_alphatest, ALPHATEST_DISABLED, false) ||
 		!m_pShader->SetDeterminator(m_attribs.d_numlights, 0, false) ||
 		!m_pShader->SetDeterminator(m_attribs.d_bumpmapping, FALSE, false) ||
@@ -7221,6 +7569,7 @@ bool CVBMRenderer::DrawHullBoundingBox( void )
 		!m_pShader->SetDeterminator(m_attribs.d_shadertype, vbm_solid, true))
 		return false;
 
+	glDepthMask(GL_FALSE);
 	glDisable (GL_CULL_FACE);
 	glEnable(GL_BLEND);
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -7236,7 +7585,7 @@ bool CVBMRenderer::DrawHullBoundingBox( void )
 
 	// Set color
 	const Float* pcolor = RANDOM_COLOR_ARRAY[m_pCurrentEntity->entindex%NUM_RANDOM_COLORS];
-	m_pShader->SetUniform4f(m_attribs.u_color, pcolor[0], pcolor[1], pcolor[2], 0.5);
+	m_pShader->SetUniform4f(m_attribs.u_color, pcolor[0], pcolor[1], pcolor[2], 0.25);
 
 	Vector mins, maxs;
 	Math::VectorAdd(m_pCurrentEntity->curstate.mins, m_pCurrentEntity->curstate.origin, mins);
@@ -7244,8 +7593,63 @@ bool CVBMRenderer::DrawHullBoundingBox( void )
 
 	DrawBox(mins, maxs);
 
-	glEnable(GL_CULL_FACE);
+	// Draw wireframe outline(do it like Q2 does, cause I like how it looks)
 	glDisable(GL_BLEND);
+
+	Vector vTemp;
+	for (Uint32 i = 0; i < 8; i++)
+	{
+		if ( i & 1 ) 
+			vTemp[0] = mins[0];
+		else 
+			vTemp[0] = maxs[0];
+
+		if ( i & 2 ) 
+			vTemp[1] = mins[1];
+		else 
+			vTemp[1] = maxs[1];
+
+		if ( i & 4 ) 
+			vTemp[2] = mins[2];
+		else 
+			vTemp[2] = maxs[2];
+
+		Math::VectorCopy( vTemp, m_bboxCorners[i] );
+	}
+
+	glLineWidth(1.0);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
+
+	m_numTempVertexes = 0;
+
+	Vector triverts[3];
+
+	Uint32 i = 0;
+	for(; i < 3; i++)
+	{
+		triverts[i] = m_bboxCorners[i];
+		BatchVertex(triverts[i]);
+	}
+
+	for(; i < 8; i++)
+	{
+		triverts[0] = triverts[1];
+		triverts[1] = triverts[2];
+		triverts[2] = m_bboxCorners[i];
+
+		for(Uint32 j = 0; j < 3; j++)
+			BatchVertex(triverts[j]);
+	}
+
+	// Draw the planes
+	m_pVBO->VBOSubBufferData(sizeof(vbm_glvertex_t)*m_drawBufferIndex, m_tempVertexes, sizeof(vbm_glvertex_t)*m_numTempVertexes);
+	glDrawArrays(GL_TRIANGLES, m_drawBufferIndex, m_numTempVertexes);
+
+	glEnable(GL_CULL_FACE);
+	glDepthMask(GL_TRUE);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
 

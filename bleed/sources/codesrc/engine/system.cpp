@@ -61,17 +61,6 @@ state variables and functionality.
 
 extern file_interface_t ENGINE_FILE_FUNCTIONS;
 
-// Ugly hack to manage SDL2 load before main is called
-CStartup gStartup;
-
-#ifdef _64BUILD
-// OpenAL library path
-static const Char SDL2_LIBRARY_PATH[] = "x64/SDL2.dll";
-#else
-// OpenAL library path
-static const Char SDL2_LIBRARY_PATH[] = "x86/SDL2.dll";
-#endif
-
 // Definition of engine state structure
 engine_state_t ens;
 
@@ -137,6 +126,10 @@ bool Sys_Init( CArray<CString>* argsArray )
 	if(!Sys_InitFloatTime())
 		return false;
 
+	// Perform window pre-initialization
+	if(!gWindow.PreInit())
+		return false;
+
 	// Set ens.time to a nonzero value so some time-based functions work immediately
 	// after starting the engine(Sys_InitFloatTime takes care of this)
 	ens.time = ens.curtime;
@@ -152,16 +145,13 @@ bool Sys_Init( CArray<CString>* argsArray )
 	// Initialize configuration
 	gConfig.Init();
 
-	// Initialize resolution related trash
-	if(!gWindow.PreInit())
-		return false;
-
 	// See if the default font exists
 	if(!Sys_LoadDefaultFont(nullptr))
 		return false;
 
 	// Initialize UI
 	gUIManager.Init();
+
 	// Initialize input class
 	gInput.Init();
 	// Initialize commands
@@ -199,7 +189,7 @@ bool Sys_Init( CArray<CString>* argsArray )
 		return false;
 
 	// Whether to keep old save files - This needs to be registered just before the config file gets executed
-	g_pCvarKeepOldSaves = gConsole.CreateCVar(CVAR_FLOAT, FL_CV_SV_ONLY|FL_CV_SAVE, "sv_keepoldaves", "0", "Controls whether old quick/auto saves are kept.\n");
+	g_pCvarKeepOldSaves = gConsole.CreateCVar(CVAR_FLOAT, FL_CV_SV_ONLY|FL_CV_SAVE, "sv_keepoldsaves", "0", "Controls whether old quick/auto saves are kept.\n");
 
 	// Load the config before VID_Init
 	CString strExecCmd;
@@ -1189,33 +1179,4 @@ void Sys_WindowFocusLost( void )
 void Sys_WindowFocusRegained( void )
 {
 	gWindow.SetActive(true);
-}
-
-//=============================================
-// Class: CStartup
-// Function: CStartup
-//=============================================
-CStartup::CStartup( void ):
-	m_hSDL2(nullptr)
-{
-	// This entire thing exists just to be able to keep the SDL 32-bit and 64-bit libraries
-	// in separate folders.
-	m_hSDL2 = LoadLibrary(SDL2_LIBRARY_PATH);
-	if(!m_hSDL2)
-	{
-		CString str;
-		str << "Failed to load " << SDL2_LIBRARY_PATH;
-		MessageBox(nullptr, str.c_str(), "Error", MB_OK | MB_ICONERROR | MB_SETFOREGROUND);
-		exit(-1);
-	}
-}
-
-//=============================================
-// Class: CStartup
-// Function: CStartup
-//=============================================
-CStartup::~CStartup( void )
-{
-	if(m_hSDL2)
-		FreeLibrary(m_hSDL2);
 }

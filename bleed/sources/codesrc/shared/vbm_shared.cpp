@@ -43,7 +43,7 @@ void VBM_CalculateBoneAdjustments( const studiohdr_t* phdr, Float dadt, const CA
 					Int32 a = (static_cast<Int32>(pcontroller1[i])+128)%256;
 					Int32 b = (static_cast<Int32>(pcontroller2[i])+128)%256;
 
-					value = (a*dadt + b*(1.0f-dadt)) * (360.0f/256.0f) + pbonecontroller->start;
+					value = ((a*dadt + b*(1.0f-dadt)) - 128) * (360.0f/256.0f) + pbonecontroller->start;
 				}
 				else
 				{
@@ -64,7 +64,7 @@ void VBM_CalculateBoneAdjustments( const studiohdr_t* phdr, Float dadt, const CA
 			value = (1.0-value) * pbonecontroller->start + value*pbonecontroller->end;
 		}
 
-		switch(pbonecontroller->type)
+		switch(pbonecontroller->type & STUDIO_TYPES)
 		{
 		case STUDIO_XR:
 		case STUDIO_YR:
@@ -75,6 +75,8 @@ void VBM_CalculateBoneAdjustments( const studiohdr_t* phdr, Float dadt, const CA
 		case STUDIO_Y:
 		case STUDIO_Z:
 			padj[i] = value;
+			break;
+		default:
 			break;
 		}
 	}
@@ -258,17 +260,17 @@ void VBM_CalculateBonePosition( Int32 frame, Float interpolant, const mstudiobon
 //
 //
 //=============================================
-Float VBM_EstimateFrame( const mstudioseqdesc_t* pseqdesc, const entity_state_t& entitystate, Double time )
+Float VBM_EstimateFrame( const mstudioseqdesc_t* pseqdesc, Double time, Float entframe, Double animtime, Float framerate, Int64 effects )
 {
-	if(entitystate.effects & EF_STATICENTITY)
+	if(effects & EF_STATICENTITY)
 		return 0;
 
 	Double frame = 0;
 	if(pseqdesc->numframes > 1)
-		frame = (entitystate.frame * (pseqdesc->numframes-1))/256.0;
+		frame = (entframe * (pseqdesc->numframes-1))/256.0;
 
-	if(time >= entitystate.animtime)
-		frame += (time - entitystate.animtime)*entitystate.framerate*pseqdesc->fps;
+	if(time >= animtime)
+		frame += (time - animtime)*framerate*pseqdesc->fps;
 
 	if(pseqdesc->flags & STUDIO_LOOPING)
 	{

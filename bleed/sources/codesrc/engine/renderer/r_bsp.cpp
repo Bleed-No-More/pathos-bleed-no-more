@@ -714,9 +714,10 @@ void CBSPRenderer::InitLightmaps( void )
 				CString filepath;
 				filepath << directoryPath << PATH_SLASH_CHAR << "dump_lightmap_default_layer_" << i << ".tga";
 
+				Uint32 compressionPercentage = 0;
 				const byte* pwritedata = reinterpret_cast<const byte*>(plightmap);
-				if(TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf))
-					Con_Printf("Exported %s.\n", filepath.c_str());
+				if(TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf, &compressionPercentage))
+					Con_Printf("Exported %s(%d percent compression).\n", filepath.c_str(), compressionPercentage);
 			}
 			else
 			{
@@ -826,9 +827,10 @@ void CBSPRenderer::InitLightmaps( void )
 						CString filepath;
 						filepath << directoryPath << "dump_" << basename << "_lightmap_" << lmapname << "_layer_" << i << ".tga";
 
+						Uint32 compressionPercentage = 0;
 						const byte* pwritedata = reinterpret_cast<const byte*>(plightmapdata);
-						if(TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf))
-							Con_Printf("Exported %s.\n", filepath.c_str());
+						if(TGA_Write(pwritedata, 4, m_lightmapWidths[i], m_lightmapHeights[i], filepath.c_str(), FL_GetInterface(), Con_Printf, &compressionPercentage))
+							Con_Printf("Exported %s(%d percent compression).\n", filepath.c_str(), compressionPercentage);
 					}
 					else
 					{
@@ -1681,7 +1683,7 @@ bool CBSPRenderer::DrawWorld( void )
 bool CBSPRenderer::Prepare( void ) 
 {
 	m_multiPass = (m_multiPassMode != MULTIPASS_DISABLED && ((!gDynamicLights.GetLightList().empty() || rns.inwater 
-		&& !R_IsEntityTransparent(*m_pCurrentEntity)) && g_pCvarDynamicLights->GetValue() >= 1)) ? true : false;
+		&& !R_IsEntityTransparent(*m_pCurrentEntity)) && g_pCvarDynamicLights->GetValue() >= 1) && m_pCurrentEntity->curstate.renderfx != RenderFx_NoDynamicLighting) ? true : false;
 
 	if(rns.fog.settings.active)
 	{
@@ -4601,6 +4603,7 @@ bool CBSPRenderer::DrawVSM( cl_dlight_t *dl, cl_entity_t** pvisents, Uint32 nume
 			if(pEntity->curstate.renderfx == RenderFx_SkyEnt ||
 				pEntity->curstate.renderfx == RenderFx_SkyEntScaled ||
 				pEntity->curstate.renderfx == RenderFx_SkyEntNC ||
+				pEntity->curstate.renderfx == RenderFx_NoShadow ||
 				pEntity->curstate.rendertype == RT_WATERSHADER ||
 				pEntity->curstate.rendertype == RT_MIRROR ||
 				pEntity->curstate.rendertype == RT_MONITORENTITY ||
@@ -5556,7 +5559,7 @@ bool CBSPRenderer::DrawDecals( bool transparents )
 	if(rns.fog.settings.active)
 	{
 		m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0.5, 0.5, 0.5);
-		m_pShader->SetUniform2f(m_attribs.u_fogparams, rns.fog.settings.end*0.8f, 1.0f/(static_cast<Float>(rns.fog.settings.end)*0.8f- static_cast<Float>(rns.fog.settings.start)));
+		m_pShader->SetUniform2f(m_attribs.u_fogparams, rns.fog.settings.end, 1.0f/(static_cast<Float>(rns.fog.settings.end)-static_cast<Float>(rns.fog.settings.start)));
 
 		if(rns.fog.specialfog)
 		{

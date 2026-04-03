@@ -1,7 +1,7 @@
-Log started: 2025-10-24 20:20:22
+Log started: 2025-12-11 11:46:30
 Log file: D:\Games\Bleed No More\bleed\sources\modelsrc\error/error.log
 VBMCompiler version 0.9.
-Build date: Oct 24 2025.
+Build date: Dec 11 2025.
 QC file path: D:\Games\Bleed No More\bleed\sources\modelsrc\error\error.qc.
 Reading launch arguments:
  - Half-Life 1 MDL texture data will be stripped.
@@ -58,6 +58,6 @@ Loading file 'D:/Games/Bleed No More/bleed/sources/modelsrc/error/ref_collisions
 Processing 'ref_collisions.smd'.
 Loaded 'ref_collisions':
 	36 triangles.
-	36 unique vertexes.
-Wrote MCD file 'D:/Games/Bleed No More/bleed/sources/modelsrc/error/error.mcd', 0.00 mbytes.
+	24 unique vertexes.
+Wrote MCD file 'D:/Games/Bleed No More/bleed/sources/modelsrc/error/error.mcd', 0.01 mbytes.
 Closing log

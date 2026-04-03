@@ -1,0 +1,299 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.38.33133.0",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/sdl_egl.c"
+          },
+          "roles": [
+            "analysisTarget"
+          ],
+          "hashes": {
+            "sha-256": "e40dda0bce8faba24b955ebd66c4aa814d3bb11d00a32c2e75fc21906bb64bb0"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/sdl_internal.h"
+          },
+          "hashes": {
+            "sha-256": "83d3d78bfb942f85f247ae2d732ac1c7999f5241c173e3273450ff81ccdab356"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi.h"
+          },
+          "hashes": {
+            "sha-256": "024494e17db39607e720bad399a8a29ba0a34c66aeaa0888d35a4910ef5153b3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi_overrides.h"
+          },
+          "hashes": {
+            "sha-256": "739d3d416910966c57361d30c332e6bd5e44a07cd67cfe9f661daa93337412d4"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config.h"
+          },
+          "hashes": {
+            "sha-256": "86a1689a2ee033f2d7463b9169ee5ddc3fd228b04a9ab3c0a7a4e05be39d9158"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_platform.h"
+          },
+          "hashes": {
+            "sha-256": "47a303749d9951df4518a45e19d244e98c87c2a7336fdf632bdfc80d6e7d0262"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/begin_code.h"
+          },
+          "hashes": {
+            "sha-256": "250ef5cd3c00a77133236d9a04fdf0f3461811cc4d05117cff40e4a8edfda03a"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/close_code.h"
+          },
+          "hashes": {
+            "sha-256": "a05d08d1d7100ef2dcb84220ab1f701108aea8747928ba2ad7384bfc02b981e8"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config_windows.h"
+          },
+          "hashes": {
+            "sha-256": "e883dcb78a26924c7b15cf5b480a69e110aa3896d1658380020bd901b08cd963"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/core/windows/sdl_windows.h"
+          },
+          "hashes": {
+            "sha-256": "e02cdfb463f971f9cb8d7c908cba4c3f1abd6a891f32e1d2c7a65180aa202ace"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/sdl_sysvideo.h"
+          },
+          "hashes": {
+            "sha-256": "9f03d0b43d3ebc0bc3a0ea423063ca82a4d0e557474565d2fb49dd605e6b0f60"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_messagebox.h"
+          },
+          "hashes": {
+            "sha-256": "0d2b834bf9c0cdf122da43b4e83129c512e3e55d7efa9d8361803d3a8bbc7b04"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_stdinc.h"
+          },
+          "hashes": {
+            "sha-256": "24c5d1124a5a28c773878220673487ca9e6f6c869adc88ef8058df5330cde98e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_video.h"
+          },
+          "hashes": {
+            "sha-256": "c819d35f9639dcf5d31edb505f760686494119073fb94ccbda7b479e3c4ce031"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_pixels.h"
+          },
+          "hashes": {
+            "sha-256": "7e97330cce33ed52c95ba14cbd14f2827ca93913dd936abcf52d6409b4b67e93"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_endian.h"
+          },
+          "hashes": {
+            "sha-256": "efb86fd1022a96b6bff2071017cd5a0303f6d7f64000d2a221a25157540af269"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_rect.h"
+          },
+          "hashes": {
+            "sha-256": "742b197047dd99caf546e3b271602d1e79d0b3905693c970d146e7bff694c06e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_error.h"
+          },
+          "hashes": {
+            "sha-256": "7abae8b28558083e3952f415ccbe0b99fab8782420f766bac54674eb60c610be"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_rwops.h"
+          },
+          "hashes": {
+            "sha-256": "29ec25675e0527a09f2e377b1037352a5552894848b763fd777a7654426e5140"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_surface.h"
+          },
+          "hashes": {
+            "sha-256": "233ac55b36544cc8ea52608de5f08f390b89ba11393f434c516b6a7c72465b3e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_blendmode.h"
+          },
+          "hashes": {
+            "sha-256": "77ff01d222e1e1a15ea1a3c416a4380bac782129432422abc9b68ab870891cbe"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_shape.h"
+          },
+          "hashes": {
+            "sha-256": "2d5c129df641b8a2f56d6db3cb8aedd2f44f987dbf6717e63f4c41f692d510e1"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_thread.h"
+          },
+          "hashes": {
+            "sha-256": "6fb683847f56e7b9f29fdbbec57ae5036909563f75c0500069f50fd3b9e9858d"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_atomic.h"
+          },
+          "hashes": {
+            "sha-256": "9fdac603ccd71716ac527374cad80b2d6996d820c2b4a05e18965c7c1fa77d17"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_mutex.h"
+          },
+          "hashes": {
+            "sha-256": "58a53c83b6d50f72a940482f5ee506acf706e61820f8bc10060ccb4027925538"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/sdl_vulkan_internal.h"
+          },
+          "hashes": {
+            "sha-256": "0f4d0e50d985b4baf2a1b387cab54ddda2818d330953fed8fcf7c1c4f85acc4f"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/khronos/vulkan/vulkan.h"
+          },
+          "hashes": {
+            "sha-256": "aa2c5906a3b0392d259e11836d860ac61b2c2cc266f2911f6ff819c90c5b0ff3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/khronos/vulkan/vk_platform.h"
+          },
+          "hashes": {
+            "sha-256": "fdc23308257b13534745ae246ff5476c1e0ee908e8c43839fdcff94c4a3142ae"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_vulkan.h"
+          },
+          "hashes": {
+            "sha-256": "10a085f4c53caadc491f32510a9d1993692b585eb7d7f8c1539f13146c9fc5cc"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_log.h"
+          },
+          "hashes": {
+            "sha-256": "8f8177e23be035311c1d04283db041ba08b844a40b84633ec789dd5ddb437341"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/sdl_egl_c.h"
+          },
+          "hashes": {
+            "sha-256": "475e1c20b13b28761e23743f263ec55a91b9c18c2d5773a4f5b63584cfd8483a"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_egl.h"
+          },
+          "hashes": {
+            "sha-256": "8e93058bbfc4d33fcf72a2c861b2e7396d7d3537bae4ea6eab89cd2808c85bcc"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_loadso.h"
+          },
+          "hashes": {
+            "sha-256": "620dcead9a45d7bb82ebd4f0a6b3f2ae99f7facbb760069a035853357007c4bc"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_hints.h"
+          },
+          "hashes": {
+            "sha-256": "e95d650949b0216380aaad8e436dc9d7f5617dbcf00e795064f593961a237dae"
+          }
+        }
+      ]
+    }
+  ]
+}

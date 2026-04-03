@@ -1,0 +1,406 @@
+hlcsg v3.4 VL34 64-bit (Dec  9 2024)
+Zoner's Half-Life Compilation Tools -- Custom Build
+Based on code modifications by Sean 'Zoner' Cavanaugh
+Based on Valve's version, modified with permission.
+Submit detailed bug reports to (vluzacn@163.com)
+-----  BEGIN  hlcsg -----
+Command line: hlcsg -chart -low -cliptype precise -estimate boxtest.map 
+Arguments: -chart -low -cliptype precise -estimate boxtest.map 
+Entering boxtest.map
+
+Current hlcsg Settings
+Name                 |  Setting  |  Default
+---------------------|-----------|-------------------------
+threads               [      12 ] [  Varies ]
+verbose               [     off ] [     off ]
+log                   [      on ] [      on ]
+reset logfile         [      on ] [      on ]
+developer             [       0 ] [       0 ]
+chart                 [      on ] [     off ]
+estimate              [      on ] [     off ]
+max texture memory    [ 33554432 ] [ 33554432 ]
+max lighting memory   [ 50331648 ] [ 50331648 ]
+priority              [     Low ] [  Normal ]
+
+noclip                [     off ] [     off ]
+null texture stripping[      on ] [      on ]
+clipnode economy mode [     off ] [     off ]
+clip hull type        [ precise ] [  simple ]
+onlyents              [     off ] [     off ]
+wadtextures           [      on ] [      on ]
+skyclip               [      on ] [      on ]
+hullfile              [    None ] [    None ]
+wad configuration file[    None ] [    None ]
+wad.cfg group name    [    None ] [    None ]
+nullfile              [    None ] [    None ]
+nullify trigger       [      on ] [      on ]
+min surface area      [   0.000 ] [   0.000 ]
+brush union threshold [   0.000 ] [   0.000 ]
+map scaling           [    None ] [    None ]
+light name optimize   [      on ] [      on ]
+convert game_text     [      on ] [      on ]
+
+Using mapfile wad configuration
+Wadinclude list :
+[zhlt.wad]
+
+0 clip economy entities discarded from clipping hulls
+CreateBrush:
+ (0.00 seconds)
+CSGBrush:
+ (0.00 seconds)
+
+Using Wadfile: \Games\Bleed No More\bleed\textures\world\pathos\pathos.wad
+ - Contains 3 used textures, 100.00 percent of map (178 textures in wad)
+
+Wad files required to run the map: "pathos.wad;"
+Texture usage is at 0.19 mb (of 32.00 mb MAX)
+
+Object names  Objects/Maxobjs  Memory / Maxmem  Fullness
+------------  ---------------  ---------------  --------
+models              0/4096           0/262144   ( 0.0%)
+planes            100/262144      2000/5242880  ( 0.0%)
+vertexes            0/262144         0/3145728  ( 0.0%)
+nodes               0/262144         0/8388608  ( 0.0%)
+texinfos            8/262144       320/10485760 ( 0.0%)
+faces               0/262144         0/9437184  ( 0.0%)
+* worldfaces        0/262144         0/0        ( 0.0%)
+clipnodes           0/262144         0/3145728  ( 0.0%)
+leaves              0/262144         0/8388608  ( 0.0%)
+* worldleaves       0/262144         0/0        ( 0.0%)
+marksurfaces        0/262144         0/1048576  ( 0.0%)
+surfedges           0/1048576        0/4194304  ( 0.0%)
+edges               0/524288         0/4194304  ( 0.0%)
+texdata          [variable]        136/33554432 ( 0.0%)
+lightdata        [variable]          0/50331648 ( 0.0%)
+visdata          [variable]          0/8388608  ( 0.0%)
+entdata          [variable]        550/2097152  ( 0.0%)
+* AllocBlock        0/64             0/0        ( 0.0%)
+3 textures referenced
+=== Total BSP file data space used: 3006 bytes ===
+Wad files required to run the map: "pathos.wad;"
+0.03 seconds elapsed
+
+-----   END   hlcsg -----
+
+
+
+hlbsp v3.4 VL34 64-bit (Dec  9 2024)
+Zoner's Half-Life Compilation Tools -- Custom Build
+Based on code modifications by Sean 'Zoner' Cavanaugh
+Based on Valve's version, modified with permission.
+Submit detailed bug reports to (vluzacn@163.com)
+-----  BEGIN  hlbsp -----
+Command line: hlbsp -lightmapscale 4.0 -chart -low -estimate boxtest.map 
+Arguments: -lightmapscale 4.0 -chart -low -estimate boxtest.map 
+
+Current hlbsp Settings
+Name               |  Setting  |  Default
+-------------------|-----------|-------------------------
+threads             [      12 ] [  Varies ]
+verbose             [     off ] [     off ]
+log                 [      on ] [      on ]
+developer           [       0 ] [       0 ]
+chart               [      on ] [     off ]
+estimate            [      on ] [     off ]
+max texture memory  [ 33554432 ] [ 33554432 ]
+priority            [     Low ] [  Normal ]
+
+noclip              [     off ] [     off ]
+nofill              [     off ] [     off ]
+noinsidefill        [     off ] [     off ]
+noopt               [     off ] [     off ]
+no clipnode merging [     off ] [     off ]
+null tex. stripping [      on ] [      on ]
+notjunc             [     off ] [     off ]
+nobrink             [     off ] [     off ]
+subdivide size      [     240 ] [     240 ] (Min 64) (Max 512)
+max node size       [    1024 ] [    1024 ] (Min 64) (Max 65536)
+remove hull 2       [     off ] [     off ]
+lightmap scale      [ 4.000000 ] [ 1.000000 ]
+
+
+SolidBSP [hull 0] 13 (0.00 seconds)
+BSP generation successful, writing portal file 'boxtest.prt'
+SolidBSP [hull 1] 13 (0.00 seconds)
+SolidBSP [hull 2] 13 (0.00 seconds)
+SolidBSP [hull 3] 13 (0.00 seconds)
+Reduced 18 clipnodes to 18
+Reduced 8 texinfos to 6
+Reduced 3 texdatas to 3 (136 bytes to 136)
+Reduced 100 planes to 20
+FixBrinks:
+Increased 18 clipnodes to 18.
+
+Object names  Objects/Maxobjs  Memory / Maxmem  Fullness
+------------  ---------------  ---------------  --------
+models              1/4096          64/262144   ( 0.0%)
+planes             20/262144       400/5242880  ( 0.0%)
+vertexes           34/262144       408/3145728  ( 0.0%)
+nodes               6/262144       192/8388608  ( 0.0%)
+texinfos            6/262144       240/10485760 ( 0.0%)
+faces              24/262144       864/9437184  ( 0.0%)
+* worldfaces       24/262144         0/0        ( 0.0%)
+clipnodes          18/262144       216/3145728  ( 0.0%)
+leaves              2/262144        64/8388608  ( 0.0%)
+* worldleaves       1/262144         0/0        ( 0.0%)
+marksurfaces       24/262144        96/1048576  ( 0.0%)
+surfedges         112/1048576      448/4194304  ( 0.0%)
+edges              57/524288       456/4194304  ( 0.0%)
+texdata          [variable]        136/33554432 ( 0.0%)
+lightdata        [variable]          0/50331648 ( 0.0%)
+visdata          [variable]          0/8388608  ( 0.0%)
+entdata          [variable]        550/2097152  ( 0.0%)
+* AllocBlock        3/64             0/0        ( 4.7%)
+3 textures referenced
+=== Total BSP file data space used: 4134 bytes ===
+Wad files required to run the map: "pathos.wad;"
+0.02 seconds elapsed
+
+-----   END   hlbsp -----
+
+
+
+hlvis v3.4 VL34 64-bit (Dec  9 2024)
+Zoner's Half-Life Compilation Tools -- Custom Build
+Based on code modifications by Sean 'Zoner' Cavanaugh
+Based on Valve's version, modified with permission.
+Submit detailed bug reports to (vluzacn@163.com)
+-----  BEGIN  hlvis -----
+Command line: hlvis -chart -low -estimate boxtest.map 
+Arguments: -chart -low -estimate boxtest.map 
+   1 portalleafs
+   0 numportals
+
+-= Current hlvis Settings =-
+Name               |  Setting  |  Default
+-------------------|-----------|-------------------------
+threads             [      12 ] [  Varies ]
+verbose             [     off ] [     off ]
+log                 [      on ] [      on ]
+developer           [       0 ] [       0 ]
+chart               [      on ] [     off ]
+estimate            [      on ] [     off ]
+max texture memory  [ 33554432 ] [ 33554432 ]
+max vis distance    [       0 ] [       0 ]
+priority            [     Low ] [  Normal ]
+
+fast vis            [     off ] [     off ]
+full vis            [     off ] [     off ]
+
+
+BasePortalVis:
+ (0.00 seconds)
+LeafThread:
+ (0.00 seconds)
+average leafs visible: 1
+g_visdatasize:1  compressed from 1
+
+Object names  Objects/Maxobjs  Memory / Maxmem  Fullness
+------------  ---------------  ---------------  --------
+models              1/4096          64/262144   ( 0.0%)
+planes             20/262144       400/5242880  ( 0.0%)
+vertexes           34/262144       408/3145728  ( 0.0%)
+nodes               6/262144       192/8388608  ( 0.0%)
+texinfos            6/262144       240/10485760 ( 0.0%)
+faces              24/262144       864/9437184  ( 0.0%)
+* worldfaces       24/262144         0/0        ( 0.0%)
+clipnodes          18/262144       216/3145728  ( 0.0%)
+leaves              2/262144        64/8388608  ( 0.0%)
+* worldleaves       1/262144         0/0        ( 0.0%)
+marksurfaces       24/262144        96/1048576  ( 0.0%)
+surfedges         112/1048576      448/4194304  ( 0.0%)
+edges              57/524288       456/4194304  ( 0.0%)
+texdata          [variable]        136/33554432 ( 0.0%)
+lightdata        [variable]          0/50331648 ( 0.0%)
+visdata          [variable]          1/8388608  ( 0.0%)
+entdata          [variable]        550/2097152  ( 0.0%)
+* AllocBlock        3/64             0/0        ( 4.7%)
+3 textures referenced
+=== Total BSP file data space used: 4135 bytes ===
+Wad files required to run the map: "pathos.wad;"
+0.01 seconds elapsed
+
+-----   END   hlvis -----
+
+
+
+hlrad v3.4 VL34 64-bit (Dec  9 2024)
+Zoner's Half-Life Compilation Tools -- Custom Build
+Based on code modifications by Sean 'Zoner' Cavanaugh
+Based on Valve's version, modified with permission.
+Submit detailed bug reports to (vluzacn@163.com)
+-----  BEGIN  hlrad -----
+Command line: hlrad -extra -compress 0 -rgbcompress 0 -compressionlevel uber_compression -bumpmaps -low -chart -blur 2.0 -smooth 150 -smooth2 60 -notexscale -minlight 1 -estimate boxtest.map 
+Arguments: -extra -compress 0 -rgbcompress 0 -compressionlevel uber_compression -bumpmaps -low -chart -blur 2.0 -smooth 150 -smooth2 60 -notexscale -minlight 1 -estimate boxtest.map 
+
+-= Current hlrad Settings =-
+Name                | Setting             | Default
+---------------------------|---------------------|-------------------------
+threads                     [                12 ] [            Varies ]
+verbose                     [               off ] [               off ]
+log                         [                on ] [                on ]
+developer                   [                 0 ] [                 0 ]
+chart                       [                on ] [               off ]
+estimate                    [                on ] [               off ]
+max texture memory          [          33554432 ] [          33554432 ]
+max lighting memory         [          50331648 ] [          50331648 ]
+priority                    [               Low ] [            Normal ]
+
+fast rad                    [               off ] [               off ]
+vismatrix algorithm         [            Sparse ] [            Sparse ]
+oversampling (-extra)       [                on ] [               off ]
+bounces                     [                 8 ] [                 8 ]
+ambient light               [ 0.000 0.000 0.000 ] [ 0.000 0.000 0.000 ]
+circus mode                 [               off ] [               off ]
+
+smoothing threshold         [           150.000 ] [            50.000 ]
+smoothing threshold 2       [            60.000 ] [         no change ]
+direct threshold            [            10.000 ] [            10.000 ]
+direct light scale          [             1.000 ] [             1.000 ]
+coring threshold            [             0.010 ] [             0.010 ]
+patch interpolation         [                on ] [                on ]
+
+texscale                    [               off ] [                on ]
+patch subdividing           [                on ] [                on ]
+chop value                  [            64.000 ] [            64.000 ]
+texchop value               [            32.000 ] [            32.000 ]
+
+global fade                 [             1.000 ] [             1.000 ]
+global texlight gap         [             0.000 ] [             0.000 ]
+global light scale          [ 2.000 2.000 2.000 ] [ 2.000 2.000 2.000 ]
+global gamma                [ 0.550 0.550 0.550 ] [ 0.550 0.550 0.550 ]
+global light scale          [             2.000 ] [             2.000 ]
+global sky diffusion        [             1.000 ] [             1.000 ]
+
+spread angles               [                on ] [                on ]
+opaque entities             [                on ] [                on ]
+sky lighting fix            [                on ] [                on ]
+incremental                 [               off ] [               off ]
+dump                        [               off ] [               off ]
+bump map info               [                on ] [               off ]
+no lightdata compression    [               off ] [               off ]
+lightdata compression level [  uber_compression ] [           default ]
+day stage                   [              none ] [              none ]
+ignore .err file            [                no ] [                no ]
+disable lightmap reduction  [                no ] [                no ]
+
+colour jitter               [       0.0 0.0 0.0 ] [       0.0 0.0 0.0 ]
+monochromatic jitter        [       0.0 0.0 0.0 ] [       0.0 0.0 0.0 ]
+
+custom shadows with bounce light
+                            [               off ] [               off ]
+rgb transfers               [               off ] [               off ]
+minimum final light         [                 1 ] [                 0 ]
+size of transfer            [         0 (32bit) ] [         1 (16bit) ]
+size of rgbtransfer         [         0 (96bit) ] [         2 (32bit) ]
+soft sky                    [                on ] [                on ]
+translucent depth           [             2.000 ] [             2.000 ]
+block opaque                [                on ] [                on ]
+ignore textures             [               off ] [               off ]
+reflectivity gamma          [             1.760 ] [             1.760 ]
+reflectivity scale          [             0.700 ] [             0.700 ]
+blur size                   [             2.000 ] [             1.500 ]
+no emitter range            [               off ] [               off ]
+wall bleeding fix           [                on ] [                on ]
+
+
+Load Textures:
+Using Wadfile: boxtest.wa_
+3 textures referenced
+Reading texlights from 'lights.rad'
+Warning: Duplication of texlight 'LAMP21C' in file 'lights.rad'!
+0 opaque models
+0 opaque faces
+24 faces
+Create Patches : 294 base patches
+5642 square feet [812544.00 square inches]
+Pairing edges for smoothing
+Pairing single edges across entities
+Paired 0 edges across entities
+0.00 seconds elapsed
+1 direct lights and 0 fast direct lights
+1 light styles
+
+FindFacePositions:
+ (0.06 seconds)
+BuildFacelights:
+ (0.35 seconds)
+BuildVisLeafs:
+ (0.00 seconds)
+visibility matrix   :   0.0 megs
+MakeScales:
+ (0.01 seconds)
+Transfer Lists :       72030 :    72.03k transfers
+       Indices :        1960 :     1.91k bytes
+          Data :      289002 :   282.23k bytes
+Bounce 1 GatherLight:
+ (0.01 seconds)
+Bounce 2 GatherLight:
+ (0.01 seconds)
+Bounce 3 GatherLight:
+ (0.01 seconds)
+Bounce 4 GatherLight:
+ (0.01 seconds)
+Bounce 5 GatherLight:
+ (0.01 seconds)
+Bounce 6 GatherLight:
+ (0.01 seconds)
+Bounce 7 GatherLight:
+ (0.01 seconds)
+Bounce 8 GatherLight:
+ (0.01 seconds)
+CreateTriangulations:
+ (0.00 seconds)
+AddPatchLights:
+ (0.13 seconds)
+FinalLightFace:
+ (0.00 seconds)
+Compressing lightmap data
+Compressing default lightmap data
+Done compressing default lightmap data from 108798 to 19809 bytes
+0.00 seconds elapsed
+Compressing ambient lightmap data
+Done compressing ambient lightmap data from 108798 to 4352 bytes
+0.00 seconds elapsed
+Compressing diffuse lightmap data
+Done compressing diffuse lightmap data from 108798 to 10631 bytes
+0.00 seconds elapsed
+Compressing vectors lightmap data
+Done compressing vectors lightmap data from 108798 to 92269 bytes
+0.00 seconds elapsed
+Lightmap data compression finished
+0.01 seconds elapsed
+
+Object names  Objects/Maxobjs  Memory / Maxmem  Fullness
+------------  ---------------  ---------------  --------
+models              1/4096          64/262144   ( 0.0%)
+planes             20/262144       400/5242880  ( 0.0%)
+vertexes           34/262144       408/3145728  ( 0.0%)
+nodes               6/262144       192/8388608  ( 0.0%)
+texinfos            6/262144       240/10485760 ( 0.0%)
+faces              24/262144       864/9437184  ( 0.0%)
+* worldfaces       24/262144         0/0        ( 0.0%)
+clipnodes          18/262144       216/3145728  ( 0.0%)
+leaves              2/262144        64/8388608  ( 0.0%)
+* worldleaves       1/262144         0/0        ( 0.0%)
+marksurfaces       24/262144        96/1048576  ( 0.0%)
+surfedges         112/1048576      448/4194304  ( 0.0%)
+edges              57/524288       456/4194304  ( 0.0%)
+texdata          [variable]        136/33554432 ( 0.0%)
+lightdata        [variable]     108798/50331648 ( 0.2%)
+visdata          [variable]          1/8388608  ( 0.0%)
+entdata          [variable]        550/2097152  ( 0.0%)
+lightdata        [variable]       4352/50331648 ( 0.0%)
+lightdata        [variable]      10631/50331648 ( 0.0%)
+lightdata        [variable]      92269/50331648 ( 0.2%)
+* AllocBlock        3/64             0/0        ( 4.7%)
+3 textures referenced
+=== Total BSP file data space used: 220185 bytes ===
+Wad files required to run the map: "pathos.wad;"
+0.79 seconds elapsed
+
+-----   END   hlrad -----
+
+
+

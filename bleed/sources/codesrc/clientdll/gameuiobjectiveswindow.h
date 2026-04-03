@@ -105,8 +105,6 @@ private:
 	CGameUIText* m_pWindowTitleText;
 	// Default description
 	CGameUIText* m_pDefaultDescription;
-	// Exit button
-	CGameUIButton* m_pExitButton;
 	// Array of buttons
 	CArray<button_t> m_buttonsArray;
 	// Currently selected objective button

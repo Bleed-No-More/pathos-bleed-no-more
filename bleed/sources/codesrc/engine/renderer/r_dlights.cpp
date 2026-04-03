@@ -1113,8 +1113,7 @@ bool CDynamicLightManager::DrawProjectivePass( cl_dlight_t *dl, cl_entity_t** pv
 	}
 
 	// Draw any view objects for shadows
-	entindex_t localPlayerIndex = CL_GetLocalPlayer()->entindex;
-	if(!dl->isStatic() && SDL_abs(dl->key) == localPlayerIndex)
+	if(!dl->isStatic())
 	{
 		if(!cls.dllfuncs.pfnDrawViewObjectsForVSM(dl))
 			return false;
@@ -1880,6 +1879,9 @@ bool CDynamicLightManager::ShouldRedrawShadowMap( cl_dlight_t *dl, dlight_scenei
 		// Only vbm and brush models
 		if(pvisentity->pmodel->type != MOD_VBM 
 			&& pvisentity->pmodel->type != MOD_BRUSH)
+			continue;
+
+		if(pvisentity->curstate.renderfx == RenderFx_NoShadow)
 			continue;
 
 		// Only static objects

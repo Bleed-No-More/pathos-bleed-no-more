@@ -175,7 +175,7 @@ void TR_VBMSetupBones( entity_vbmhulldata_t* phulldata, const studiohdr_t* pstud
 		g_boneQuaternions4.resize(pstudiohdr->numbones);
 
 	// Also the bone transforms
-	if(phulldata->bonetransform.size() != pstudiohdr->numbones)
+	if(phulldata->bonetransform.size() != static_cast<Uint32>(pstudiohdr->numbones))
 		phulldata->bonetransform.resize(pstudiohdr->numbones);
 
 	Vector angles = state.angles;
@@ -202,7 +202,7 @@ void TR_VBMSetupBones( entity_vbmhulldata_t* phulldata, const studiohdr_t* pstud
 	const mstudioanim_t* panim = VBM_GetAnimation(pstudiohdr, pseqdesc);
 	if(!panim)
 	{
-		Con_EPrintf("%s - Pathos does not support models with sequence groups. Model '%s' not managed.\n", __FUNCTION__, pmodel->name.c_str());
+		Con_EPrintf("[flags=onlyonce_game]%s - Pathos does not support models with sequence groups. Model '%s' not managed.\n", __FUNCTION__, pmodel->name.c_str());
 		return;
 	}
 
@@ -303,7 +303,7 @@ void TR_VBMSetHullInfo( entity_vbmhulldata_t*& pdataptr, const cache_model_t* pm
 
 	// Get sequence data
 	const mstudioseqdesc_t* pseqdesc = pstudiohdr->getSequence(sequence);
-	Float frame = VBM_EstimateFrame(pseqdesc, state, time);
+	Float frame = VBM_EstimateFrame(pseqdesc, time, state.frame, state.animtime, state.framerate, state.effects);
 
 	// Check if the last data matches our current state
 	bool statematches = false;
@@ -373,7 +373,7 @@ void TR_VBMSetHullInfo( entity_vbmhulldata_t*& pdataptr, const cache_model_t* pm
 				pdataptr->hulls[i].hullset = false;
 		}
 
-		// Initialize hulls of needed
+		// Initialize hulls if needed
 		if(pmodel != pdataptr->pcachemodel)
 		{
 			// If model was changed, flush current hull setup

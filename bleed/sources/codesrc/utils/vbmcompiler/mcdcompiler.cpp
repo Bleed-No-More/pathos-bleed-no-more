@@ -19,7 +19,7 @@ All Rights Reserved.
 #include "main.h"
 #include "compiler_math.h"
 #include "refframesmdparser.h"
-#include "filefuncs.h"
+#include "utils_filefuncs.h"
 #include "collisionsmdparser.h"
 
 // Thanks to Jacco for the BVH article he made
@@ -136,7 +136,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 				continue;
 
 			pdestsubmodel->name = psrcsubmodel->collisionsmdname;
-			pdestsubmodel->reversetriangles = psrcsubmodel->reverseTriangles;
+			pdestsubmodel->reversetriangles = !psrcsubmodel->reverseTriangles;
 
 			// Parse the SMD in
 			CCollisionSMDParser smdParser(m_studioCompiler, (*this), pdestsubmodel, pdestsubmodel->reversetriangles);
@@ -189,6 +189,10 @@ bool CMCDCompiler::CreateMCDFile( void )
 		if(!m_pSubModel->nbtriangles)
 			continue;
 
+		// Initialize mins/maxs
+		m_pSubModel->mins = NULL_MINS;
+		m_pSubModel->maxs = NULL_MAXS;
+
 		// Transform vertices used into their final positions
 		for(Uint32 j = 0; j < m_pSubModel->vertexes.size(); j++)
 		{
@@ -198,6 +202,16 @@ bool CMCDCompiler::CreateMCDFile( void )
 
 			Vector tmp = vertex.origin;
 			Math::VectorTransform(tmp, boneTransform.matrix, vertex.origin);
+
+			// Update mins/maxs
+			for(Uint32 k = 0; k < 3; k++)
+			{
+				if(m_pSubModel->mins[k] > vertex.origin[k])
+					m_pSubModel->mins[k] = vertex.origin[k];
+
+				if(m_pSubModel->maxs[k] < vertex.origin[k])
+					m_pSubModel->maxs[k] = vertex.origin[k];
+			}
 		}
 
 		// Create collision data
@@ -241,13 +255,13 @@ bool CMCDCompiler::CreateMCDFile( void )
 	qstrcpy_s(m_pMCDHeader->name, g_options.outputname.c_str(), maxSize);
 
 	// Save submodels
-	Int32 submodeloffset = m_pFileBuffer->getsize();
+	Int32 submodeloffset = m_pFileBuffer->getdatasize();
 	m_pFileBuffer->append(nullptr, m_pSubmodelsArray.size()*sizeof(mcdsubmodel_t));
 	mcdsubmodel_t* psubmodels = reinterpret_cast<mcdsubmodel_t*>(reinterpret_cast<byte*>(m_pMCDHeader) + submodeloffset);
 	m_pFileBuffer->addpointer(reinterpret_cast<void**>(&psubmodels));
 
 	// Save bodyparts array
-	m_pMCDHeader->bodypartoffset = m_pFileBuffer->getsize();
+	m_pMCDHeader->bodypartoffset = m_pFileBuffer->getdatasize();
 	m_pMCDHeader->numbodyparts = m_studioCompiler.GetNbBodyParts();
 	m_pFileBuffer->append(nullptr, m_pMCDHeader->numbodyparts*sizeof(mcdbodypart_t));
 	mcdbodypart_t* pbodyparts = reinterpret_cast<mcdbodypart_t*>(reinterpret_cast<byte*>(m_pMCDHeader) + m_pMCDHeader->bodypartoffset);
@@ -264,7 +278,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 
 		pdestbodypart->base = psrcbodypart->base;
 		pdestbodypart->numsubmodels = psrcbodypart->psubmodels.size();
-		pdestbodypart->submodelindex = reinterpret_cast<byte *>(&psubmodels[j]) - reinterpret_cast<byte*>(m_pMCDHeader);
+		pdestbodypart->submodeloffset = reinterpret_cast<byte *>(&psubmodels[j]) - reinterpret_cast<byte*>(m_pMCDHeader);
 		j += psrcbodypart->psubmodels.size();
 	}
 
@@ -281,8 +295,11 @@ bool CMCDCompiler::CreateMCDFile( void )
 
 		Uint32 maxSize = sizeof(mcdsubmodel_t::name);
 		qstrcpy_s(pdestsubmodel->name, m_pSubModel->name.c_str(), maxSize);
-		pdestsubmodel->collisiontypesoffset = m_pFileBuffer->getsize();
+		pdestsubmodel->collisiontypesoffset = m_pFileBuffer->getdatasize();
 		pdestsubmodel->numcollisiontypes = NB_MCD_COLLISION_TYPES;
+		pdestsubmodel->mins = m_pSubModel->mins;
+		pdestsubmodel->maxs = m_pSubModel->maxs;
+
 		m_pFileBuffer->append(nullptr, pdestsubmodel->numcollisiontypes*sizeof(mcdcollisiontypemodel_t));
 
 		// Create collision data
@@ -290,7 +307,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 		{
 			mcdcollisiontypemodel_t* pcollisiontypemodel = reinterpret_cast<mcdcollisiontypemodel_t*>(reinterpret_cast<byte*>(m_pMCDHeader) + pdestsubmodel->collisiontypesoffset) + j;
 			pcollisiontypemodel->type = static_cast<mcdcollisiontype_t>(j);
-			pcollisiontypemodel->dataoffset = m_pFileBuffer->getsize();
+			pcollisiontypemodel->dataoffset = m_pFileBuffer->getdatasize();
 
 			m_pFileBuffer->addpointer(reinterpret_cast<void**>(&pcollisiontypemodel));
 
@@ -304,22 +321,60 @@ bool CMCDCompiler::CreateMCDFile( void )
 					m_pFileBuffer->addpointer(reinterpret_cast<void**>(&ptrimesh));
 
 					// Allocate triangles and fill data
-					ptrimesh->trianglesoffset = m_pFileBuffer->getsize();
+					ptrimesh->triangleoffset = m_pFileBuffer->getdatasize();
 					ptrimesh->numtriangles = m_pSubModel->triangles.size();
 					m_pFileBuffer->append(nullptr, ptrimesh->numtriangles*sizeof(mcdtrimeshtriangle_t));
-					mcdtrimeshtriangle_t* ptrimeshtriangles = reinterpret_cast<mcdtrimeshtriangle_t*>(reinterpret_cast<byte*>(m_pMCDHeader) + ptrimesh->trianglesoffset);
+					mcdtrimeshtriangle_t* ptrimeshtriangles = reinterpret_cast<mcdtrimeshtriangle_t*>(reinterpret_cast<byte*>(m_pMCDHeader) + ptrimesh->triangleoffset);
 					m_pFileBuffer->addpointer(reinterpret_cast<void**>(&ptrimeshtriangles));
 
 					for(Uint32 k = 0; k < m_pSubModel->triangles.size(); k++)
 					{
+						// Calculate plane of triangle
+						Vector a1, a2, sn;
+						Vector dotvec;
+
+						const Vector& v1 = m_pSubModel->vertexes[m_pSubModel->triangles[k].vertexes[0]].origin;
+						const Vector& v2 = m_pSubModel->vertexes[m_pSubModel->triangles[k].vertexes[1]].origin;
+						const Vector& v3 = m_pSubModel->vertexes[m_pSubModel->triangles[k].vertexes[2]].origin;
+
+						Math::VectorSubtract(v2, v1, a1);
+						Math::VectorSubtract(v3, v1, a2);
+						Math::CrossProduct(a1, a2, sn);
+						sn.Normalize();
+
+						ptrimeshtriangles[k].normal = sn;
+						ptrimeshtriangles[k].distance = Math::DotProduct(v2, sn);
 						ptrimeshtriangles[k].skinref = m_pSubModel->triangles[k].skinref;
+
+						Uint32 l = 0;
+						for(; l < 3; l++)
+						{
+							if(sn[l] < 0)
+								ptrimeshtriangles[k].signbits |= (1 << l);
+
+							if(SDL_fabs(sn[l]) == 1.0)
+							{
+								ptrimeshtriangles[k].planetype = l;
+								break;
+							}
+						}
+
+						if(l == 3)
+						{
+							if(sn[0] >= sn[1] && sn[0] >= sn[2])
+								ptrimeshtriangles[k].planetype = PLANE_AX;
+							else if(sn[1] >= sn[0] && sn[1] >= sn[2])
+								ptrimeshtriangles[k].planetype = PLANE_AY;
+							else
+								ptrimeshtriangles[k].planetype = PLANE_AZ;
+						}
 
 						for(Uint32 l = 0; l < 3; l++)
 							ptrimeshtriangles[k].trivertexes[l] = m_pSubModel->triangles[k].vertexes[l];
 					}
 
 					// Allocate vertexes and fill data
-					ptrimesh->vertexoffset = m_pFileBuffer->getsize();
+					ptrimesh->vertexoffset = m_pFileBuffer->getdatasize();
 					ptrimesh->numvertexes = m_pSubModel->vertexes.size();
 					m_pFileBuffer->append(nullptr, ptrimesh->numvertexes*sizeof(mcdvertex_t));
 					mcdvertex_t* ptrimeshvertexes = reinterpret_cast<mcdvertex_t*>(reinterpret_cast<byte*>(m_pMCDHeader) + ptrimesh->vertexoffset);
@@ -344,7 +399,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 					m_pFileBuffer->addpointer(reinterpret_cast<void**>(&pvbhdata));
 
 					// Allocate BVH nodes
-					pvbhdata->bvhnodeoffset = m_pFileBuffer->getsize();
+					pvbhdata->bvhnodeoffset = m_pFileBuffer->getdatasize();
 					pvbhdata->numbvhnodes = m_pSubModel->pbvhnodes.size();
 					m_pFileBuffer->append(nullptr, sizeof(mcdbvhnode_t)*pvbhdata->numbvhnodes);
 
@@ -369,7 +424,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 						// Write triangles if leaf node
 						if(!psrcbvhnode->triindexesarray.empty())
 						{
-							pdestbvhnode->triindexoffset = m_pFileBuffer->getsize();
+							pdestbvhnode->triindexoffset = m_pFileBuffer->getdatasize();
 							pdestbvhnode->numtriangles = psrcbvhnode->triindexesarray.size();
 							m_pFileBuffer->append(nullptr, sizeof(Int32)*pdestbvhnode->numtriangles);
 							Int32* ptriindexes = reinterpret_cast<Int32*>(reinterpret_cast<byte*>(m_pMCDHeader) + pdestbvhnode->triindexoffset);		
@@ -401,7 +456,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 	}
 
 	// Set texture data
-	m_pMCDHeader->textureoffset = m_pFileBuffer->getsize();
+	m_pMCDHeader->textureoffset = m_pFileBuffer->getdatasize();
 	m_pMCDHeader->numtextures = m_texturesArray.size();
 	m_pFileBuffer->append(nullptr, sizeof(mcdtexture_t)*m_pMCDHeader->numtextures);
 
@@ -413,7 +468,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 	}
 
 	// Save bone data
-	m_pMCDHeader->boneoffset = m_pFileBuffer->getsize();
+	m_pMCDHeader->boneoffset = m_pFileBuffer->getdatasize();
 	m_pMCDHeader->numbones = m_bonesArray.size();
 	m_pFileBuffer->append(nullptr, sizeof(mcdbone_t)*m_pMCDHeader->numbones);
 
@@ -431,7 +486,7 @@ bool CMCDCompiler::CreateMCDFile( void )
 	}
 
 	// Set final size
-	m_pMCDHeader->size = m_pFileBuffer->getsize();
+	m_pMCDHeader->size = m_pFileBuffer->getdatasize();
 
 	// Write the output
 	bool result = WriteFile();

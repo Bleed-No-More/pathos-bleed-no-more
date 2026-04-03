@@ -761,8 +761,11 @@ bool CL_ReadPacketEntities( void )
 		if(updateMask & U_ANIMINFO)
 		{
 			state.sequence = reader.ReadInt32();
+			state.gaitsequence = reader.ReadInt32();
 			state.frame = reader.ReadFloat();
+			state.gaitframe = reader.ReadFloat();
 			state.animtime = reader.ReadFloat();
+			state.gaitanimtime = reader.ReadFloat();
 			state.framerate = reader.ReadFloat();
 		}
 

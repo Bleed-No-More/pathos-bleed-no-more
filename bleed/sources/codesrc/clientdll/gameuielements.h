@@ -754,15 +754,6 @@ protected:
 	// Text inset on x axis
 	Uint32 m_inset;
 
-	// Surface color
-	color32_t m_color;
-	// Background color
-	color32_t m_backgroundColor;
-	// Clicked-on color
-	color32_t m_highlightColor;
-	// Edge thickness
-	Uint32 m_edgeThickness;
-
 	// Current input string
 	Char m_szBuffer[GAMEUI_MAX_INPUT_LENGTH+1];
 	// Marker position

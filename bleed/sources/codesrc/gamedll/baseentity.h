@@ -210,6 +210,8 @@ public:
 
 	// Tells if this is a brush model
 	virtual bool IsBrushModel( void ) const;
+	// Tells if the model we use has an MCD file attached
+	virtual bool HasMCDCollisions( void ) const;
 	// Tells if the entity is moving
 	virtual bool IsMoving( void ) const { return m_pState->velocity.IsZero() ? false : true; }
 
@@ -688,8 +690,8 @@ public:
 	virtual daystage_t GetDayStage( void ) const { STUBWARNING; return DAYSTAGE_NORMAL; };
 	// Sets day state
 	virtual void SetDayStage( daystage_t daystage ) { STUBWARNING; };
-	// Sets dialouge duration for player
-	virtual void SetDialougeDuration( Float duration ) { STUBWARNING; }
+	// Sets dialogue duration for player
+	virtual void SetDialogueDuration( Float duration ) { STUBWARNING; }
 
 	// Set NPC awareness
 	virtual void SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay, bool isLeanAwareness ) { STUBWARNING; };
@@ -740,7 +742,7 @@ public:
 	// Sets ammo count for a type
 	virtual void SetAmmoCount( Int32 ammotype, Int32 ammocount ) { STUBWARNING; };
 	// Adds item to player
-	virtual bool AddPlayerWeapon( CPlayerWeapon* pWeapon ) { STUBWARNING; return false; };
+	virtual bool AddPlayerWeapon( CPlayerWeapon* pWeapon, bool& triggerTarget ) { STUBWARNING; return false; };
 	// Sets the save-game title
 	virtual void SetSaveGameTitle( const Char* pstrtitle ) { STUBWARNING; };
 	// Returns the save-game title

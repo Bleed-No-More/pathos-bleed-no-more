@@ -1,0 +1,1424 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 317,
+                  "startColumn": 17,
+                  "endLine": 317,
+                  "endColumn": 27
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Fill_IMA_ADPCM_block",
+                  "decoratedName": "Fill_IMA_ADPCM_block",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 324,
+                  "startColumn": 20,
+                  "endLine": 324,
+                  "endColumn": 24
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Fill_IMA_ADPCM_block",
+                  "decoratedName": "Fill_IMA_ADPCM_block",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 331,
+                  "startColumn": 20,
+                  "endLine": 331,
+                  "endColumn": 24
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "Fill_IMA_ADPCM_block",
+                  "decoratedName": "Fill_IMA_ADPCM_block",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 398,
+                  "startColumn": 25,
+                  "endLine": 398,
+                  "endColumn": 40
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "IMA_ADPCM_decode",
+                  "decoratedName": "IMA_ADPCM_decode",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 398,
+                  "startColumn": 25,
+                  "endLine": 398,
+                  "endColumn": 36
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "IMA_ADPCM_decode",
+                  "decoratedName": "IMA_ADPCM_decode",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C6340",
+          "message": {
+            "text": "Mismatch on sign: 'unsigned short' passed as _Param_(2) when some signed type is required in call to 'SDL_SetError_REAL'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 604,
+                  "startColumn": 9
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_LoadWAV_RW_REAL",
+                  "decoratedName": "SDL_LoadWAV_RW_REAL",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C6011",
+          "message": {
+            "text": "Dereferencing NULL pointer 'format'. "
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 516,
+                  "startColumn": 5,
+                  "endLine": 516,
+                  "endColumn": 10
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_LoadWAV_RW_REAL",
+                  "decoratedName": "SDL_LoadWAV_RW_REAL",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 451,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 452,
+                            "startColumn": 11
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 453,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 454,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 454,
+                            "startColumn": 29
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 454,
+                            "startColumn": 47
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 455,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 458,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 459,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 460,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 461,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 464,
+                            "startColumn": 14
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 465,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 467,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 470,
+                            "startColumn": 15
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 471,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 477,
+                            "startColumn": 15
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 478,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 479,
+                            "startColumn": 17
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 484,
+                            "startColumn": 19
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 486,
+                            "startColumn": 29
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 491,
+                            "startColumn": 16
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 494,
+                            "startColumn": 16
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 496,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 497,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 498,
+                            "startColumn": 17
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 499,
+                            "startColumn": 21
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 504,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 505,
+                            "startColumn": 86
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 508,
+                            "startColumn": 12
+                          }
+                        },
+                        "message": {
+                          "text": "'format' may be NULL"
+                        }
+                      },
+                      "kinds": [
+                        "declaration"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 509,
+                            "startColumn": 21
+                          }
+                        },
+                        "message": {
+                          "text": "Skip this branch, (assume 'chunk.magic!=544501094' is false)"
+                        }
+                      },
+                      "kinds": [
+                        "branch"
+                      ]
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 514,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 515,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 516,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "'format' is dereferenced, but may still be NULL"
+                        }
+                      },
+                      "kinds": [
+                        "usage"
+                      ],
+                      "importance": "essential"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C6011",
+          "message": {
+            "text": "Dereferencing NULL pointer 'ext'. See line 515 for an earlier location where this can occur"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                },
+                "region": {
+                  "startLine": 545,
+                  "startColumn": 13,
+                  "endLine": 545,
+                  "endColumn": 39
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_LoadWAV_RW_REAL",
+                  "decoratedName": "SDL_LoadWAV_RW_REAL",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 451,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 452,
+                            "startColumn": 11
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 453,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 454,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 454,
+                            "startColumn": 29
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 454,
+                            "startColumn": 47
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 455,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 458,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 459,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 460,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 461,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 464,
+                            "startColumn": 14
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 465,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 467,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 470,
+                            "startColumn": 15
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 471,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 477,
+                            "startColumn": 15
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 478,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 479,
+                            "startColumn": 17
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 484,
+                            "startColumn": 19
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 486,
+                            "startColumn": 29
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 491,
+                            "startColumn": 16
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 494,
+                            "startColumn": 16
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 496,
+                            "startColumn": 9
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 497,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 498,
+                            "startColumn": 17
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 499,
+                            "startColumn": 21
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 504,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 505,
+                            "startColumn": 86
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 508,
+                            "startColumn": 12
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 509,
+                            "startColumn": 21
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 514,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 515,
+                            "startColumn": 13
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 539,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 544,
+                            "startColumn": 13
+                          }
+                        },
+                        "message": {
+                          "text": "'ext' may be NULL"
+                        }
+                      },
+                      "kinds": [
+                        "declaration"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+                          },
+                          "region": {
+                            "startLine": 545,
+                            "startColumn": 37
+                          }
+                        },
+                        "message": {
+                          "text": "'ext' is dereferenced, but may still be NULL"
+                        }
+                      },
+                      "kinds": [
+                        "usage"
+                      ],
+                      "importance": "essential"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.38.33133.0",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/audio/SDL_wave.c"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "a5f5040f01d72bc7cefbb3179c668bbf23c0a1c9b6a35212612a33893ac679a8"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/sdl_internal.h"
+          },
+          "hashes": {
+            "sha-256": "83d3d78bfb942f85f247ae2d732ac1c7999f5241c173e3273450ff81ccdab356"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi.h"
+          },
+          "hashes": {
+            "sha-256": "024494e17db39607e720bad399a8a29ba0a34c66aeaa0888d35a4910ef5153b3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi_overrides.h"
+          },
+          "hashes": {
+            "sha-256": "739d3d416910966c57361d30c332e6bd5e44a07cd67cfe9f661daa93337412d4"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config.h"
+          },
+          "hashes": {
+            "sha-256": "86a1689a2ee033f2d7463b9169ee5ddc3fd228b04a9ab3c0a7a4e05be39d9158"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_platform.h"
+          },
+          "hashes": {
+            "sha-256": "47a303749d9951df4518a45e19d244e98c87c2a7336fdf632bdfc80d6e7d0262"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/begin_code.h"
+          },
+          "hashes": {
+            "sha-256": "250ef5cd3c00a77133236d9a04fdf0f3461811cc4d05117cff40e4a8edfda03a"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/close_code.h"
+          },
+          "hashes": {
+            "sha-256": "a05d08d1d7100ef2dcb84220ab1f701108aea8747928ba2ad7384bfc02b981e8"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config_windows.h"
+          },
+          "hashes": {
+            "sha-256": "e883dcb78a26924c7b15cf5b480a69e110aa3896d1658380020bd901b08cd963"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_audio.h"
+          },
+          "hashes": {
+            "sha-256": "dfca1028223e329c224a076a83f61405207a71fce95d79eabf8a0f1127170c33"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_stdinc.h"
+          },
+          "hashes": {
+            "sha-256": "24c5d1124a5a28c773878220673487ca9e6f6c869adc88ef8058df5330cde98e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_error.h"
+          },
+          "hashes": {
+            "sha-256": "7abae8b28558083e3952f415ccbe0b99fab8782420f766bac54674eb60c610be"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_endian.h"
+          },
+          "hashes": {
+            "sha-256": "efb86fd1022a96b6bff2071017cd5a0303f6d7f64000d2a221a25157540af269"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_mutex.h"
+          },
+          "hashes": {
+            "sha-256": "58a53c83b6d50f72a940482f5ee506acf706e61820f8bc10060ccb4027925538"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_thread.h"
+          },
+          "hashes": {
+            "sha-256": "6fb683847f56e7b9f29fdbbec57ae5036909563f75c0500069f50fd3b9e9858d"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_atomic.h"
+          },
+          "hashes": {
+            "sha-256": "9fdac603ccd71716ac527374cad80b2d6996d820c2b4a05e18965c7c1fa77d17"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_rwops.h"
+          },
+          "hashes": {
+            "sha-256": "29ec25675e0527a09f2e377b1037352a5552894848b763fd777a7654426e5140"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/audio/sdl_wave.h"
+          },
+          "hashes": {
+            "sha-256": "7bd7ab63f6e648748e5f42a540c1a0cce51eb9960833d651f4496fac2bf5c787"
+          }
+        }
+      ]
+    }
+  ]
+}

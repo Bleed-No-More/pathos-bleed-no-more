@@ -1364,7 +1364,6 @@ const CAISchedule scheduleTakeCoverFromBestSoundWithCower(
 //=============================================
 ai_task_t taskListScheduleTakeCoverFromEnemy[] = 
 {
-	AITASK(AI_TASK_SET_FAIL_SCHEDULE,			AI_SCHED_SMALL_FLINCH),
 	AITASK(AI_TASK_STOP_MOVING,					0),
 	AITASK(AI_TASK_FIND_COVER_FROM_ENEMY,		0),
 	AITASK(AI_TASK_RUN_PATH,					0),
@@ -1990,7 +1989,7 @@ void CBaseNPC::ChangeSchedule( const CAISchedule* pNewSchedule )
 	{
 		static const Uint32 keptBitsArray[] = {AI_COND_ENEMY_NAVIGABLE, AI_COND_ENEMY_NOT_FOUND, AI_COND_FRIENDLY_FIRE,
 			AI_COND_CAN_RANGE_ATTACK1, AI_COND_CAN_RANGE_ATTACK2, AI_COND_CAN_MELEE_ATTACK1, AI_COND_CAN_MELEE_ATTACK2,
-			AI_COND_CAN_SPECIAL_ATTACK1, AI_COND_CAN_SPECIAL_ATTACK2};
+			AI_COND_CAN_SPECIAL_ATTACK1, AI_COND_CAN_SPECIAL_ATTACK2, AI_COND_ENEMY_DEAD };
 		static CBitSet keptBitsSet(AI_COND_BITSET_SIZE, keptBitsArray, PT_ARRAYSIZE(keptBitsArray));
 		saveConditions = (m_aiConditionBits & keptBitsSet);
 	}

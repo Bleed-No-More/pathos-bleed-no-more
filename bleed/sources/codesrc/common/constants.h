@@ -132,6 +132,9 @@ static constexpr Int32 NO_SKIN_VALUE = -1;
 // No position value for generic positions
 static constexpr Int32 NO_POSITION = -1;
 
+// Max floating point value
+static constexpr Float MAX_FLOAT_VALUE = 1e30f;
+
 // Path to default footstep file for player
 static const Char FOOTSTEP_SCRIPT_FILE[] = "scripts/footsteps.txt";
 
@@ -237,9 +240,9 @@ static constexpr Uint32 MOUSE_FILTER_MIN_FRAMES = 2;
 static constexpr Uint32 MOUSE_FILTER_MAX_FRAMES = 8;
 
 // Null mins value
-static const Vector NULL_MINS(1e30f, 1e30f, 1e30f);
+static const Vector NULL_MINS(MAX_FLOAT_VALUE, MAX_FLOAT_VALUE, MAX_FLOAT_VALUE);
 // Null maxs value
-static const Vector NULL_MAXS(-1e30f, -1e30f, -1e30f);
+static const Vector NULL_MAXS(-MAX_FLOAT_VALUE, -MAX_FLOAT_VALUE, -MAX_FLOAT_VALUE);
 
 // env_elight radius multiplier
 static constexpr Float ENV_ELIGHT_RADIUS_MULTIPLIER = 9.5;
@@ -247,9 +250,6 @@ static constexpr Float ENV_ELIGHT_RADIUS_MULTIPLIER = 9.5;
 static constexpr Uint32 MAX_CLIENTSIDE_ENTITIES = 65535;
 // Entity index offset for client-side entities
 static constexpr Uint32 CL_ENTITY_INDEX_BASE = MAX_SERVER_ENTITIES;
-
-// Max surface extents size
-static constexpr Uint32 MAX_SURFACE_EXTENTS = 1024;
 
 // Default field of view value
 static constexpr Uint32 DEFAULT_FOV_VALUE = 70;
@@ -271,6 +271,8 @@ typedef void (*pfnErrorPopup_t)( const Char *fmt, ... );
 static const Char NEWLINE[] = "\r\n";
 // World textures base path
 static const Char WORLD_TEXTURES_BASE_PATH[] = "textures/world/";
+// Common game directory
+static const Char COMMON_GAMEDIR[] = "common";
 
 // The common Id for all Pathos BSP file formats
 static const Int32 PBSP_HEADER = (('P'<<24)+('S'<<16)+('B'<<8)+'P');
@@ -322,6 +324,7 @@ enum walkmove_t
 
 enum hull_types_t
 {
+	HULL_NONE = -3, // Invalid hull
 	HULL_BBOX = -2, // Request box hull only
 	HULL_AUTO = -1, // Hull will be determined by engine
 	HULL_POINT = 0, // Point sized hull
@@ -727,7 +730,8 @@ enum renderfx_t
 	RenderFx_GlowShell,
 	RenderFx_ClampMinScale,
 	RenderFx_NoShadow,
-	RenderFx_TraceGlow
+	RenderFx_TraceGlow,
+	RenderFx_NoDynamicLighting
 };
 
 enum rendertype_t
@@ -890,12 +894,15 @@ struct decalcache_t
 
 // This needs to match with studio.h
 static constexpr Uint32 MAX_CONTROLLERS = 4;
-static constexpr Uint32 MAX_BLENDING	= 2;
+static constexpr Uint32 MAX_BLENDING	= 9;
 
 // NULL entity index
 static constexpr entindex_t NO_ENTITY_INDEX = -1;
 // NULL attachment index
 static constexpr Int32 NO_ATTACHMENT_INDEX = -1;
+
+// Spawnflag for env_model not being solid
+static const Uint32 ENVMODEL_SF_NOT_SOLID = (1<<4);
 
 // Lightstyles matching what Half-Life 1 has
 enum lightstyles_t

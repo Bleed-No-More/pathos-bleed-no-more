@@ -538,6 +538,7 @@ namespace mcd
 		}
 
 		Vector centroid;
+		Vector normal;
 		Uint32 vertexes[3];
 		Int32 skinref;
 	};
@@ -570,6 +571,9 @@ namespace mcd
 		Int32 addVertex( const mcd::vertex_t& vertex );
 
 		CString name;
+
+		Vector mins;
+		Vector maxs;
 
 		CArray<triangle_t> triangles;
 		Uint32 nbtriangles;

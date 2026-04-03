@@ -631,7 +631,7 @@ void CPlayerMovement::PreventMegaBunnyJumping( void )
 		return;
 
 	Float speed = m_pPlayerState->velocity.Length();
-	if(speed <= bunnyJumpMaxSpeedFactor)
+	if(speed <= maxScaledSpeed)
 		return;
 
 	Float frac = (maxScaledSpeed/speed) * 0.65;
@@ -1119,7 +1119,7 @@ void CPlayerMovement::Jump( void )
 	// Add a punch to the player's view angles
 	m_pPlayerState->punchamount[0] = Common::RandomFloat(25, 50);
 
-	// Add in jump velocity
+	//// Add in jump velocity
 	m_pPlayerState->velocity[2] = sqrt(2 * 800 * 45.0);
 
 	// NOTES: Do we really need this?

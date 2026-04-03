@@ -147,10 +147,13 @@ bool CCollisionSMDParser::ProcessFile( const Char* pstrFilename )
 	}
 
 	// Ensure we have a closed mesh
-	if(!CheckTriangleNeighbors())
+	if(!g_options.isFlagSet(CMP_FL_MCD_NO_NEIGHBOR_CHECK))
 	{
-		ErrorMsg("Error while checking for holes on collision mesh '%s'.\n", m_scriptFileName.c_str());
-		return false;
+		if(!CheckTriangleNeighbors())
+		{
+			ErrorMsg("Error while checking for holes on collision mesh '%s'.\n", m_scriptFileName.c_str());
+			return false;
+		}
 	}
 
 	return true;
@@ -312,7 +315,7 @@ bool CCollisionSMDParser::ParseTriangles( void )
 	// Print out the relevant results
 	Msg("Loaded '%s':\n", m_pSubModel->name.c_str());
 	Msg("\t%d triangles.\n", triangleCount);
-	Msg("\t%d unique vertexes.\n", m_pSubModel->nbtriangles);
+	Msg("\t%d unique vertexes.\n", m_pSubModel->nbvertexes);
 
 	return true;
 }

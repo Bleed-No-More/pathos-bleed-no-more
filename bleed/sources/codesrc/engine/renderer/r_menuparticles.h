@@ -36,8 +36,10 @@ private:
 	static const Uint32 PARTICLE_SPAWN_FREQ;
 	// Particle spawn frequency variation
 	static const Uint32 PARTICLE_SPAWN_VARIATION;
-	// Particle fade in/fade out time
-	static const Float PARTICLE_FADE_TIME;
+	// Particle fade in
+	static const Float PARTICLE_FADE_IN_TIME;
+	// Particle fade out time
+	static const Float PARTICLE_FADE_OUT_TIME;
 
 private:
 	struct mparticle_t
@@ -52,7 +54,8 @@ private:
 			die(0),
 			spawntime(0),
 			mainalpha(0),
-			noinfade(false)
+			noinfade(false),
+			stuck(false)
 			{
 				memset(texcoords, 0, sizeof(texcoords));
 			}
@@ -76,6 +79,7 @@ private:
 		Double spawntime;
 		Float mainalpha;
 		bool noinfade;
+		bool stuck;
 	};
 
 	struct mparticle_vertex_t

@@ -1,0 +1,1081 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 194,
+                  "startColumn": 44,
+                  "endLine": 194,
+                  "endColumn": 52
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_AddDollarGesture_one",
+                  "decoratedName": "SDL_AddDollarGesture_one",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 291,
+                  "startColumn": 67
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarDifference",
+                  "decoratedName": "dollarDifference",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 291,
+                  "startColumn": 34,
+                  "endLine": 291,
+                  "endColumn": 65
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarDifference",
+                  "decoratedName": "dollarDifference",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 291,
+                  "startColumn": 35,
+                  "endLine": 291,
+                  "endColumn": 48
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarDifference",
+                  "decoratedName": "dollarDifference",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 354,
+                  "startColumn": 40,
+                  "endLine": 354,
+                  "endColumn": 49
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 354,
+                  "startColumn": 40,
+                  "endLine": 354,
+                  "endColumn": 43
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 366,
+                  "startColumn": 95
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 366,
+                  "startColumn": 36,
+                  "endLine": 366,
+                  "endColumn": 93
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 366,
+                  "startColumn": 37,
+                  "endLine": 366,
+                  "endColumn": 63
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 400,
+                  "startColumn": 29,
+                  "endLine": 400,
+                  "endColumn": 52
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 401,
+                  "startColumn": 29,
+                  "endLine": 401,
+                  "endColumn": 52
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 407,
+                  "startColumn": 32,
+                  "endLine": 407,
+                  "endColumn": 46
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 409,
+                  "startColumn": 32,
+                  "endLine": 409,
+                  "endColumn": 46
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "dollarNormalize",
+                  "decoratedName": "dollarNormalize",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 451,
+                  "startColumn": 71,
+                  "endLine": 451,
+                  "endColumn": 95
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureAddTouch",
+                  "decoratedName": "SDL_GestureAddTouch",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 622,
+                  "startColumn": 49,
+                  "endLine": 622,
+                  "endColumn": 72
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 622,
+                  "startColumn": 49,
+                  "endLine": 622,
+                  "endColumn": 56
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 639,
+                  "startColumn": 41,
+                  "endLine": 639,
+                  "endColumn": 61
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 639,
+                  "startColumn": 41,
+                  "endLine": 639,
+                  "endColumn": 49
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 644,
+                  "startColumn": 40,
+                  "endLine": 644,
+                  "endColumn": 54
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 644,
+                  "startColumn": 40,
+                  "endLine": 644,
+                  "endColumn": 46
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '-' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '-' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 652,
+                  "startColumn": 43,
+                  "endLine": 652,
+                  "endColumn": 61
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 652,
+                  "startColumn": 43,
+                  "endLine": 652,
+                  "endColumn": 50
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 652,
+                  "startColumn": 63,
+                  "endLine": 652,
+                  "endColumn": 81
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C26451",
+          "message": {
+            "text": "Arithmetic overflow: Using operator '*' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '*' to avoid overflow (io.2)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+                },
+                "region": {
+                  "startLine": 652,
+                  "startColumn": 63,
+                  "endLine": 652,
+                  "endColumn": 70
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "SDL_GestureProcessEvent",
+                  "decoratedName": "SDL_GestureProcessEvent",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.38.33133.0",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///D:/Games/Bleed No More/bleed/sources/codesrc/libs/sdl2.0/src/events/SDL_gesture.c"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "71a8892de9ab013b7ace88c9f06dafdc16046f354a0c7949a2186cd4c49fcf92"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/sdl_internal.h"
+          },
+          "hashes": {
+            "sha-256": "83d3d78bfb942f85f247ae2d732ac1c7999f5241c173e3273450ff81ccdab356"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi.h"
+          },
+          "hashes": {
+            "sha-256": "024494e17db39607e720bad399a8a29ba0a34c66aeaa0888d35a4910ef5153b3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/dynapi/sdl_dynapi_overrides.h"
+          },
+          "hashes": {
+            "sha-256": "739d3d416910966c57361d30c332e6bd5e44a07cd67cfe9f661daa93337412d4"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config.h"
+          },
+          "hashes": {
+            "sha-256": "86a1689a2ee033f2d7463b9169ee5ddc3fd228b04a9ab3c0a7a4e05be39d9158"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_platform.h"
+          },
+          "hashes": {
+            "sha-256": "47a303749d9951df4518a45e19d244e98c87c2a7336fdf632bdfc80d6e7d0262"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/begin_code.h"
+          },
+          "hashes": {
+            "sha-256": "250ef5cd3c00a77133236d9a04fdf0f3461811cc4d05117cff40e4a8edfda03a"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/close_code.h"
+          },
+          "hashes": {
+            "sha-256": "a05d08d1d7100ef2dcb84220ab1f701108aea8747928ba2ad7384bfc02b981e8"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_config_windows.h"
+          },
+          "hashes": {
+            "sha-256": "e883dcb78a26924c7b15cf5b480a69e110aa3896d1658380020bd901b08cd963"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_events.h"
+          },
+          "hashes": {
+            "sha-256": "233d9fb9c97305ba432daf83abf12af0cba989a712eaf701d805ab6efcd68a73"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_stdinc.h"
+          },
+          "hashes": {
+            "sha-256": "24c5d1124a5a28c773878220673487ca9e6f6c869adc88ef8058df5330cde98e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_error.h"
+          },
+          "hashes": {
+            "sha-256": "7abae8b28558083e3952f415ccbe0b99fab8782420f766bac54674eb60c610be"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_video.h"
+          },
+          "hashes": {
+            "sha-256": "c819d35f9639dcf5d31edb505f760686494119073fb94ccbda7b479e3c4ce031"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_pixels.h"
+          },
+          "hashes": {
+            "sha-256": "7e97330cce33ed52c95ba14cbd14f2827ca93913dd936abcf52d6409b4b67e93"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_endian.h"
+          },
+          "hashes": {
+            "sha-256": "efb86fd1022a96b6bff2071017cd5a0303f6d7f64000d2a221a25157540af269"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_rect.h"
+          },
+          "hashes": {
+            "sha-256": "742b197047dd99caf546e3b271602d1e79d0b3905693c970d146e7bff694c06e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_rwops.h"
+          },
+          "hashes": {
+            "sha-256": "29ec25675e0527a09f2e377b1037352a5552894848b763fd777a7654426e5140"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_surface.h"
+          },
+          "hashes": {
+            "sha-256": "233ac55b36544cc8ea52608de5f08f390b89ba11393f434c516b6a7c72465b3e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_blendmode.h"
+          },
+          "hashes": {
+            "sha-256": "77ff01d222e1e1a15ea1a3c416a4380bac782129432422abc9b68ab870891cbe"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_keyboard.h"
+          },
+          "hashes": {
+            "sha-256": "b696461075374ca0a8cdc61fe0c03d800e5b5cd3d2c71f6baaa05a3edb60afee"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_keycode.h"
+          },
+          "hashes": {
+            "sha-256": "4a931c946f9ea663d089b8b77cdb107b594153164f24e3aee037d08e94d9620c"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_scancode.h"
+          },
+          "hashes": {
+            "sha-256": "e556990bd21f32e360cf787a3899fd43f20607ff9ca729b122b8e496e096ccea"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_mouse.h"
+          },
+          "hashes": {
+            "sha-256": "805307e9b073bc909f7fc17b14c5a53faa3a4f27459a25c4bb475a5a9d7aeb09"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_joystick.h"
+          },
+          "hashes": {
+            "sha-256": "6d4c940daaf24a4dfbb5f06be6d9fead85486e8350f1a49702e8f3e7917a1d9a"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_gamecontroller.h"
+          },
+          "hashes": {
+            "sha-256": "e5c9b23dca0fa46fbd6490aae27d46b0a8ab325c14d4d362d1d2c62fba87eaa2"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_quit.h"
+          },
+          "hashes": {
+            "sha-256": "98dfd3ecf8c756d55c7befe6eed216207f29f25ca52d63ee240902b1b12f8e18"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_gesture.h"
+          },
+          "hashes": {
+            "sha-256": "ff9fad390590f6b6a8a6a042131947f4294003f7d501f10122b77f5a5a5aa881"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_touch.h"
+          },
+          "hashes": {
+            "sha-256": "f6643657ddfb0c03ba3a371014c6e816b9c9122a9d93edae1c1cddbcc6149ddd"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_events_c.h"
+          },
+          "hashes": {
+            "sha-256": "619f4ffefa7d1eda032077096855eb9b83a8780428f93fc2a199878c30a1cd42"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_thread.h"
+          },
+          "hashes": {
+            "sha-256": "6fb683847f56e7b9f29fdbbec57ae5036909563f75c0500069f50fd3b9e9858d"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_atomic.h"
+          },
+          "hashes": {
+            "sha-256": "9fdac603ccd71716ac527374cad80b2d6996d820c2b4a05e18965c7c1fa77d17"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_mutex.h"
+          },
+          "hashes": {
+            "sha-256": "58a53c83b6d50f72a940482f5ee506acf706e61820f8bc10060ccb4027925538"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/sdl_sysvideo.h"
+          },
+          "hashes": {
+            "sha-256": "9f03d0b43d3ebc0bc3a0ea423063ca82a4d0e557474565d2fb49dd605e6b0f60"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_messagebox.h"
+          },
+          "hashes": {
+            "sha-256": "0d2b834bf9c0cdf122da43b4e83129c512e3e55d7efa9d8361803d3a8bbc7b04"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_shape.h"
+          },
+          "hashes": {
+            "sha-256": "2d5c129df641b8a2f56d6db3cb8aedd2f44f987dbf6717e63f4c41f692d510e1"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/sdl_vulkan_internal.h"
+          },
+          "hashes": {
+            "sha-256": "0f4d0e50d985b4baf2a1b387cab54ddda2818d330953fed8fcf7c1c4f85acc4f"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/core/windows/sdl_windows.h"
+          },
+          "hashes": {
+            "sha-256": "e02cdfb463f971f9cb8d7c908cba4c3f1abd6a891f32e1d2c7a65180aa202ace"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/khronos/vulkan/vulkan.h"
+          },
+          "hashes": {
+            "sha-256": "aa2c5906a3b0392d259e11836d860ac61b2c2cc266f2911f6ff819c90c5b0ff3"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/video/khronos/vulkan/vk_platform.h"
+          },
+          "hashes": {
+            "sha-256": "fdc23308257b13534745ae246ff5476c1e0ee908e8c43839fdcff94c4a3142ae"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/include/sdl_vulkan.h"
+          },
+          "hashes": {
+            "sha-256": "10a085f4c53caadc491f32510a9d1993692b585eb7d7f8c1539f13146c9fc5cc"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_clipboardevents_c.h"
+          },
+          "hashes": {
+            "sha-256": "22e49d81e212f637a2b5ad79551db3b1d4dc58067c08219fb4088dc482bb14ee"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_displayevents_c.h"
+          },
+          "hashes": {
+            "sha-256": "cbd62184a5cfd1fb48ce103187ead4bc6941913634ffec7b174cab771f02a14d"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_dropevents_c.h"
+          },
+          "hashes": {
+            "sha-256": "0e2b9346aacfa4958aa99623bd7f16f4b8b137c340999fa12ed7ba9e14b297dc"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_gesture_c.h"
+          },
+          "hashes": {
+            "sha-256": "b0e755a183767d3de4902534101e837568377e73d945455fb702a97d6ae1caf7"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_keyboard_c.h"
+          },
+          "hashes": {
+            "sha-256": "1be9235d3a01618ae2ea6fd5feca2db1c995105b76a15177a0df6d2e181d9fb7"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_mouse_c.h"
+          },
+          "hashes": {
+            "sha-256": "03b49a6b1a11273c9a769a5e4a93e12ee36eab2ac926445282877a7f99ff7d51"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_touch_c.h"
+          },
+          "hashes": {
+            "sha-256": "4d18ba1a3662f48da4d193c6f7a7fbad3342a64ee9fa329c94117c452ff1280c"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///d:/games/bleed no more/bleed/sources/codesrc/libs/sdl2.0/src/events/sdl_windowevents_c.h"
+          },
+          "hashes": {
+            "sha-256": "491145c0cc2042e424d9f31088f0cbdd8560066c1e20669a8d35a1e2d34fad6a"
+          }
+        }
+      ]
+    }
+  ]
+}

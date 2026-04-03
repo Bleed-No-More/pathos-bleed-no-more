@@ -75,8 +75,11 @@ entity_data_desc_t g_edictStateFields[] =
 	DEFINE_DATA_FIELD( entity_state_t, gravity, EFIELD_FLOAT ),
 	DEFINE_DATA_FIELD( entity_state_t, friction, EFIELD_FLOAT ),
 	DEFINE_DATA_FIELD( entity_state_t, sequence, EFIELD_INT32 ),
+	DEFINE_DATA_FIELD( entity_state_t, gaitsequence, EFIELD_INT32 ),
 	DEFINE_DATA_FIELD( entity_state_t, frame, EFIELD_FLOAT ),
+	DEFINE_DATA_FIELD( entity_state_t, gaitframe, EFIELD_FLOAT ),
 	DEFINE_DATA_FIELD( entity_state_t, animtime, EFIELD_TIME ),
+	DEFINE_DATA_FIELD( entity_state_t, gaitanimtime, EFIELD_TIME ),
 	DEFINE_DATA_FIELD( entity_state_t, framerate, EFIELD_FLOAT ),
 	DEFINE_DATA_FIELD_ARRAY( entity_state_t, controllers, EFIELD_FLOAT, MAX_CONTROLLERS ),
 	DEFINE_DATA_FIELD_ARRAY( entity_state_t, blending, EFIELD_FLOAT, MAX_BLENDING ),
@@ -1262,6 +1265,7 @@ bool AddPacketEntity( entity_state_t& state, entindex_t entindex, edict_t& entit
 	state.waterlevel	= entity.state.waterlevel;
 	state.gravity		= entity.state.gravity;
 	state.sequence		= entity.state.sequence;
+	state.gaitsequence	= entity.state.gaitsequence;
 
 	state.iuser1		= entity.state.iuser1;
 	state.iuser2		= entity.state.iuser2;

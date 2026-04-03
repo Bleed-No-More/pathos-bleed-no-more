@@ -23,26 +23,12 @@ All Rights Reserved.
 #include "trace_shared.h"
 #include "vbmtrace.h"
 #include "sv_physics.h"
+#include "mcdtrace.h"
+#include "collision_shared.h"
 
 //
 // Some of the code here was written while referencing Quake 1 and ReHLDS. I want to thank Id Software
 // and dreamstalker for their invaluable work.
-
-// Hull mins for tracehull
-static const Vector HULL_MINS[MAX_MAP_HULLS] = {
-	Vector(0.0f, 0.0f, 0.0f),		// Point hull
-	Vector(-16.0f, -16.0f, -36.0f),	// Human hull
-	Vector(-32.0f, -32.0f, -32.0f),	// Large hull
-	Vector(-16.0f, -16.0f, -18.0f)	// Small hull
-};
-
-// Hull maxs for tracehull
-static const Vector HULL_MAXS[MAX_MAP_HULLS] = {
-	Vector(0.0f, 0.0f, 0.0f),		// Point hull
-	Vector(16.0f, 16.0f, 36.0f),	// Human hull
-	Vector(32.0f, 32.0f, 32.0f),	// Large hull
-	Vector(16.0f, 16.0f, 18.0f)		// Small hull
-};
 
 //=============================================
 //
@@ -154,53 +140,20 @@ const hull_t* SV_HullForBSP( const edict_t* pentity, const Vector& mins, const V
 	}
 
 	const brushmodel_t* pmodel = pcache->getBrushmodel();
-
-	// If hulltype is specified, just give out hull
-	if(hulltype != HULL_AUTO)
+	if(!pmodel)
 	{
-		if(hulltype >= MAX_MAP_HULLS || hulltype < 0 && hulltype != HULL_AUTO)
-		{
-			Con_Printf("%s - Bogus hull index %d.", __FUNCTION__, hulltype);
-			return nullptr;
-		}
-
-		const hull_t* phull = &pmodel->hulls[hulltype];
-
-		if(poffset)
-		{
-			Math::VectorSubtract(phull->clipmins, mins, *poffset);
-			Math::VectorAdd(*poffset, pentity->state.origin, *poffset);
-		}
-
-		return phull;
+		Con_Printf("%s - Hit pentity %s without valid brushmodel(%s).", __FUNCTION__, SV_GetString(pentity->fields.classname), SV_GetString(pentity->fields.modelname));
+		return nullptr;
 	}
 
-	Vector size;
-	Math::VectorSubtract(maxs, mins, size);
-
-	const hull_t *phull = nullptr;
-	if(size[0] <= 8.0f)
-	{
-		phull = &pmodel->hulls[HULL_POINT];
-
-		if(poffset)
-			Math::VectorCopy(phull->clipmins, *poffset);
-	}
-	else
-	{
-		if(size[0] > 36.0f)
-			phull = &pmodel->hulls[HULL_LARGE];
-		else if(size[2] > 36.0f)
-			phull = &pmodel->hulls[HULL_HUMAN];
-		else
-			phull = &pmodel->hulls[HULL_SMALL];
-
-		if(poffset)
-			Math::VectorSubtract(phull->clipmins, mins, *poffset);
-	}
+	hull_types_t _hulltype = TR_GetHullType(mins, maxs, hulltype);
+	const hull_t* phull = &pmodel->hulls[_hulltype];
 
 	if(poffset)
+	{
+		Math::VectorSubtract(phull->clipmins, mins, *poffset);
 		Math::VectorAdd(*poffset, pentity->state.origin, *poffset);
+	}
 
 	return phull;
 }
@@ -470,50 +423,6 @@ const hull_t* SV_HullForEntity( const edict_t* pentity, const Vector& mins, cons
 //=============================================
 //
 //=============================================
-bool SV_TracelineBBoxCheck( edict_t* pentity, const cache_model_t* pcachemodel, const Vector& start, const Vector& end, const Vector& mins, const Vector& maxs )
-{
-	trace_t tr;
-	tr.endpos = end;
-	tr.fraction = 1.0;
-	tr.flags |= FL_TR_ALLSOLID;
-
-	// Calculate hull mins/maxs
-	Vector hullmins, hullmaxs;
-	if(pcachemodel->type == MOD_BRUSH && !pentity->state.angles.IsZero())
-	{
-		for(Uint32 i = 0; i < 3; i++)
-		{
-			hullmins[i] = -pcachemodel->radius - maxs[i];
-			hullmaxs[i] = pcachemodel->radius - mins[i];
-		}
-	}
-	else
-	{
-		Math::VectorSubtract(pentity->state.mins, maxs, hullmins);
-		Math::VectorSubtract(pentity->state.maxs, mins, hullmaxs);
-	}
-	// Some very small mins/maxs need to be extended, otherwise the trace fails
-	for(Uint32 i = 0; i < 3; i++)
-	{
-		hullmins[i] -= 1;
-		hullmaxs[i] += 1;
-	}
-
-	const hull_t* phull = TR_HullForBox(hullmins, hullmaxs);
-
-	Vector start_l;
-	Vector end_l;
-	Math::VectorSubtract(start, pentity->state.origin, start_l);
-	Math::VectorSubtract(end, pentity->state.origin, end_l);
-
-	// Regular trace
-	TR_RecursiveHullCheck(phull, phull->firstclipnode, 0.0f, 1.0f, start_l, end_l, tr);
-	return (tr.fraction != 1.0f || tr.startSolid() || tr.allSolid()) ? true : false;
-}
-
-//=============================================
-//
-//=============================================
 void SV_SingleClipMoveToEntity( edict_t* pentity, const Vector& start, const Vector& mins, const Vector& maxs, const Vector& end, trace_t& trace, Int32 flags, hull_types_t hulltype )
 {
 	// Set these first
@@ -537,7 +446,7 @@ void SV_SingleClipMoveToEntity( edict_t* pentity, const Vector& start, const Vec
 	// Do an inexpensive check first, but only if either the entity is mod_brush, or mod_vbm AND has hitboxes specified to be used
 	if(pmodel->cacheindex != WORLD_MODEL_INDEX && (pmodel->type == MOD_BRUSH || pmodel->type == MOD_VBM && (flags & FL_TRACE_HITBOXES || pmodel->flags & STUDIO_MF_TRACE_HITBOX)))
 	{
-		if(!SV_TracelineBBoxCheck(pentity, pmodel, start, end, mins, maxs))
+		if(!TR_TracelineBBoxCheck(pentity->state, pmodel, start, end, mins, maxs))
 			return;
 	}
 
@@ -546,16 +455,24 @@ void SV_SingleClipMoveToEntity( edict_t* pentity, const Vector& start, const Vec
 
 	const hull_t* phull = nullptr;
 	const CArray<vbmhitboxhull_t>* pvbmhulls = nullptr;
+	const mcdheader_t* pmcdheader = nullptr;
+
+	// Fetch MCD if we have it
+	if(pmodel->cacheflags & CACHE_FL_HAS_MCD)
+	{
+		const vbmcache_t* pvbmcache = pmodel->getVBMCache();
+		pmcdheader = pvbmcache->pmcdheader;
+	}
 
 	// Get the appropriate hull
-	if(pmodel->type == MOD_VBM && (flags & FL_TRACE_HITBOXES || pmodel->flags & STUDIO_MF_TRACE_HITBOX))
+	if(pmodel->type == MOD_VBM && ((flags & FL_TRACE_HITBOXES) || (pmodel->flags & STUDIO_MF_TRACE_HITBOX)) && !pmcdheader && !(pentity->state.flags & FL_NO_HITBOX_TRACE))
 	{
 		// Set VBM hull data if not already set
 		TR_VBMSetHullInfo(pentity->pvbmhulldata, pmodel, mins, maxs, pentity->state, svs.time, hulltype);
 		// Retrieve pointer to array
 		pvbmhulls = TR_VBMGetHulls(pentity->pvbmhulldata, mins, maxs, hulltype, flags, &offset);
 	}
-	else
+	else if(!pmcdheader)
 	{
 		// Retrieve regular hull
 		phull = SV_HullForEntity(pentity, mins, maxs, &offset, hulltype);
@@ -567,18 +484,18 @@ void SV_SingleClipMoveToEntity( edict_t* pentity, const Vector& start, const Vec
 	Math::VectorSubtract(end, offset, end_l);
 
 	// Rotate the pentity if needed
-	if(pmodel->type != MOD_VBM && pentity->state.solid == SOLID_BSP && !pentity->state.angles.IsZero())
+	if((pmcdheader || pmodel->type == MOD_BRUSH && pentity->state.solid == SOLID_BSP) && !pentity->state.angles.IsZero())
 	{
 		Math::RotateToEntitySpace(pentity->state.angles, start_l);
 		Math::RotateToEntitySpace(pentity->state.angles, end_l);
 	}
 
-	if(!pvbmhulls)
+	if(pmcdheader)
 	{
-		// Regular trace
-		TR_RecursiveHullCheck(phull, phull->firstclipnode, 0.0f, 1.0f, start_l, end_l, trace);
+		hull_types_t hullType = TR_GetHullType(mins, maxs, hulltype);
+		g_mcdTrace.TraceLineAABB(start_l, end_l, HULL_MINS[hullType], HULL_MAXS[hullType], pmcdheader, pentity->state.body, trace);
 	}
-	else
+	else if(pvbmhulls)
 	{
 		if(pvbmhulls->empty())
 		{
@@ -588,6 +505,11 @@ void SV_SingleClipMoveToEntity( edict_t* pentity, const Vector& start, const Vec
 
 		// Trace against VBM hulls
 		TR_VBMHullCheck(pvbmhulls, start_l, end_l, trace);
+	}
+	else
+	{
+		// Regular trace
+		TR_RecursiveHullCheck(phull, phull->firstclipnode, 0.0f, 1.0f, start_l, end_l, trace);
 	}
 
 	if(trace.fraction != 1.0f)
@@ -629,7 +551,7 @@ void SV_SingleClipMoveToEntityPoint( edict_t* pentity, const Vector& start, cons
 	// Do an inexpensive check first, but only if either the entity is mod_brush, or mod_vbm AND has hitboxes specified to be used
 	if(pmodel->cacheindex != WORLD_MODEL_INDEX && (pmodel->type == MOD_BRUSH || pmodel->type == MOD_VBM && (flags & FL_TRACE_HITBOXES || pmodel->flags & STUDIO_MF_TRACE_HITBOX)))
 	{
-		if(!SV_TracelineBBoxCheck(pentity, pmodel, start, end, ZERO_VECTOR, ZERO_VECTOR))
+		if(!TR_TracelineBBoxCheck(pentity->state, pmodel, start, end, ZERO_VECTOR, ZERO_VECTOR))
 			return;
 	}
 
@@ -638,43 +560,53 @@ void SV_SingleClipMoveToEntityPoint( edict_t* pentity, const Vector& start, cons
 
 	const hull_t* phull = nullptr;
 	const CArray<vbmhitboxhull_t>* pvbmhulls = nullptr;
+	const mcdheader_t* pmcdheader = nullptr;
+
+	if(pmodel->cacheflags & CACHE_FL_HAS_MCD)
+	{
+		const vbmcache_t* pvbmcache = pmodel->getVBMCache();
+		pmcdheader = pvbmcache->pmcdheader;
+	}
 
 	Vector start_l;
 	Vector end_l;
+	Vector offset;
 
 	// Get the appropriate hull
-	if(pmodel->type == MOD_VBM && (flags & FL_TRACE_HITBOXES || pmodel->flags & STUDIO_MF_TRACE_HITBOX) && !(pentity->state.flags & FL_NO_HITBOX_TRACE))
+	if(pmodel->type == MOD_VBM && ((flags & FL_TRACE_HITBOXES) || (pmodel->flags & STUDIO_MF_TRACE_HITBOX)) && !pmcdheader && !(pentity->state.flags & FL_NO_HITBOX_TRACE))
 	{
 		// Set VBM hull data if not already set
 		TR_VBMSetHullInfo(pentity->pvbmhulldata, pmodel, ZERO_VECTOR, ZERO_VECTOR, pentity->state, svs.time, HULL_POINT);
 		// Retrieve pointer to array
 		pvbmhulls = TR_VBMGetHulls(pentity->pvbmhulldata, ZERO_VECTOR, ZERO_VECTOR, HULL_POINT, flags, nullptr);
-
-		Math::VectorCopy(start, start_l);
-		Math::VectorCopy(end, end_l);
+		// Zero offset in this case
+		offset = ZERO_VECTOR;
 	}
 	else
 	{
-		// Retrieve regular hull
-		phull = SV_HullForEntity(pentity, ZERO_VECTOR, ZERO_VECTOR, nullptr, HULL_POINT); 
+		// Retrieve regular hull if not using MCD
+		if(!pmcdheader)
+			phull = SV_HullForEntity(pentity, ZERO_VECTOR, ZERO_VECTOR, nullptr, HULL_POINT); 
 
-		Math::VectorSubtract(start, pentity->state.origin, start_l);
-		Math::VectorSubtract(end, pentity->state.origin, end_l);
+		// Offset is entity origin
+		offset = pentity->state.origin;
 	}
 
-	// Rotate the pentity if needed
-	if(pmodel->type == MOD_BRUSH && pentity->state.solid == SOLID_BSP && !pentity->state.angles.IsZero())
+	Math::VectorSubtract(start, offset, start_l);
+	Math::VectorSubtract(end, offset, end_l);
+
+	// Rotate the entity if needed
+	if((pmcdheader || pmodel->type == MOD_BRUSH && pentity->state.solid == SOLID_BSP) && !pentity->state.angles.IsZero())
 	{
 		Math::RotateToEntitySpace(pentity->state.angles, start_l);
 		Math::RotateToEntitySpace(pentity->state.angles, end_l);
 	}
 
-	if(pmodel->type == MOD_BRUSH || !pvbmhulls)
+	if(pmcdheader)
 	{
-		// Regular trace
-		TR_RecursiveHullCheck(phull, phull->firstclipnode, 0.0f, 1.0f, start_l, end_l, trace);
+		g_mcdTrace.TraceLinePoint(start_l, end_l, pmcdheader, pentity->state.body, trace);
 	}
-	else
+	else if(pvbmhulls)
 	{
 		if(pvbmhulls->empty())
 		{
@@ -685,10 +617,15 @@ void SV_SingleClipMoveToEntityPoint( edict_t* pentity, const Vector& start, cons
 		// Trace against VBM hulls
 		TR_VBMHullCheck(pvbmhulls, start_l, end_l, trace);
 	}
+	else
+	{
+		// Regular trace
+		TR_RecursiveHullCheck(phull, phull->firstclipnode, 0.0f, 1.0f, start_l, end_l, trace);
+	}
 
 	if(trace.fraction != 1.0f)
 	{
-		if(pmodel->type == MOD_BRUSH && pentity->state.solid == SOLID_BSP && !pentity->state.angles.IsZero())
+		if((pmcdheader || pmodel->type == MOD_BRUSH && pentity->state.solid == SOLID_BSP) && !pentity->state.angles.IsZero())
 			Math::RotateFromEntitySpace(pentity->state.angles, trace.plane.normal);
 
 		Vector point;
@@ -1208,7 +1145,7 @@ void SV_PlayerTrace( const Vector& start, const Vector& end, Int32 traceflags, h
 
 	// trace against world first
 	edict_t* pworld = gEdicts.GetEdict(WORLDSPAWN_ENTITY_INDEX);
-	TR_PlayerTraceSingleEntity(pworld->state, pworld->pvbmhulldata, start, end, hulltype, traceflags, svs.player_mins[hulltype], svs.player_maxs[hulltype], trace);
+	TR_PlayerTraceSingleEntity(pworld->state, pworld->pvbmhulldata, nullptr, start, end, hulltype, traceflags, svs.player_mins[hulltype], svs.player_maxs[hulltype], trace);
 
 	// Trace against entities if applicable
 	if(!(traceflags & FL_TRACE_WORLD_ONLY))
@@ -1275,10 +1212,17 @@ void SV_PlayerTrace( const Vector& start, const Vector& end, Int32 traceflags, h
 				return;
 
 			// Set VBM data if needed
-			if(pmodel->type == MOD_VBM && (pmodel->flags & STUDIO_MF_TRACE_HITBOX || traceflags & FL_TRACE_HITBOXES))
+			const mcdheader_t* pmcdheader = nullptr;
+			if(pmodel->cacheflags & CACHE_FL_HAS_MCD)
+			{
+				const vbmcache_t* pvbmcache = pmodel->getVBMCache();
+				pmcdheader = pvbmcache->pmcdheader;
+			}
+
+			if(pmodel->type == MOD_VBM && (pmodel->flags & STUDIO_MF_TRACE_HITBOX || traceflags & FL_TRACE_HITBOXES) && !pmcdheader)
 				TR_VBMSetHullInfo(pentity->pvbmhulldata, pmodel, svs.player_mins[hulltype], svs.player_maxs[hulltype], pentity->state, svs.time, hulltype);
 
-			TR_PlayerTraceSingleEntity(pentity->state, pentity->pvbmhulldata, start, end, hulltype, traceflags, svs.player_mins[hulltype], svs.player_maxs[hulltype], trace);
+			TR_PlayerTraceSingleEntity(pentity->state, pentity->pvbmhulldata, pmcdheader, start, end, hulltype, traceflags, svs.player_mins[hulltype], svs.player_maxs[hulltype], trace);
 		}
 	}
 }

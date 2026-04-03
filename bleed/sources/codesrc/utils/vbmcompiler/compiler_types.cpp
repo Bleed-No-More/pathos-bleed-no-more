@@ -743,9 +743,7 @@ namespace mcd
 		if(nbtriangles >= triangles.size())
 			triangles.resize(triangles.size() + TRIANGLE_ALLOCATION_COUNT);
 
-		for(Uint32 i = 0; i < 3; i++)
-			triangles[nbtriangles+i] = triangle;
-
+		triangles[nbtriangles] = triangle;
 		nbtriangles++;
 	}
 

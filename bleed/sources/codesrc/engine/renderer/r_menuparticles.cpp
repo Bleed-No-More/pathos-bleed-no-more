@@ -34,8 +34,10 @@ const Float CMenuParticles::PARTICLE_MAX_LIFE = 25;
 const Uint32 CMenuParticles::PARTICLE_SPAWN_FREQ = 10;
 // Particle spawn frequency variation
 const Uint32 CMenuParticles::PARTICLE_SPAWN_VARIATION = 20;
-// Particle fade in/fade out time
-const Float CMenuParticles::PARTICLE_FADE_TIME = 0.2;
+// Particle fade in time
+const Float CMenuParticles::PARTICLE_FADE_IN_TIME = 0.5;
+// Particle fade out time
+const Float CMenuParticles::PARTICLE_FADE_OUT_TIME = 0.5;
 
 // Class object
 CMenuParticles gMenuParticles;
@@ -315,12 +317,18 @@ void CMenuParticles::Think( void )
 		}
 
 		// Update alpha
-		if(!pParticle->noinfade && (pParticle->spawntime + PARTICLE_FADE_TIME > ens.time))
-			pParticle->alpha = (ens.time - pParticle->spawntime) / PARTICLE_FADE_TIME;
-		else if(ens.time > (pParticle->die - PARTICLE_FADE_TIME))
-			pParticle->alpha = 1.0 - ((ens.time - (pParticle->die - PARTICLE_FADE_TIME)) / PARTICLE_FADE_TIME);
+		if(!pParticle->noinfade && (pParticle->spawntime + PARTICLE_FADE_IN_TIME > ens.time))
+			pParticle->alpha = (ens.time - pParticle->spawntime) / PARTICLE_FADE_IN_TIME;
+		else if(ens.time > (pParticle->die - PARTICLE_FADE_OUT_TIME))
+			pParticle->alpha = 1.0 - ((ens.time - (pParticle->die - PARTICLE_FADE_OUT_TIME)) / PARTICLE_FADE_OUT_TIME);
 		else
 			pParticle->alpha = 1.0;
+
+		if(pParticle->stuck)
+		{
+			m_particlesList.next();
+			continue;
+		}
 
 		// Add in gravity and wind
 		if(pParticle->wind)
@@ -347,15 +355,17 @@ void CMenuParticles::Think( void )
 			m_particlesList.next();
 			continue;
 		}
-#if 0
+
+		// Make particles get stuck
 		if((pParticle->origin.y) > screenHeight)
 		{
 			pParticle->gravity = 0;
 			pParticle->wind = 0;
-			pParticle->die = ens.time + PARTICLE_FADE_TIME;
+			pParticle->die = ens.time + PARTICLE_FADE_OUT_TIME;
 			pParticle->velocity.Clear();
+			pParticle->stuck = true;
 		}
-#endif
+
 		m_particlesList.next();
 	}
 }

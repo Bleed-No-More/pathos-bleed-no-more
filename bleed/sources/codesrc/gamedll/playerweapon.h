@@ -93,6 +93,8 @@ public:
 	virtual bool ShouldRemove( CPlayerWeapon* pWeapon ) { return true; };
 	// Sets spawn properties
 	virtual void SetSpawnProperties( void ) = 0;
+	// Called at end of picking up a weapon
+	virtual void PostWeaponPickup( void );
 
 	// Check for friendly fire
 	bool CheckFriendlyFire( const Vector& shootOrigin, const Vector& shootDirection );
@@ -321,6 +323,8 @@ protected:
 	bool	m_hasDual;
 	// True if this is the first time we draw the weapon
 	bool	m_firstDraw;
+	// TRUE if the last animation was played was a fidget one
+	bool	m_playedFidgetAnimation;
 
 protected:
 	// Next time until weapon can think
