@@ -51,6 +51,9 @@ enum gameui_windows_t
 	GAMEUI_SUBWAYWINDOW,
 	GAMEUI_OBJECTIVESWINDOW,
 	GAMEUI_DOCUMENTSWINDOW,
+	GAMEUI_INVENTORYWINDOW,
+
+	// Must be last
 	GAMEUI_KILLWINDOWS
 };
 
@@ -61,5 +64,10 @@ enum gameui_player_event_t
 	GAMEUIEVENT_SUBWAY_SELECTION,
 	GAMEUIEVENT_READ_OBJECTIVE
 };
+
+// Default number of horizontal rows in inventory
+static const Uint32 GAMEUI_INVENTORY_NB_HORIZONTAL_ROWS = 30;
+// Default number of vertical rows in inventory
+static const Uint32 GAMEUI_INVENTORY_NB_VERTICAL_ROWS = 10;
 
 #endif //GAMEUI_SHARED_H

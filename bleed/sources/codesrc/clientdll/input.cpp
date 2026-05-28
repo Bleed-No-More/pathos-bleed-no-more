@@ -35,7 +35,6 @@ m_filter_info_t g_mouseFilterInfo;
 // Impulse command value
 Int32 g_impulseValue = 0;
 
-kbutton_t	cmd_lean;
 kbutton_t	cmd_forward;
 kbutton_t	cmd_back;
 kbutton_t	cmd_moveleft;
@@ -45,11 +44,8 @@ kbutton_t	cmd_use;
 kbutton_t	cmd_jump;
 kbutton_t	cmd_attack;
 kbutton_t	cmd_attack2;
-kbutton_t	cmd_up;
-kbutton_t	cmd_down;
 kbutton_t	cmd_duck;
 kbutton_t	cmd_reload;
-kbutton_t	cmd_sprint;
 kbutton_t	cmd_walkmode;
 kbutton_t	cmd_heal;
 kbutton_t	cmd_special;
@@ -72,8 +68,6 @@ CCVar* g_pCvarReferenceFOV = nullptr;
 // Functions for key commands
 //
 //=============================================
-void Cmd_LeanDown( void )		{ CL_KeyDown(cmd_lean); }
-void Cmd_LeanUp( void )			{ CL_KeyUp(cmd_lean); }
 void Cmd_ForwardDown( void )	{ CL_KeyDown(cmd_forward); }
 void Cmd_ForwardUp( void )		{ CL_KeyUp(cmd_forward); }
 void Cmd_BackDown( void )		{ CL_KeyDown(cmd_back); }
@@ -92,8 +86,6 @@ void Cmd_DuckDown( void )		{ CL_KeyDown(cmd_duck); }
 void Cmd_DuckUp( void )			{ CL_KeyUp(cmd_duck); }
 void Cmd_ReloadDown( void )		{ CL_KeyDown(cmd_reload); }
 void Cmd_ReloadUp( void )		{ CL_KeyUp(cmd_reload); }
-void Cmd_SprintDown( void )		{ CL_KeyDown(cmd_sprint); }
-void Cmd_SprintUp( void )		{ CL_KeyUp(cmd_sprint); }
 void Cmd_WalkModeDown( void )	{ CL_KeyDown(cmd_walkmode);}
 void Cmd_WalkModeUp( void )		{ CL_KeyUp(cmd_walkmode); }
 void Cmd_AttackDown( void )		{ CL_KeyDown(cmd_attack); }
@@ -291,10 +283,6 @@ void CL_InitInput( void )
 	cl_engfuncs.pfnCreateCommand("-duck", Cmd_DuckUp, nullptr);
 	cl_engfuncs.pfnCreateCommand("+reload", Cmd_ReloadDown, nullptr);
 	cl_engfuncs.pfnCreateCommand("-reload", Cmd_ReloadUp, nullptr);
-	cl_engfuncs.pfnCreateCommand("+lean",Cmd_LeanDown, nullptr);
-	cl_engfuncs.pfnCreateCommand("-lean",Cmd_LeanUp, nullptr);
-	cl_engfuncs.pfnCreateCommand("+sprint", Cmd_SprintDown, nullptr);
-	cl_engfuncs.pfnCreateCommand("-sprint", Cmd_SprintUp, nullptr);
 	cl_engfuncs.pfnCreateCommand("+walkmode",Cmd_WalkModeDown, nullptr);
 	cl_engfuncs.pfnCreateCommand("-walkmode",Cmd_WalkModeUp, nullptr);
 	cl_engfuncs.pfnCreateCommand("+heal", Cmd_HealDown, nullptr);
@@ -336,12 +324,6 @@ void CL_ResetPressedInputs( void )
 	Int32 bits = CL_GetButtonBits(false);
 	if(!bits)
 		return;
-
-	if(bits & IN_LEAN)
-	{
-		CL_KeyUp(cmd_lean, true);
-		cl_engfuncs.pfnResetInputCommand("lean");
-	}
 
 	if(bits & IN_FORWARD)
 	{
@@ -403,12 +385,6 @@ void CL_ResetPressedInputs( void )
 		cl_engfuncs.pfnResetInputCommand("reload");
 	}
 
-	if(bits & IN_SPRINT)
-	{
-		CL_KeyUp(cmd_sprint, true);
-		cl_engfuncs.pfnResetInputCommand("sprint");
-	}
-
 	if(bits & IN_WALKMODE)
 	{
 		CL_KeyUp(cmd_walkmode, true);
@@ -435,9 +411,6 @@ Int32 CL_GetButtonBits( bool resetstate )
 {
 	Int32 bits = 0;
 
-	if(cmd_lean.state & (KS_IDOWN|KS_DOWN))
-		bits |= IN_LEAN;
-
 	if(cmd_forward.state & (KS_IDOWN|KS_DOWN))
 		bits |= IN_FORWARD;
 
@@ -462,20 +435,11 @@ Int32 CL_GetButtonBits( bool resetstate )
 	if(cmd_attack2.state & (KS_IDOWN|KS_DOWN))
 		bits |= IN_ATTACK2;
 
-	if(cmd_up.state & (KS_IDOWN|KS_DOWN))
-		bits |= IN_UP;
-
-	if(cmd_down.state & (KS_IDOWN|KS_DOWN))
-		bits |= IN_DOWN;
-
 	if(cmd_duck.state & (KS_IDOWN|KS_DOWN))
 		bits |= IN_DUCK;
 
 	if(cmd_reload.state & (KS_IDOWN|KS_DOWN))
 		bits |= IN_RELOAD;
-
-	if(cmd_sprint.state & (KS_IDOWN|KS_DOWN))
-		bits |= IN_SPRINT;
 
 	if(cmd_walkmode.state & (KS_IDOWN|KS_DOWN))
 		bits |= IN_WALKMODE;
@@ -488,7 +452,6 @@ Int32 CL_GetButtonBits( bool resetstate )
 
 	if(resetstate)
 	{
-		cmd_lean.state &= ~KS_IDOWN;
 		cmd_forward.state &= ~KS_IDOWN;
 		cmd_back.state &= ~KS_IDOWN;
 		cmd_moveleft.state &= ~KS_IDOWN;
@@ -498,11 +461,8 @@ Int32 CL_GetButtonBits( bool resetstate )
 		cmd_jump.state &= ~KS_IDOWN;
 		cmd_attack.state &= ~KS_IDOWN;
 		cmd_attack2.state &= ~KS_IDOWN;
-		cmd_up.state &= ~KS_IDOWN;
-		cmd_down.state &= ~KS_IDOWN;
 		cmd_duck.state &= ~KS_IDOWN;
 		cmd_reload.state &= ~KS_IDOWN;
-		cmd_sprint.state &= ~KS_IDOWN;
 		cmd_walkmode.state &= ~KS_IDOWN;
 		cmd_heal.state &= ~KS_IDOWN;
 		cmd_special.state &= ~KS_IDOWN;

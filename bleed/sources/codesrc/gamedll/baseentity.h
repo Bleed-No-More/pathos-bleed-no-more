@@ -170,7 +170,7 @@ public:
 	// Returns the entity's targeting origin
 	virtual Vector GetBodyTarget( const Vector& targetingPosition );
 	// Returns the view position
-	virtual Vector GetEyePosition( bool addlean = false, bool usebone = false ) const { return m_pState->origin + m_pState->view_offset; };
+	virtual Vector GetEyePosition( bool usebone = false ) const { return m_pState->origin + m_pState->view_offset; };
 	// Returns a navigable position
 	virtual Vector GetNavigablePosition( void ) const { return m_pState->origin; }
 	// Returns the view origin for VIS checks
@@ -694,7 +694,7 @@ public:
 	virtual void SetDialogueDuration( Float duration ) { STUBWARNING; }
 
 	// Set NPC awareness
-	virtual void SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay, bool isLeanAwareness ) { STUBWARNING; };
+	virtual void SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay ) { STUBWARNING; };
 
 	// Adds a medkit to the player
 	virtual bool AddMedkit( const Char* pstrClassname, bool noNotice ) { STUBWARNING; return false; };
@@ -796,6 +796,8 @@ public:
 	virtual void SpawnObjectivesWindow( void ) { STUBWARNING; };
 	// Spawns the documents window
 	virtual void SpawnDocumentsWindow( void ) { STUBWARNING; };
+	// Spawns the inventory window
+	virtual void SpawnInventoryWindow( void ) { STUBWARNING; };
 
 	// Sets countdown timer
 	virtual void SetCountdownTimer( Float duration, const Char* pstrTitle ) { STUBWARNING; };

@@ -344,6 +344,11 @@ bool ClientCommand( edict_t* pclient )
 		pClientEntity->SpawnObjectivesWindow();
 		return true;
 	}
+	else if(!qstrcmp(pstrCmd, "inventory"))
+	{
+		pClientEntity->SpawnInventoryWindow();
+		return true;
+	}
 	else if(!qstrcmp(pstrCmd, "documents"))
 	{
 		pClientEntity->SpawnDocumentsWindow();
@@ -506,8 +511,6 @@ CPlayerEntity::CPlayerEntity( edict_t* pedict ):
 	m_prevFlags(0),
 	m_prevButtons(0),
 	m_changedButtons(0),
-	m_leanTime(0),
-	m_leanState(0),
 	m_pActiveWeapon(nullptr),
 	m_pClientActiveWeapon(nullptr),
 	m_pNextWeapon(nullptr),
@@ -2213,9 +2216,6 @@ void CPlayerEntity::PreCmdThink( void )
 
 	// Perform ladder thinking
 	LadderThink();
-
-	// Update leaning states
-	LeanThink();
 
 	// Update weapons
 	WeaponPreFrameThink();
@@ -4675,18 +4675,6 @@ Int32 CPlayerEntity::GetClientFOV( void ) const
 // @brief
 //
 //=============================================
-Vector CPlayerEntity::GetLeanOffset( Int32 buttons ) const
-{
-	if(!(m_pState->buttons & IN_LEAN))
-		return ZERO_VECTOR;
-
-	return m_curLeanOffset;
-}
-
-//=============================================
-// @brief
-//
-//=============================================
 void CPlayerEntity::UseMedkit( void )
 {
 	if(!m_numMedkits)
@@ -5523,7 +5511,7 @@ void CPlayerEntity::LadderThink( void )
 // @brief
 //
 //=============================================
-void CPlayerEntity::SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay, bool isLeanAwareness )
+void CPlayerEntity::SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay )
 {
 	if(!m_npcAwarenessList.empty())
 	{
@@ -5537,7 +5525,6 @@ void CPlayerEntity::SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float t
 				{
 					info.awareness = awareness;
 					info.lasttime = g_pGameVars->time;
-					info.leanawareness = isLeanAwareness;
 					return;
 				}
 				else
@@ -5559,7 +5546,6 @@ void CPlayerEntity::SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float t
 	info.pnpc = pNPC;
 	info.timeoutdelay = timeoutDelay;
 	info.lasttime = g_pGameVars->time;
-	info.leanawareness = isLeanAwareness;
 
 	m_npcAwarenessList.add(info);
 }
@@ -5592,7 +5578,7 @@ void CPlayerEntity::NPCAwarenessThink( void )
 			if(info.lasttime > lasthighesttime || info.awareness > m_highestAwarenessLevel )
 			{
 				m_highestAwarenessLevel = info.awareness;
-				m_highestAwarenessColor = info.leanawareness ? LEAN_AWARENESS_BAR_COLOR : FULL_AWARENESS_BAR_COLOR;
+				m_highestAwarenessColor = FULL_AWARENESS_BAR_COLOR;
 				lasthighesttime = info.lasttime;
 			}
 		}
@@ -5605,182 +5591,9 @@ void CPlayerEntity::NPCAwarenessThink( void )
 // @brief
 //
 //=============================================
-void CPlayerEntity::LeanThink( void )
-{
- 	Int32 flagsChanged = (m_prevFlags ^ m_pState->flags);
-	m_prevFlags = m_pState->flags;
-
-	Int32 buttonsChanged = ( m_prevButtons ^ m_pState->buttons );
-	m_prevButtons = m_pState->buttons;
-
-	if(m_bikeState != BIKE_SV_INACTIVE)
-		return;
-
-	if (m_pState->buttons & IN_LEAN)
-	{
-		if(!m_leanState || (buttonsChanged & IN_MOVELEFT) || (buttonsChanged & IN_MOVERIGHT) 
-			|| (buttonsChanged & IN_FORWARD) || (buttonsChanged & IN_BACK) || (flagsChanged & FL_DUCKING))
-		{
-			m_prevLeanAngles = m_curLeanAngles;
-			m_prevLeanOffset = m_curLeanOffset;
-			m_leanTime = g_pGameVars->time;
-			m_leanState = true;
-		}
-
-		// Determine directions
-		Float leanUp = 0;
-		Float leanSide = 0;
-
-		if( m_pState->buttons & IN_MOVELEFT )
-			leanSide -= 1.0;
-
-		if( m_pState->buttons & IN_MOVERIGHT )
-			leanSide += 1.0;
-
-		if(m_pState->buttons & IN_FORWARD)
-		{
-			if(!(m_pState->flags & FL_DUCKING))
-				leanUp = 0.3;
-			else
-				leanUp = 1.0;
-		}
-		else if(m_pState->buttons & IN_BACK)
-		{
-			leanUp = -0.2;
-		}
-		
-		// Calculate complete offset
-		Vector v_forward, v_right, v_up;
-		Math::AngleVectors(m_pState->viewangles, &v_forward, &v_right, &v_up);
-		v_right = v_right + v_up*(-0.2*leanSide);
-		v_right = v_right + v_forward*(0.3*leanSide);
-
-		m_idealLeanOffset = v_right*leanSide*LEAN_DISTANCE_SIDE;
-		m_idealLeanOffset = m_idealLeanOffset + v_up*leanUp*LEAN_DISTANCE_UP;
-
-		Vector traceOrg = (m_pState->origin + m_pState->view_offset);
-		Vector traceDest1 = (m_pState->origin + m_pState->view_offset)+m_idealLeanOffset;
-		Vector traceDest2 = traceDest1 + m_idealLeanOffset + v_forward*4;
-
-		trace_t tr, tr_cp;
-		Util::TraceLine(traceOrg, traceDest1, false, true, m_pEdict, tr);
-		Util::TraceLine(traceOrg, traceDest2, false, true, m_pEdict, tr_cp);
-
-		Float flTraceFraction = 1.0;
-		if(tr.fraction != 1.0)
-			flTraceFraction = tr.fraction*0.75;
-		else if(tr_cp.fraction != 1.0)
-			flTraceFraction = tr_cp.fraction*0.75;
-
-		m_idealLeanAngles[1] = leanSide*4;
-		m_idealLeanAngles[2] = leanSide*16;
-		m_idealLeanAngles[0] = leanUp*6;
-
-		// Calculate fraction
-		Double time = clamp((g_pGameVars->time - m_leanTime), 0.0, LEAN_TIME);
-		Float leanFraction = Common::SplineFraction( time, (1.0/LEAN_TIME) );
-
-		// It must be recalculated every frame
-		if(leanFraction > 1.0)
-			leanFraction = 1.0;
-
-		// Interpolate offset
-		m_curLeanOffset = m_idealLeanOffset*leanFraction*flTraceFraction;
-		m_curLeanOffset = m_curLeanOffset+m_prevLeanOffset*(1.0-leanFraction);
-
-		// Interpolate tilt
-		m_curLeanAngles = m_idealLeanAngles*leanFraction;
-		m_curLeanAngles = m_curLeanAngles+m_prevLeanAngles*(1.0-leanFraction);
-	}
-	else
-	{
-		// Move back if we have to
-		if(m_leanState)
-		{
-			m_prevLeanAngles = m_curLeanAngles;
-			m_idealLeanAngles.Clear();
-			m_prevLeanOffset = m_curLeanOffset;
-			m_idealLeanOffset.Clear();
-			m_leanTime = g_pGameVars->time;
-			m_leanState = false;
-		}
-
-		if(m_leanTime)
-		{
-			// Calculate lean interpolation
-			Float time = clamp((g_pGameVars->time - m_leanTime), 0.0, LEAN_TIME);
-			Float leanFraction = Common::SplineFraction( time, (1.0/LEAN_TIME) );
-
-			if(leanFraction >= 1.0)
-			{
-				m_curLeanOffset.Clear();
-				m_curLeanAngles.Clear();
-				m_leanTime = 0;
-				return;
-			}
-
-			Vector v_forward;
-			Math::AngleVectors(m_pState->viewangles, &v_forward, nullptr, nullptr);
-
-			Vector traceOrg = (m_pState->origin + m_pState->view_offset);
-			Vector traceDest1 = (m_pState->origin + m_pState->view_offset)+m_idealLeanOffset;
-			Vector traceDest2 = traceDest1 + m_idealLeanOffset + v_forward*4;
-
-			trace_t tr, tr_cp;
-			Util::TraceLine(traceOrg, traceDest1, false, true, m_pEdict, tr);
-			Util::TraceLine(traceOrg, traceDest2, false, true, m_pEdict, tr);
-
-			Double flTraceFraction = 1.0;
-			if(tr.fraction != 1.0)
-				flTraceFraction = tr.fraction*0.75;
-			else if(tr_cp.fraction != 1.0)
-				flTraceFraction = tr_cp.fraction*0.75;
-
-			// Interpolate offset
-			m_curLeanOffset = m_idealLeanOffset*leanFraction;
-			m_curLeanOffset = m_curLeanOffset+m_prevLeanOffset*(1.0-leanFraction)*flTraceFraction;
-
-			// Interpolate tilt
-			m_curLeanAngles = m_idealLeanAngles*leanFraction;
-			m_curLeanAngles = m_curLeanAngles+m_prevLeanAngles*(1.0-leanFraction);
-		}
-	}
-}
-
-//=============================================
-// @brief
-//
-//=============================================
-Vector CPlayerEntity::GetLeanAngle( void ) const
-{
-	if(!(m_pState->buttons & IN_LEAN) && !m_leanTime)
-		return ZERO_VECTOR;
-
-	return m_curLeanAngles;
-}
-
-//=============================================
-// @brief
-//
-//=============================================
-Vector CPlayerEntity::GetLeanOffset( void ) const
-{
-	if(!(m_pState->buttons & IN_LEAN) && !m_leanTime)
-		return ZERO_VECTOR;
-
-	return m_curLeanOffset;
-}
-
-//=============================================
-// @brief
-//
-//=============================================
 Vector CPlayerEntity::GetGunPosition( void ) const
 {
-	Vector origin = m_pState->origin + m_pState->view_offset;
-	origin = origin + GetLeanOffset();
-
-	return origin;
+	return m_pState->origin + m_pState->view_offset;
 }
 
 //=============================================
@@ -5926,7 +5739,7 @@ bool CPlayerEntity::ShouldUseAutoAim( void ) const
 //=============================================
 Vector CPlayerEntity::GetGunAngles( bool addPunch ) const
 {
-	Vector result = GetViewAngles() + GetLeanAngle();
+	Vector result = GetViewAngles();
 	if(ShouldUseAutoAim() && !m_autoAimVector.IsZero())
 		result += m_autoAimVector;
 	else if(addPunch)
@@ -5939,14 +5752,9 @@ Vector CPlayerEntity::GetGunAngles( bool addPunch ) const
 // @brief
 //
 //=============================================
-Vector CPlayerEntity::GetEyePosition( bool addlean, bool usebone ) const
+Vector CPlayerEntity::GetEyePosition( bool usebone ) const
 {
-	Vector origin = m_pState->origin + m_pState->view_offset;
-
-	if(addlean)
-		return origin + GetLeanOffset(m_pState->buttons);
-	else 
-		return origin;
+	return m_pState->origin + m_pState->view_offset;
 }
 
 //=============================================
@@ -6883,6 +6691,22 @@ void CPlayerEntity::SpawnDocumentsWindow( void )
 		gd_engfuncs.pfnMsgWriteInt16(documentsList.size());
 		for(Uint32 i = 0; i < documentsList.size(); i++)
 			gd_engfuncs.pfnMsgWriteString(documentsList[i].c_str());
+	gd_engfuncs.pfnUserMessageEnd();
+
+	m_hasActiveUIWindows = true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void CPlayerEntity::SpawnInventoryWindow( void )
+{
+	// Write message to client
+	gd_engfuncs.pfnUserMessageBegin(MSG_ONE, g_usermsgs.creategameuiwindow, nullptr, m_pEdict);
+		gd_engfuncs.pfnMsgWriteByte(GAMEUI_INVENTORYWINDOW);
+		gd_engfuncs.pfnMsgWriteByte(GAMEUI_INVENTORY_NB_HORIZONTAL_ROWS);
+		gd_engfuncs.pfnMsgWriteByte(GAMEUI_INVENTORY_NB_VERTICAL_ROWS);
 	gd_engfuncs.pfnUserMessageEnd();
 
 	m_hasActiveUIWindows = true;

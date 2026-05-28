@@ -87,15 +87,13 @@ public:
 		npc_awarenessinfo_t():
 			awareness(0),
 			lasttime(0),
-			timeoutdelay(0),
-			leanawareness(false)
+			timeoutdelay(0)
 			{}
 
 		CEntityHandle pnpc;
 		Float awareness;
 		Double lasttime;
 		Float timeoutdelay;
-		bool leanawareness;
 	};
 
 	struct music_data_t
@@ -278,7 +276,7 @@ public:
 	virtual Int32 GetClientIndex( void ) const override { return m_pEdict->clientindex; }
 
 	// Returns the view position
-	virtual Vector GetEyePosition( bool addlean = false, bool usebone = false ) const override;
+	virtual Vector GetEyePosition( bool usebone = false ) const override;
 	// Returns a navigable position
 	virtual Vector GetNavigablePosition( void ) const override;
 	// Returns the view origin for VIS checks
@@ -545,15 +543,6 @@ public:
 	// Returns field of iew on client
 	Int32 GetClientFOV( void ) const;
 
-	// Calculates leaning
-	void LeanThink( void );
-	// Returns lean offset
-	Vector GetLeanOffset( Int32 buttons ) const;
-
-	// Returns lean angle
-	Vector GetLeanAngle( void ) const;
-	// Returns lean offset
-	Vector GetLeanOffset( void ) const;
 	// Returns gun position
 	Vector GetGunPosition( void ) const;
 	// Returns gun position
@@ -577,7 +566,7 @@ public:
 
 public:
 	// Set NPC awareness
-	virtual void SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay, bool isLeanAwareness ) override;
+	virtual void SetNPCAwareness( Float awareness, CBaseEntity* pNPC, Float timeoutDelay ) override;
 	// Think function for NPC awareness
 	void NPCAwarenessThink( void );
 
@@ -648,6 +637,8 @@ public:
 	virtual void SpawnObjectivesWindow( void ) override;
 	// Spawns the documents window
 	virtual void SpawnDocumentsWindow( void ) override;
+	// Spawns the inventory window
+	virtual void SpawnInventoryWindow( void ) override;
 
 public:
 	// Sets countdown timer
@@ -851,25 +842,6 @@ private:
 	Int32						m_prevButtons;
 	// Changed buttons
 	Int32						m_changedButtons;
-
-	// Ideal lean offset
-	Vector						m_idealLeanOffset;
-	// Previous lean offset
-	Vector						m_prevLeanOffset;
-	// Current lean offset
-	Vector						m_curLeanOffset;
-
-	// Ideal lean angles
-	Vector						m_idealLeanAngles;
-	// Previous lean angles
-	Vector						m_prevLeanAngles;
-	// Current lean angles
-	Vector						m_curLeanAngles;
-
-	// Leaning time
-	Double						m_leanTime;
-	// Leaning state
-	Int32						m_leanState;
 
 private:
 	// Active weapon

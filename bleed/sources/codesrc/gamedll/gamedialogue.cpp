@@ -178,7 +178,7 @@ void CGameDialogue::DialogueThink( void )
 		}
 
 		Vector playerEyes = pPlayer->GetEyePosition();
-		Vector vecDirToPlayer = m_pState->origin - pPlayer->GetEyePosition(true);
+		Vector vecDirToPlayer = m_pState->origin - pPlayer->GetEyePosition();
 		vecDirToPlayer = vecDirToPlayer.Normalize();
 
 		Vector vecPlayerForward;

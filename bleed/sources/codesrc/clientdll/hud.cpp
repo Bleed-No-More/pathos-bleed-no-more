@@ -1211,7 +1211,6 @@ bool CGameHUD::DrawCrosshair( void )
 	}
 
 	Vector vspread = Weapon_GetConeSize(m_pWeapon->cone,
-		gDefaultView.GetLeanOffset(),
 		pplayer->curstate.velocity,
 		pplayer->curstate.punchangles);
 

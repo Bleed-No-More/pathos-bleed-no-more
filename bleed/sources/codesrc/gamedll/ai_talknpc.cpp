@@ -748,7 +748,7 @@ void CTalkNPC::PlayScriptedSentence( const Char* pstrSentenceName, Float duratio
 
 	// Make us face the talk target
 	if(m_talkTargetEntity && m_npcState != NPC_STATE_SCRIPT)
-		SetIdealYaw(m_talkTargetEntity->GetEyePosition(true, true));
+		SetIdealYaw(m_talkTargetEntity->GetEyePosition(true));
 
 	CSquadNPC::PlayScriptedSentence(pstrSentenceName, duration, volume, attenuation, timeOffset, subtitleOnlyInRadius, isConcurrent, pListener, pPlayer);
 }
@@ -959,7 +959,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 				CBaseEntity* pPlayer = Util::GetHostPlayer();
 				if(pPlayer)
 				{
-					Vector eyePosition = pPlayer->GetEyePosition(true, true);
+					Vector eyePosition = pPlayer->GetEyePosition(true);
 					IdleHeadTurn(&eyePosition);
 				}
 			}
@@ -1011,7 +1011,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 
 			SetIdealYaw(pPlayer->GetOrigin());
 
-			Vector eyePosition = pPlayer->GetEyePosition(true, true);
+			Vector eyePosition = pPlayer->GetEyePosition(true);
 			IdleHeadTurn(&eyePosition);
 			if(g_pGameVars->time > m_waitFinishedTime && GetYawDifference() < IDEALYAW_DIFF_TRESHOLD)
 				SetTaskCompleted();
@@ -1021,7 +1021,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 		{
 			if(!IsMoving() && IsTalking() && m_talkTargetEntity)
 			{
-				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true, true);
+				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true);
 				IdleHeadTurn(&eyePosition);
 			}
 			else
@@ -1032,7 +1032,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 		{
 			if(IsTalking() && m_talkTargetEntity)
 			{
-				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true, true);
+				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true);
 				IdleHeadTurn(&eyePosition);
 			}
 			else
@@ -1054,7 +1054,7 @@ void CTalkNPC::RunTask( const ai_task_t* pTask )
 		{
 			if(IsTalking() && m_talkTargetEntity)
 			{
-				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true, true);
+				Vector eyePosition = m_talkTargetEntity->GetEyePosition(true);
 				IdleHeadTurn(&eyePosition);
 			}
 			else
@@ -1136,19 +1136,19 @@ Int32 CTalkNPC::GetIdealActivity( void )
 // @brief Returns the view position
 //
 //=============================================
-Vector CTalkNPC::GetEyePosition( bool addlean, bool usebone ) const
+Vector CTalkNPC::GetEyePosition( bool usebone ) const
 {
 	if(usebone && m_eyeBoneIndex != NO_POSITION)
 	{
 		Vector bonePosition;
 		if(!gd_engfuncs.pfnGetBonePositionByIndex(m_pEdict, m_eyeBoneIndex, bonePosition))
-			bonePosition = CSquadNPC::GetEyePosition(addlean);
+			bonePosition = CSquadNPC::GetEyePosition();
 
 		return bonePosition;
 	}
 	else
 	{
-		return CSquadNPC::GetEyePosition(addlean);
+		return CSquadNPC::GetEyePosition();
 	}
 }
 
@@ -1410,7 +1410,7 @@ void CTalkNPC::IdleHeadTurn( const Vector* pTarget )
 		return;
 	}
 
-	Vector bonePosition = GetEyePosition(false, true);
+	Vector bonePosition = GetEyePosition(true);
 	Float yaw = Util::VectorToYaw((*pTarget) - bonePosition) - m_pState->angles[YAW];
 	if(yaw > 180.0f)
 		yaw -= 360.0f;

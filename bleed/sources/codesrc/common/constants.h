@@ -77,8 +77,6 @@ static constexpr Float DUCKING_SPEED_MULTIPLIER = 0.4;
 static constexpr Float PLAYER_NOCLIP_SPEED = 600;
 
 // Lean awareness bar color
-static color24_t LEAN_AWARENESS_BAR_COLOR(255, 160, 0);
-// Lean awareness bar color
 static color24_t FULL_AWARENESS_BAR_COLOR(255, 0, 0);
 
 // Maximum noise amount

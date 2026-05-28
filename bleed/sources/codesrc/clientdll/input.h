@@ -70,11 +70,8 @@ extern kbutton_t cmd_use;
 extern kbutton_t cmd_jump;
 extern kbutton_t cmd_attack;
 extern kbutton_t cmd_attack2;
-extern kbutton_t cmd_up;
-extern kbutton_t cmd_down;
 extern kbutton_t cmd_duck;
 extern kbutton_t cmd_reload;
-extern kbutton_t cmd_sprint;
 extern kbutton_t cmd_walkmode;
 extern kbutton_t cmd_heal;
 

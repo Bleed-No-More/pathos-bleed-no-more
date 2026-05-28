@@ -558,7 +558,7 @@ usableobject_type_t CEnvLadder::GetUsableObjectType( void )
 //=============================================
 void CEnvLadder::GetUseReticleMinsMaxs( Vector& outMins, Vector& outMaxs, CBaseEntity* pPlayer )
 {
-	Vector playerEyePosition = pPlayer->GetEyePosition(true);
+	Vector playerEyePosition = pPlayer->GetEyePosition();
 	Vector playerViewAngles = pPlayer->GetViewAngles();
 
 	Vector forward;

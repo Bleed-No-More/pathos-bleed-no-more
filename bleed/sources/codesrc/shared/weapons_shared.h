@@ -247,6 +247,6 @@ static const Float AUTOAIM_DEGREES_VALUES [] =
 };
 
 // Returns cone size for weapon based on params
-extern Vector Weapon_GetConeSize( Int32 coneindex, Vector leanoffset = ZERO_VECTOR, Vector velocity = ZERO_VECTOR, Vector punchangles = ZERO_VECTOR );
+extern Vector Weapon_GetConeSize( Int32 coneindex, Vector velocity = ZERO_VECTOR, Vector punchangles = ZERO_VECTOR );
 extern bool Weapon_CheckAmmoTypeMapConsinstency( pfnCon_Printf_t pfnCon_Printf );
 #endif //WEAPONS_SHARED_H

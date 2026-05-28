@@ -158,10 +158,6 @@ public:
 	static const Float NPC_DEFAULT_MAX_FIRING_DISTANCE;
 	// Default hearing sensitivity
 	static const Float NPC_DEFAULT_HEARING_SENSITIVITY;
-	// Hearing lean awareness gain
-	static const Float NPC_HEAR_LEAN_AWARENESS_GAIN;
-	// Lean awareness timeout
-	static const Float NPC_LEANAWARENESS_TIMEOUT;
 	// NPC step size
 	static const Float NPC_STEP_SIZE;
 	// Maximum danger exposure time
@@ -236,8 +232,6 @@ public:
 	static const Float NPC_LIGHT_DAMAGE_TRESHOLD;
 	// Heavy damage treshold
 	static const Float NPC_HEAVY_DAMAGE_TRESHOLD;
-	// Default lean awareness time
-	static const Float NPC_DEFAULT_LEAN_AWARE_TIME;
 	// Script move minimum distance
 	static const Float NPC_SCRIPT_MOVE_MIN_DIST;
 	// NPC gun sound radius
@@ -379,15 +373,14 @@ public:
 	{
 		AI_SIGHTED_NOTHING				= 0,
 		AI_SIGHTED_PLAYER_FULL			= (1<<0),
-		AI_SIGHTED_PLAYER_LEAN			= (1<<1),
-		AI_SIGHTED_PLAYER_CLOSE			= (1<<2),
-		AI_SIGHTED_PLAYER_FLASHLIGHT	= (1<<3),
-		AI_SIGHTED_PLAYER_FAR			= (1<<4),
-		AI_SIGHTED_PLAYER_PARTIAL		= (1<<5),
-		AI_SIGHTED_NPC					= (1<<6),
-		AI_SIGHTED_NPC_CLOSE			= (1<<7),
-		AI_SIGHTED_NPC_FAR				= (1<<8),
-		AI_SIGHTED_NPC_PARTIAL			= (1<<9)
+		AI_SIGHTED_PLAYER_CLOSE			= (1<<1),
+		AI_SIGHTED_PLAYER_FLASHLIGHT	= (1<<2),
+		AI_SIGHTED_PLAYER_FAR			= (1<<3),
+		AI_SIGHTED_PLAYER_PARTIAL		= (1<<4),
+		AI_SIGHTED_NPC					= (1<<5),
+		AI_SIGHTED_NPC_CLOSE			= (1<<6),
+		AI_SIGHTED_NPC_FAR				= (1<<7),
+		AI_SIGHTED_NPC_PARTIAL			= (1<<8)
 	};
 	enum npc_animevent_t
 	{
@@ -450,18 +443,6 @@ protected:
 
 		Int32 dmgbit;
 		Double time;
-	};
-
-	struct enemyawareness_t
-	{
-		enemyawareness_t():
-			lastsighttime(0),
-			awareness(0)
-		{}
-
-		CEntityHandle entity;
-		Double lastsighttime;
-		Float awareness;
 	};
 
 public:
@@ -902,7 +883,7 @@ protected:
 	// Returns the firing coverage for a targer position
 	Float GetFiringCoverage( const Vector& shootOrigin, const Vector& targetPosition, const Vector& firingCone );
 	// Returns visibility bits for an NPC/player
-	Uint64 GetNPCVisibilityBits( CBaseEntity* pEntity, bool checkGlass = false, enemyawareness_t** pAwarenessPtr = nullptr );
+	Uint64 GetNPCVisibilityBits( CBaseEntity* pEntity, bool checkGlass = false );
 	// Returns an entity we can kick
 	CBaseEntity* GetKickEntity( Float checkDistance );
 	// Calculates coverage for a position
@@ -1013,13 +994,6 @@ protected:
 	// Collects data from senses
 	virtual void RunSenses( void );
 
-	// Updates the awareness factor
-	virtual void UpdatePartialAwareness( enemyawareness_t* pAwarenessinfo, Uint64 sightBits );
-	// Updates the awareness factor
-	virtual void UpdateAwareness( CBaseEntity* pEntity, enemyawareness_t* pPartialAwareness, enemyawareness_t** pEnemyAwarenessPtr, Uint64 sightBits ) { };
-	// Returns the time time to be aware of a player who's leaning
-	virtual Float GetLeanAwarenessTime( void );
-
 	// Gibs the NPC
 	virtual void GibNPC( void );
 
@@ -1100,14 +1074,9 @@ protected:
 	// Processes a sound heard
 	virtual bool ProcessHeardSound( ai_sound_t& sound, Uint64 soundMask );
 	// Tells if we should see an NPC
-	virtual bool ShouldSeeNPC( Uint64 sightBits, CBaseEntity* pEntity, enemyawareness_t* pPartialAwareness, enemyawareness_t* pEnemyAwareness );
+	virtual bool ShouldSeeNPC( Uint64 sightBits, CBaseEntity* pEntity );
 	// Tells if NPC should check navigability
 	virtual bool ShouldCheckEnemyNavigability( void ) { return false; }
-
-	// Returns the awareness info for a sighted enemy
-	virtual enemyawareness_t* GetEnemyAwarenessInfo( CBaseEntity* pEntity );
-	// Returns the partial awareness info for a sighted enemy
-	virtual enemyawareness_t* GetEnemyPartialAwarenessInfo( CBaseEntity* pEntity );
 
 	// Updates visibility and shooting distances
 	virtual void UpdateDistances( void );
@@ -1363,9 +1332,6 @@ protected:
 	Vector						m_lastNavigabilityCheckPosition;
 	// Last navigability check result
 	bool						m_lastNavigabilityCheckResult;
-
-	// List of enemy partial awareness stats
-	CLinkedList<enemyawareness_t> m_enemyPartialAwarenessList;
 
 	// Linked list of enemies we can see
 	CLinkedList<CEntityHandle>	m_sightedHostileNPCsList;

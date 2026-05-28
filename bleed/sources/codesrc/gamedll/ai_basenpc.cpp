@@ -43,10 +43,6 @@ const Float CBaseNPC::NPC_DEFAULT_MAX_FIRING_DISTANCE = 2048.0f;
 
 // Default hearing sensitivity
 const Float CBaseNPC::NPC_DEFAULT_HEARING_SENSITIVITY = 0.1f;
-// Hearing lean awareness gain
-const Float CBaseNPC::NPC_HEAR_LEAN_AWARENESS_GAIN = 0.5f;
-// Lean awareness timeout
-const Float CBaseNPC::NPC_LEANAWARENESS_TIMEOUT = 2;
 // NPC step size
 const Float CBaseNPC::NPC_STEP_SIZE = 16.0f;
 // Maximum danger exposure time
@@ -121,8 +117,6 @@ const Float CBaseNPC::NPC_BULLETGIB_MIN_HEALTH = 30;
 const Float CBaseNPC::NPC_LIGHT_DAMAGE_TRESHOLD = 1;
 // Heavy damage treshold
 const Float CBaseNPC::NPC_HEAVY_DAMAGE_TRESHOLD = 30;
-// Default lean awareness time
-const Float CBaseNPC::NPC_DEFAULT_LEAN_AWARE_TIME = 1.0f;
 // Script move minimum distance
 const Float CBaseNPC::NPC_SCRIPT_MOVE_MIN_DIST = 8.0f;
 // NPC gun sound radius
@@ -841,17 +835,6 @@ bool CBaseNPC::ProcessHeardSound( ai_sound_t& sound, Uint64 soundMask )
 	// Set typeflags
 	m_soundTypes |= sound.typeflags;
 
-	// Update lean awareness if it's a combat sound
-	if (sound.typeflags & (AI_SOUND_COMBAT | AI_SOUND_PLAYER) && sound.emitter && sound.emitter->IsPlayer())
-	{
-		enemyawareness_t* pawareness = GetEnemyPartialAwarenessInfo(sound.emitter);
-		assert(pawareness != nullptr);
-
-		pawareness->awareness += NPC_HEAR_LEAN_AWARENESS_GAIN * m_thinkIntervalTime;
-		pawareness->lastsighttime = g_pGameVars->time;
-		if (pawareness->awareness > 1.0)
-			pawareness->awareness = 1.0;
-	}
 	return true;
 }
 
@@ -1338,7 +1321,7 @@ void CBaseNPC::Killed( CBaseEntity* pAttacker, gibbing_t gibbing, deathmode_t de
 	m_killer = pAttacker;
 
 	if(m_enemy && m_enemy->IsPlayer())
-		m_enemy->SetNPCAwareness(0, this, 0, false);
+		m_enemy->SetNPCAwareness(0, this, 0);
 
 	// Explode in a few seconds
 	if((deathMode == DEATH_NORMAL || deathMode == DEATH_BLOWBACK)
@@ -1777,17 +1760,6 @@ void CBaseNPC::TraceAttack( CBaseEntity* pAttacker, Float damage, const Vector& 
 
 	if(m_pState->takedamage == TAKEDAMAGE_YES)
 	{
-		// Pop lean awareness to full if we got damaged
-		if (pAttacker && pAttacker->IsPlayer())
-		{
-			enemyawareness_t* pawareness = GetEnemyPartialAwarenessInfo(pAttacker);
-			assert(pawareness != nullptr);
-
-			pawareness->lastsighttime = g_pGameVars->time;
-			if (pawareness->awareness < 1.0)
-				pawareness->awareness = 1.0;
-		}
-
 		m_lastHitGroup = tr.hitgroup;
 		if(_dmgAmount >= NPC_LIGHT_DAMAGE_TRESHOLD)
 			SpawnBloodDecals(damage, direction, tr, damageFlags);
@@ -1845,7 +1817,7 @@ void CBaseNPC::DecapitateNPC( bool spawnGib, Int32 bodyGroup, Int32 bodyNumber )
 	if(!GetBonePosition(HEAD_BONE_NAME, boneOrigin))
 	{
 		Util::EntityConDPrintf(m_pEdict, "%s - No bone named '%s'.\n", __FUNCTION__, HEAD_BONE_NAME);
-		boneOrigin = GetEyePosition(false, true);
+		boneOrigin = GetEyePosition(true);
 	}
 
 	Util::CreateParticles("blood_effects_decap.txt", boneOrigin, Vector(0, 0, 1), PART_SCRIPT_CLUSTER);
@@ -2517,7 +2489,7 @@ void CBaseNPC::GibNPC( void )
 	CGib::SpawnRandomGibs(this, Common::RandomLong(4, 8), pCenter, randomMinvel, randomMaxvel);
 
 	if(m_enemy && m_enemy->IsPlayer())
-		m_enemy->SetNPCAwareness(0, this, 0, false);
+		m_enemy->SetNPCAwareness(0, this, 0);
 
 	// Spawn particles for gibbing
 	SpawnGibbedParticles();
@@ -3406,98 +3378,7 @@ npcstate_t CBaseNPC::GetNPCState( void )
 // @brief
 //
 //=============================================
-void CBaseNPC::UpdatePartialAwareness( enemyawareness_t* pAwarenessinfo, Uint64 sightBits )
-{
-	assert(pAwarenessinfo != nullptr);
-	assert(pAwarenessinfo->entity != nullptr);
-
-	CBaseEntity* pEntity = pAwarenessinfo->entity;
-	if (!pEntity->IsPlayer())
-	{
-		assert(false);
-		return;
-	}
-
-	if(sightBits & AI_SIGHTED_PLAYER_LEAN)
-	{
-		if(pAwarenessinfo->awareness < 1.0)
-		{
-			Vector playerDir = (pEntity->GetEyePosition() - m_pState->origin).Normalize();
-
-			Vector forward;
-			Math::AngleVectors(m_pState->angles, &forward);
-			Float dp = Math::DotProduct(playerDir, forward);
-			dp = clamp(dp, 0.0, 1.0);
-
-			if(dp > 0.5)
-			{
-				pAwarenessinfo->awareness += m_thinkIntervalTime*(1.0f/GetLeanAwarenessTime())*dp;
-				if(pAwarenessinfo->awareness > 1.0)
-					pAwarenessinfo->awareness = 1.0;
-
-				pAwarenessinfo->lastsighttime = g_pGameVars->time;
-			}
-
-			// If not aware, set this as npc awareness
-			if(!IsAwareOf(pEntity))
-				pEntity->SetNPCAwareness(pAwarenessinfo->awareness, this, NPC_LEANAWARENESS_TIMEOUT, true);
-		}
-		else if(sightBits & AI_SIGHTED_PLAYER_FULL)
-		{
-			// Set lean awareness to full
-			pAwarenessinfo->awareness = 1.0;
-			pAwarenessinfo->lastsighttime = g_pGameVars->time;
-			pEntity->SetNPCAwareness(1.0, this, NPC_COMBATSTATE_TIMEOUT, false);
-		}
-	}
-}
-
-//=============================================
-// @brief
-//
-//=============================================
-CBaseNPC::enemyawareness_t* CBaseNPC::GetEnemyPartialAwarenessInfo( CBaseEntity* pEntity )
-{
-	if (!m_enemyPartialAwarenessList.empty())
-	{
-		m_enemyPartialAwarenessList.begin();
-		while (!m_enemyPartialAwarenessList.end())
-		{
-			enemyawareness_t& awareness = m_enemyPartialAwarenessList.get();
-			if (!awareness.entity)
-			{
-				m_enemyPartialAwarenessList.remove(m_enemyPartialAwarenessList.get_link());
-				m_enemyPartialAwarenessList.next();
-				continue;
-			}
-
-			if (awareness.entity.get() == pEntity->GetEdict())
-				return &awareness;
-
-			m_enemyPartialAwarenessList.next();
-		}
-	}
-
-	enemyawareness_t& awareness = m_enemyPartialAwarenessList.add({})->_val;
-	awareness.entity = pEntity;
-
-	return &awareness;
-}
-
-//=============================================
-// @brief
-//
-//=============================================
-CBaseNPC::enemyawareness_t* CBaseNPC::GetEnemyAwarenessInfo(CBaseEntity* pEntity)
-{
-	return nullptr;
-}
-
-//=============================================
-// @brief
-//
-//=============================================
-bool CBaseNPC::ShouldSeeNPC( Uint64 sightBits, CBaseEntity* pEntity, enemyawareness_t* pPartialAwareness, enemyawareness_t* pEnemyAwareness )
+bool CBaseNPC::ShouldSeeNPC( Uint64 sightBits, CBaseEntity* pEntity )
 {
 	if(pEntity->GetEffectFlags() & EF_NODRAW)
 		return false;
@@ -3523,11 +3404,6 @@ bool CBaseNPC::ShouldSeeNPC( Uint64 sightBits, CBaseEntity* pEntity, enemyawaren
 			// We should see the player
 			return true;
 		}
-		else if(sightBits & AI_SIGHTED_PLAYER_LEAN)
-		{
-			// Make fully visible if lean awareness is full
-			return (pPartialAwareness && pPartialAwareness->awareness == 1.0) ? true : false;
-		}
 	}
 	else if(sightBits & AI_SIGHTED_NPC)
 	{
@@ -3542,14 +3418,14 @@ bool CBaseNPC::ShouldSeeNPC( Uint64 sightBits, CBaseEntity* pEntity, enemyawaren
 // @brief
 //
 //=============================================
-Uint64 CBaseNPC::GetNPCVisibilityBits( CBaseEntity* pEntity, bool checkGlass, enemyawareness_t** pAwarenessPtr )
+Uint64 CBaseNPC::GetNPCVisibilityBits( CBaseEntity* pEntity, bool checkGlass )
 {
 	trace_t tr;
 	Uint64 sightBits = 0;
 	// Get eye position
 	Vector eyePosition = GetEyePosition();
 	// Check first without adding lean
-	Vector otherEyePosition = pEntity->GetEyePosition(false);
+	Vector otherEyePosition = pEntity->GetEyePosition();
 
 	if(pEntity->IsPlayer())
 	{
@@ -3592,60 +3468,6 @@ Uint64 CBaseNPC::GetNPCVisibilityBits( CBaseEntity* pEntity, bool checkGlass, en
 		{
 			// Player is fully visible
 			sightBits |= AI_SIGHTED_PLAYER_FULL;
-		}
-		else
-		{
-			// Check entity visibility with lean added
-			otherEyePosition = pEntity->GetEyePosition(true);
-
-			// Do special checks for glass
-			if(checkGlass)
-			{
-				Util::TraceLine(eyePosition, otherEyePosition, true, false, false, false, m_pEdict, tr);
-				if(!tr.noHit() && tr.hitentity != NO_ENTITY_INDEX)
-				{
-					edict_t* pedict = gd_engfuncs.pfnGetEdictByIndex(tr.hitentity);
-					CBaseEntity* pHitEntity = CBaseEntity::GetClass(pedict);
-
-					if(pHitEntity->IsFuncBreakableEntity())
-					{
-						// If there's no other opaque occluder, then we saw the player
-						Util::TraceLine(eyePosition, otherEyePosition, true, false, true, false, m_pEdict, tr);
-					}
-				}
-			}
-			else
-			{
-				// Do a check ignoring glass objects
-				Util::TraceLine(eyePosition, otherEyePosition, true, false, true, false, m_pEdict, tr);
-			}
-
-			if(!checkGlass && !tr.noHit())
-			{
-				edict_t* pedict = gd_engfuncs.pfnGetEdictByIndex(tr.hitentity);
-				CBaseEntity* pHitEntity = CBaseEntity::GetClass(pedict);
-
-				rendermode_t renderMode = pHitEntity->GetRenderMode();
-				if(renderMode != RENDER_NORMAL && (renderMode & RENDERMODE_BITMASK) != RENDER_TRANSCOLOR)
-					Util::TraceLine(tr.endpos, otherEyePosition, true, false, true, false, pedict, tr);
-			}
-
-			if((tr.noHit() || tr.hitentity == pEntity->GetEntityIndex()) && !tr.allSolid() && !tr.startSolid())
-			{
-				// Mark as being visible leaning only
-				sightBits |= AI_SIGHTED_PLAYER_LEAN;
-
-				enemyawareness_t* pAwareness = nullptr;
-				if (pAwarenessPtr)
-				{
-					if (!(*pAwarenessPtr))
-						(*pAwarenessPtr) = GetEnemyPartialAwarenessInfo(pEntity);
-
-					pAwareness = (*pAwarenessPtr);
-					if (pAwareness->awareness >= 1.0)
-						sightBits |= AI_SIGHTED_PLAYER_FULL;
-				}
-			}
 		}
 	}
 	else
@@ -3813,33 +3635,17 @@ void CBaseNPC::Look( void )
 			if(linearDistance > m_lookDistance)
 				continue;
 
-			// Get visibility bits
-			enemyawareness_t* pPartialAwareness = nullptr;
-			Uint64 visibilityBits = GetNPCVisibilityBits(pEntity, false, &pPartialAwareness);
-			if ((visibilityBits & AI_SIGHTED_PLAYER_LEAN))
-			{
-				// Add to partially aware NPC list
-				m_partiallySightedHostileNPCsList.add(pEntity);
-				
-				// Update awareness stats
-				UpdatePartialAwareness(pPartialAwareness, visibilityBits);
-			}
-
-			// Let child classes update this
-			enemyawareness_t* pEnemyAwareness = nullptr;
+			Uint64 visibilityBits = GetNPCVisibilityBits(pEntity, false);
 			if(relationship != R_ALLY && relationship != R_NONE && relationship != R_FRIEND)
 			{
-				// Only call this on non-friendlies
-				UpdateAwareness(pEntity, pPartialAwareness, &pEnemyAwareness, visibilityBits);
-
 				sightBits |= visibilityBits;
-				if(!ShouldSeeNPC(visibilityBits, pEntity, pPartialAwareness, pEnemyAwareness))
+				if(!ShouldSeeNPC(visibilityBits, pEntity))
 					continue;
 			}
 			else
 			{
 				// Call non-derived function for friendlies
-				if(!CBaseNPC::ShouldSeeNPC(visibilityBits, pEntity, pPartialAwareness, pEnemyAwareness))
+				if(!CBaseNPC::ShouldSeeNPC(visibilityBits, pEntity))
 					continue;
 			}
 
@@ -3894,32 +3700,6 @@ void CBaseNPC::Look( void )
 
 	// Set the conditions based on what we saw
 	SetConditions(sightConditions);
-
-	// See if we can clear any awareness infos from the entity
-	if (!m_enemyPartialAwarenessList.empty())
-	{
-		m_enemyPartialAwarenessList.begin();
-		while (!m_enemyPartialAwarenessList.end())
-		{
-			enemyawareness_t& awareness = m_enemyPartialAwarenessList.get();
-			if (!awareness.entity)
-			{
-				m_enemyPartialAwarenessList.remove(m_enemyPartialAwarenessList.get_link());
-				m_enemyPartialAwarenessList.next();
-				continue;
-			}
-
-			if (!IsAwareOf(awareness.entity) && (awareness.lastsighttime + NPC_LEANAWARENESS_TIMEOUT) < g_pGameVars->time)
-			{
-				if (awareness.entity->IsPlayer())
-					awareness.entity->SetNPCAwareness(0, this, 0, false);
-
-				m_enemyPartialAwarenessList.remove(m_enemyPartialAwarenessList.get_link());
-			}
-
-			m_enemyPartialAwarenessList.next();
-		}
-	}
 }
 
 //=============================================
@@ -4378,7 +4158,7 @@ void CBaseNPC::ForgetPlayer( CBaseEntity* pPlayer )
 	assert(pPlayer != nullptr);
 
 	// Clear player info
-	pPlayer->SetNPCAwareness(0.0, this, NPC_COMBATSTATE_TIMEOUT, false);
+	pPlayer->SetNPCAwareness(0.0, this, NPC_COMBATSTATE_TIMEOUT);
 
 	if(pPlayer == m_enemy)
 	{
@@ -4398,26 +4178,6 @@ void CBaseNPC::ForgetPlayer( CBaseEntity* pPlayer )
 				m_backedUpEnemies[i].lastsighttime = 0;
 				m_backedUpEnemies[i].enemy.reset();
 			}
-		}
-	}
-
-	if (!m_enemyPartialAwarenessList.empty())
-	{
-		m_enemyPartialAwarenessList.begin();
-		while (!m_enemyPartialAwarenessList.end())
-		{
-			enemyawareness_t& awareness = m_enemyPartialAwarenessList.get();
-			if (!awareness.entity)
-			{
-				m_enemyPartialAwarenessList.remove(m_enemyPartialAwarenessList.get_link());
-				m_enemyPartialAwarenessList.next();
-				continue;
-			}
-
-			if (awareness.entity.get() == pPlayer->GetEdict())
-				m_enemyPartialAwarenessList.remove(m_enemyPartialAwarenessList.get_link());
-
-			m_enemyPartialAwarenessList.next();
 		}
 	}
 
@@ -4496,7 +4256,7 @@ void CBaseNPC::ExamineDangers( void )
 		if(flDot > 0.2)
 		{
 			trace_t tr;
-			Util::TraceLine(pDangerEntity->GetEyePosition(true), GetEyePosition(), true, false, m_pEdict, tr);
+			Util::TraceLine(pDangerEntity->GetEyePosition(), GetEyePosition(), true, false, m_pEdict, tr);
 			if(tr.noHit())
 			{
 				if(dangerDistance < 1024)
@@ -5730,7 +5490,7 @@ bool CBaseNPC::CheckEnemy( void )
 
 		// Update awareness about player
 		if (m_enemy->IsPlayer())
-			m_enemy->SetNPCAwareness(1.0, this, NPC_COMBATSTATE_TIMEOUT, false);
+			m_enemy->SetNPCAwareness(1.0, this, NPC_COMBATSTATE_TIMEOUT);
 
 		// We've found the enemy, so clear this
 		ClearCondition(AI_COND_ENEMY_NOT_FOUND);
@@ -5762,7 +5522,7 @@ bool CBaseNPC::CheckEnemy( void )
 
 			// Update awareness about player
 			if(m_enemy->IsPlayer())
-				m_enemy->SetNPCAwareness(1.0, this, NPC_COMBATSTATE_TIMEOUT, false);
+				m_enemy->SetNPCAwareness(1.0, this, NPC_COMBATSTATE_TIMEOUT);
 
 			// We've found the enemy, so clear this
 			ClearCondition(AI_COND_ENEMY_NOT_FOUND);
@@ -9037,15 +8797,6 @@ void CBaseNPC::StopMovement( void )
 	SetIdealActivity(GetStoppedActivity());
 	// Force think immediately
 	m_pState->nextthink = g_pGameVars->time;
-}
-
-//=============================================
-// @brief
-//
-//=============================================
-Float CBaseNPC::GetLeanAwarenessTime( void )
-{
-	return NPC_DEFAULT_LEAN_AWARE_TIME;
 }
 
 //=============================================

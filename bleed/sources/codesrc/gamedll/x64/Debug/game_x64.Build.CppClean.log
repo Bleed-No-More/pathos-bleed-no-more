@@ -20,7 +20,6 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\cstring.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\crc32.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\common.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\cbitset.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envbeam.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\doorstatestack.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\cplane.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\beam.obj
@@ -31,6 +30,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ammoglockclip.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ambientoggstream.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ambientgeneric.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_wandernpc.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_turretnpc.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_tasks.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_talknpc.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_squadnpc.obj
@@ -40,7 +40,6 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_schedule.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_patrolnpc.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_nodegraph.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\ai_militianpc.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envsetbodygroup.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envposportalworld.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envposportal.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envparticleeffect.obj
@@ -60,7 +59,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envchromatic.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envblackandwhite.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envblackhole.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envbeamfollow.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envglow.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envbeam.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envglobal.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envfunnel.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envfade.obj
@@ -80,7 +79,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envbeamfx.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envspecialfog.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envsetskytexture.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envsetsequence.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcparticleblocker.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envsetbodygroup.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcnull.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcmonitor.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcladder.obj
@@ -100,9 +99,9 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envrender.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envpossky.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envmessage.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envladder.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamesetdaystage.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envglow.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gameobjective.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamedialouge.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamedialogue.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gametimer.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\game.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcfriction.obj
@@ -120,7 +119,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcpushable.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcportalsurface.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcplatrot.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcplat.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemmotorbike.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcparticleblocker.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemkevlar.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemhealthkit.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemglocksilencer.obj
@@ -140,7 +139,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gibshooter.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gib.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gametitle.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gametext.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcconveyor.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamesetdaystage.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envspotlight.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envposworld.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\envparticlesystem.obj
@@ -160,7 +159,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemtaperecorder.
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemsodacan.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemshoulderlight.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemsecurity.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\multimanager.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\itemmotorbike.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\lightspot.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\lightenvironment.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\light.obj
@@ -180,8 +179,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcmirror.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcillusionary.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcfade.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcclipeconomy.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerdualweapon.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerammo.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\funcconveyor.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\player.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\plattrigger.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\plattrainentity.obj
@@ -189,6 +187,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\pathtrack.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\pathcorner.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\nullentity.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\npctesthull.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\npcsentry.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\npcsecuritydead.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\npcsecurity.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\npcmaker.obj
@@ -200,8 +199,7 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\nodeignorelist.ob
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\nightlightspot.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\nightlight.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\multisource.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerchance.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggercameramodel.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\multimanager.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggercamera.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerautosave.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerauto.obj
@@ -220,8 +218,8 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerweaponstrip
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerweapon.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerloadsaved.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playeritem.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggernpcpull.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggermultiple.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerdualweapon.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\playerammo.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggermovetrain.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggermove.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerlookat.obj
@@ -240,8 +238,8 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggercounter.ob
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggercoderegister.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerchangetarget.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerchangelevel.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\usermsgs.obj
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerzoom.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerchance.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggercameramodel.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggervacuum.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggertransition.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggertoggletarget.obj
@@ -260,18 +258,22 @@ d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerrelay.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerpush.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerparalyzeplayer.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggeronce.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggernpcpull.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggermultiple.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\worldspawn.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\weaponknife.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\weaponhandgrenade.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\weaponglock.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\vbmutils.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\util.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\usermsgs.obj
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\triggerzoom.obj
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\game_x64.dll
-d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\game_x64.ilk
-d:\games\bleed no more\bleed\sources\codesrc\x64\debug\game_x64.dll
-d:\games\bleed no more\bleed\sources\codesrc\x64\debug\game_x64.pdb
 d:\games\bleed no more\bleed\sources\codesrc\x64\debug\game_x64.lib
 d:\games\bleed no more\bleed\sources\codesrc\x64\debug\game_x64.exp
+d:\games\bleed no more\bleed\sources\codesrc\x64\debug\game_x64.dll
+d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\game_x64.ilk
+d:\games\bleed no more\bleed\sources\codesrc\x64\debug\game_x64.pdb
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamedll.tlog\cl.command.1.tlog
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamedll.tlog\cl.items.tlog
 d:\games\bleed no more\bleed\sources\codesrc\gamedll\x64\debug\gamedll.tlog\cl.read.1.tlog

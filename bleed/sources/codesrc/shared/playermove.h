@@ -23,9 +23,9 @@ static const Float WATERJUMP_HEIGHT = 8.0f;
 // Waterjump wait time
 static const Float WATERJUMP_WAIT_TIME = 2000; // two seconds
 // Waterjump wait time
-static const Float PLAYER_DUCK_WAIT_TIME = 1000; // Time until we can duck again
+static const Float PLAYER_DUCK_WAIT_TIME = 300; // Time until we can duck again
 // Waterjump wait time
-static const Float PLAYER_DUCK_TIME = 400; // Time until we can duck again
+static const Float PLAYER_DUCK_TIME = 100; // Time until we can duck again
 // Waterjump wait time
 static const Float SWIM_SOUND_DELAY = 1000; // two seconds
 // Number of bumps with flymove

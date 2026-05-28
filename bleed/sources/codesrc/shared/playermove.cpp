@@ -134,7 +134,7 @@ void CPlayerMovement::CheckParameters( void )
 		m_userCmd.upmove *= ratio;
 	}
 
-	if(m_pPlayerState->flags & (FL_FROZEN|FL_ON_LADDER|FL_PARALYZED) || m_userCmd.buttons & IN_LEAN)
+	if(m_pPlayerState->flags & (FL_FROZEN|FL_ON_LADDER|FL_PARALYZED))
 	{
 		m_userCmd.forwardmove = 0;
 		m_userCmd.sidemove = 0;
@@ -1116,9 +1116,6 @@ void CPlayerMovement::Jump( void )
 		m_pmInterface.pfnPlayStepSound(m_pPlayerState->entindex, m_pTextureMaterial->materialname.c_str(), m_pPlayerState->stepleft, VOL_NORM, m_pPlayerState->origin);
 	}
 
-	// Add a punch to the player's view angles
-	m_pPlayerState->punchamount[0] = Common::RandomFloat(25, 50);
-
 	//// Add in jump velocity
 	m_pPlayerState->velocity[2] = sqrt(2 * 800 * 45.0);
 
@@ -1820,12 +1817,15 @@ void CPlayerMovement::CheckFalling( void )
 			m_pmInterface.pfnPlayStepSound(m_pPlayerState->entindex, m_pTextureMaterial->materialname.c_str(), m_pPlayerState->stepleft, volume, m_pPlayerState->origin);
 		}
 
-		// Punch the view
-		Float punchforce = ((m_pPlayerState->fallvelocity > PLAYER_SAFE_FALL_SPEED) ? PLAYER_SAFE_FALL_SPEED : m_pPlayerState->fallvelocity) * 0.25;
+		if(m_pPlayerState->fallvelocity > PLAYER_SAFE_FALL_SPEED * 0.75)
+		{
+			// Punch the view
+			Float punchforce = ((m_pPlayerState->fallvelocity > PLAYER_SAFE_FALL_SPEED) ? PLAYER_SAFE_FALL_SPEED : m_pPlayerState->fallvelocity) * 0.25;
 
-		m_pPlayerState->punchamount[0] += punchforce;
-		m_pPlayerState->punchamount[1] += Common::RandomFloat(punchforce/-10, punchforce/10);
-		m_pPlayerState->punchamount[2] += Common::RandomFloat(punchforce/-10, punchforce/10);
+			m_pPlayerState->punchamount[0] += punchforce;
+			m_pPlayerState->punchamount[1] += Common::RandomFloat(punchforce/-10, punchforce/10);
+			m_pPlayerState->punchamount[2] += Common::RandomFloat(punchforce/-10, punchforce/10);
+		}
 	}
 
 	if(m_pPlayerState->groundent != NO_ENTITY_INDEX)

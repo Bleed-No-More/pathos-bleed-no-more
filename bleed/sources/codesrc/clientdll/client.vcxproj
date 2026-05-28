@@ -206,6 +206,7 @@
     <ClCompile Include="clshared.cpp" />
     <ClCompile Include="draw.cpp" />
     <ClCompile Include="gameuidocumentswindow.cpp" />
+    <ClCompile Include="gameuiinventorywindow.cpp" />
     <ClCompile Include="gameuikeypadwindow.cpp" />
     <ClCompile Include="gameuiloginwindow.cpp" />
     <ClCompile Include="gameuiobjectiveswindow.cpp" />
@@ -290,6 +291,7 @@
     <ClInclude Include="gameuidocumentswindow.h" />
     <ClInclude Include="gameuielements.h" />
     <ClInclude Include="draw.h" />
+    <ClInclude Include="gameuiinventorywindow.h" />
     <ClInclude Include="gameuikeypadwindow.h" />
     <ClInclude Include="gameuiloginwindow.h" />
     <ClInclude Include="gameuiobjectiveswindow.h" />

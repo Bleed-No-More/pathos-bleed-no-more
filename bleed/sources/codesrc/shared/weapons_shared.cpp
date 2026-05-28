@@ -27,7 +27,7 @@ bullet_typemapping_t BULLET_TYPE_MAP[] =
 // @brief
 //
 //=============================================
-Vector Weapon_GetConeSize( Int32 coneindex, Vector leanoffset, Vector velocity, Vector punchangles )
+Vector Weapon_GetConeSize( Int32 coneindex, Vector velocity, Vector punchangles )
 {
 	Vector cone;
 	switch(coneindex)
@@ -70,9 +70,6 @@ Vector Weapon_GetConeSize( Int32 coneindex, Vector leanoffset, Vector velocity, 
 	// Add velocity-induced inaccuracy
 	Float spreadadd;
 	spreadadd = (velocity.Length()*0.1);
-
-	// Add in leaning
-	spreadadd += leanoffset.Length()*0.8; // Make leaning far less accurate
 
 	// Add in punchangles
 	spreadadd += punchangles.Length()*2;

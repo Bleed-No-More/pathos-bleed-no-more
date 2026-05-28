@@ -36,7 +36,7 @@ const Float CDefaultView::FLASHLIGHT_FADE_SPEED = 3.5;
 // Flashlight sprite file
 const Char CDefaultView::FLASHLIGHT_SPRITE_FILE[] = "sprites/flare1.spr";
 
-// Values view leaning calculations
+// Values for view model lag calculations
 const Float CDefaultView::VIEWMODEL_LAG_MULT = 0.4f;
 const Float CDefaultView::VIEWMODEL_LAG_SPEED = 5;
 
@@ -75,10 +75,6 @@ CDefaultView::CDefaultView( void ):
 	m_flLastViewModelLagTime(-1),
 	m_breathingTime(0),
 	m_currentViewRoll(0),
-	m_leanTime(0),
-	m_prevLeanButtons(0),
-	m_prevPlayerFlags(0),
-	m_leaningState(false),
 	m_lastStepSmoothTime(0),
 	m_prevStepSmoothZ(0),
 	m_stepSmoothSpeed(0),
@@ -165,11 +161,6 @@ void CDefaultView::ClearGame( void )
 
 	// Reset view roll
 	m_currentViewRoll = 0;
-
-	// Reset leaning
-	m_prevLeanButtons = 0;
-	m_leanTime = 0;
-	m_leaningState = false;
 
 	// Reset stair smoothing
 	m_lastStepSmoothTime = 0;
@@ -491,162 +482,6 @@ void CDefaultView::CalcViewRoll( cl_entity_t* pplayer, ref_params_t& params )
 //=============================================
 //
 //=============================================
-void CDefaultView::CalcLeaning( cl_entity_t* pplayer, cl_entity_t *pviewmodel, ref_params_t& params )
-{
-	Int32 flagsChanged = (m_prevPlayerFlags ^ pplayer->curstate.flags);
-	m_prevPlayerFlags = pplayer->curstate.flags;
-
-	Int32 buttonsChanged = ( m_prevLeanButtons ^ params.pcmd->buttons );
-	m_prevLeanButtons = params.pcmd->buttons;
-
-	if(pplayer->curstate.flags & FL_ON_BIKE)
-		return;
-
-	if(pplayer->curstate.health <= 0)
-		return;
-
-	if (params.pcmd->buttons & IN_LEAN)
-	{
-		if(!m_leaningState || (buttonsChanged & IN_MOVELEFT) || (buttonsChanged & IN_MOVERIGHT) || (buttonsChanged & IN_FORWARD) || (buttonsChanged & IN_BACK) || (flagsChanged & FL_DUCKING))
-		{
-			Math::VectorCopy(m_curLeanAngles, m_prevLeanAngles);
-			Math::VectorCopy(m_curLeanOffset, m_prevLeanOffset);
-			m_leanTime = params.time;
-			m_leaningState = TRUE;
-		}
-
-		// Determine directions
-		Float leanUp = 0;
-		Float leanSide = 0;
-
-		if( params.pcmd->buttons & IN_MOVELEFT )
-			leanSide -= 1.0;
-
-		if( params.pcmd->buttons & IN_MOVERIGHT )
-			leanSide += 1.0;
-
-		if(params.pcmd->buttons & IN_FORWARD)
-		{
-			if(!(pplayer->curstate.flags & FL_DUCKING))
-				leanUp = 0.3;
-			else
-				leanUp = 1.0;
-		}
-		else if(params.pcmd->buttons & IN_BACK)
-		{
-			leanUp = -0.2;
-		}
-		
-		// Calculate complete offset
-		Vector v_forward, v_right, v_up;
-		Math::AngleVectors(pplayer->curstate.angles, &v_forward, &v_right, &v_up);
-		Math::VectorMA(v_right, -0.2*leanSide, v_up, v_right);
-		Math::VectorMA(v_right, 0.3*leanSide, v_forward, v_right);
-
-		Math::VectorScale(v_right, leanSide*LEAN_DISTANCE_SIDE, m_idealLeanOffset);
-		Math::VectorMA(m_idealLeanOffset, leanUp*LEAN_DISTANCE_UP, v_up, m_idealLeanOffset);
-		
-		// Avoid clipping into the world
-		trace_t ptrace;
-		cl_tracefuncs.pfnPlayerTrace(params.v_origin, Vector(params.v_origin)+m_idealLeanOffset, FL_TRACE_NORMAL, HULL_POINT, NO_ENTITY_INDEX, ptrace);
-
-		trace_t ptrace_cp;
-		cl_tracefuncs.pfnPlayerTrace(params.v_origin, Vector(params.v_origin)+m_idealLeanOffset+v_forward*4, FL_TRACE_NORMAL, HULL_POINT, NO_ENTITY_INDEX, ptrace_cp);
-
-		Double flTraceFraction = 1.0;
-		if(ptrace.fraction != 1.0)
-			flTraceFraction = ptrace.fraction*0.75;
-		else if(ptrace_cp.fraction != 1.0)
-			flTraceFraction = ptrace_cp.fraction*0.75;
-
-		m_idealLeanAngles[YAW] = leanSide*4;
-		m_idealLeanAngles[ROLL] = leanSide*16;
-		m_idealLeanAngles[PITCH] = leanUp*6;
-
-		// Calculate fraction
-		Float time = clamp((params.time - m_leanTime), 0.0, LEAN_TIME );
-		Float leanFraction = Common::SplineFraction( time, (1.0/LEAN_TIME) );
-
-		// It must be recalculated every frame
-		if(leanFraction > 1.0)
-			leanFraction = 1.0;
-
-		// Interpolate between previous offset and current one
-		Math::VectorScale(m_idealLeanOffset, leanFraction*flTraceFraction, m_curLeanOffset);
-		Math::VectorMA(m_curLeanOffset, (1.0-leanFraction), m_prevLeanOffset, m_curLeanOffset);
-
-		// Interpolate tilt
-		Math::VectorScale(m_idealLeanAngles, leanFraction, m_curLeanAngles);
-		Math::VectorMA(m_curLeanAngles, (1.0-leanFraction), m_prevLeanAngles, m_curLeanAngles);
-	}
-	else
-	{
-		// Move back if we have to
-		if(m_leaningState)
-		{
-			Math::VectorCopy(m_curLeanAngles, m_prevLeanAngles);
-			Math::VectorClear(m_idealLeanAngles);
-			Math::VectorCopy(m_curLeanOffset, m_prevLeanOffset);
-			Math::VectorClear(m_idealLeanOffset);
-			m_leanTime = params.time;
-			m_leaningState = FALSE;
-		}
-
-		if(m_leanTime)
-		{
-			// Calculate lean interpolation
-			Float time = clamp((params.time - m_leanTime), 0.0, LEAN_TIME );
-			Float leanFraction = Common::SplineFraction( time, (1.0/LEAN_TIME) );
-
-			if(leanFraction >= 1.0)
-			{
-				Math::VectorClear(m_curLeanOffset);
-				Math::VectorClear(m_curLeanAngles);
-				m_leanTime = 0;
-				return;
-			}
-
-			Vector v_forward;
-			Math::AngleVectors(pplayer->curstate.angles, &v_forward, nullptr, nullptr);
-
-			// Avoid clipping into the world
-			trace_t ptrace;
-			cl_tracefuncs.pfnPlayerTrace(params.v_origin, Vector(params.v_origin)+m_idealLeanOffset, FL_TRACE_NORMAL, HULL_POINT, NO_ENTITY_INDEX, ptrace);
-
-			trace_t ptrace_cp;
-			cl_tracefuncs.pfnPlayerTrace(params.v_origin, Vector(params.v_origin)+m_idealLeanOffset+v_forward*4, FL_TRACE_NORMAL, HULL_POINT, NO_ENTITY_INDEX, ptrace_cp);
-
-			Float flTraceFraction = 1.0;
-			if(ptrace.fraction != 1.0)
-				flTraceFraction = ptrace.fraction*0.75;
-			else if(ptrace_cp.fraction != 1.0)
-				flTraceFraction = ptrace_cp.fraction*0.75;
-
-			// Add it all together
-			Math::VectorScale(m_idealLeanOffset, leanFraction, m_curLeanOffset);
-			Math::VectorMA(m_curLeanOffset, (1.0-leanFraction)*flTraceFraction, m_prevLeanOffset, m_curLeanOffset);
-
-			// Interpolate tilt
-			Math::VectorScale(m_idealLeanAngles, leanFraction, m_curLeanAngles);
-			Math::VectorMA(m_curLeanAngles, (1.0-leanFraction), m_prevLeanAngles, m_curLeanAngles);
-		}
-	}
-
-	// Add to view origin
-	Math::VectorAdd(params.v_origin, m_curLeanOffset, params.v_origin);
-	Math::VectorAdd(params.v_angles, m_curLeanAngles, params.v_angles);
-
-	// Add 90% to view model
-	Math::VectorMA(pviewmodel->curstate.origin, 0.9, m_curLeanOffset, pviewmodel->curstate.origin);
-	Math::VectorCopy(pviewmodel->curstate.origin, pviewmodel->curstate.origin);
-
-	Math::VectorMA(pviewmodel->curstate.angles, 0.4, m_curLeanAngles, pviewmodel->curstate.angles);
-	Math::VectorCopy(pviewmodel->curstate.angles, pviewmodel->curstate.angles);
-}
-
-//=============================================
-//
-//=============================================
 void CDefaultView::SmoothSteps( cl_entity_t* pplayer, cl_entity_t* pviewmodel, ref_params_t& params )
 {
 	if((params.pl_origin - m_lastStepSmoothOrigin).Length() > params.pmovevars->stepsize
@@ -891,9 +726,6 @@ void CDefaultView::CalcRefDef( ref_params_t& params )
 
 		// Calculate view model lag
 		CalcViewModelLag(params, pviewmodel->curstate.origin, pviewmodel->curstate.angles, origangles);
-
-		// Add in leaning
-		CalcLeaning(pplayer, pviewmodel, params);
 	}
 
 	// Add in punchangles
@@ -918,14 +750,6 @@ void CDefaultView::CalcRefDef( ref_params_t& params )
 		Math::VectorMA(params.v_origin, viewOffsets.y, v_right, params.v_origin);
 		Math::VectorMA(params.v_origin, viewOffsets.z, v_up, params.v_origin);
 	}
-}
-
-//=============================================
-//
-//=============================================
-Vector CDefaultView::GetLeanOffset( void ) const
-{
-	return m_curLeanOffset;
 }
 
 //=============================================

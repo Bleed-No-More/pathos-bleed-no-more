@@ -39,6 +39,7 @@ All Rights Reserved.
 #include "gameuitextwindow.h"
 #include "gameuiobjectiveswindow.h"
 #include "gameuidocumentswindow.h"
+#include "gameuiinventorywindow.h"
 
 //=============================================
 // @brief
@@ -1717,6 +1718,32 @@ MSGFN MsgFunc_CreateGameUIWindow( const Char* pstrName, const byte* pdata, Uint3
 			}
 
 			if(!pWindow->initData(documentsArray, nullptr))
+			{
+				cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUIDocumentsWindow'.\n", __FUNCTION__);
+				return true;
+			}
+		}
+		break;
+	case GAMEUI_INVENTORYWINDOW:
+		{
+			Uint32 nbHorizontalRows = reader.ReadByte();
+			Uint32 nbVerticalRows = reader.ReadByte();
+
+			if(reader.HasError())
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
+				return false;
+			}
+
+			// Spawn the window
+			CGameUIInventoryWindow* pWindow = reinterpret_cast<CGameUIInventoryWindow*>(gGameUIManager.SpawnWindow(type));
+			if(!pWindow)
+			{
+				cl_engfuncs.pfnCon_EPrintf("%s - Failed to create 'CGameUIDocumentsWindow'.\n", __FUNCTION__);
+				return true;
+			}
+
+			if(!pWindow->initData(nbHorizontalRows, nbVerticalRows))
 			{
 				cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUIDocumentsWindow'.\n", __FUNCTION__);
 				return true;

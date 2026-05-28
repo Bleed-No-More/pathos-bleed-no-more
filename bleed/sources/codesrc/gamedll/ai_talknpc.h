@@ -165,7 +165,7 @@ public:
 	// Returns the ideal activity
 	virtual Int32 GetIdealActivity( void ) override;
 	// Returns the view position
-	virtual Vector GetEyePosition( bool addlean = false, bool usebone = false ) const override;
+	virtual Vector GetEyePosition( bool usebone = false ) const override;
 	// Tells if the entity is a talking NPC
 	virtual bool IsTalkNPC( void ) const override { return true; }
 	// Stops following the target

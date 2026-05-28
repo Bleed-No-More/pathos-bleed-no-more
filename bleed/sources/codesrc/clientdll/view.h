@@ -31,7 +31,7 @@ public:
 	// Flashlight sprite file
 	static const Char FLASHLIGHT_SPRITE_FILE[];
 
-	// Values view leaning calculations
+	// Values for view model lag calculations
 	static const Float VIEWMODEL_LAG_MULT;
 	static const Float VIEWMODEL_LAG_SPEED;
 
@@ -60,9 +60,6 @@ public:
 
 	// Calculates view position
 	void CalcRefDef( ref_params_t& params );
-
-	// Returns the lean offset
-	Vector GetLeanOffset( void ) const;
 
 	// Resets view roll
 	void ResetViewRoll( void );
@@ -106,8 +103,6 @@ private:
 	static Float CalcSmoothRolling( Float cur_roll, Float target_roll, Float speed, Double frametime );
 	// Calculates view rolling
 	void CalcViewRoll( cl_entity_t* pplayer, ref_params_t& params );
-	// Calculates leaning
-	void CalcLeaning( cl_entity_t* pplayer, cl_entity_t *pviewmodel, ref_params_t& params );
 
 	// Estimates footstep time
 	static Float EstimateStepTime( cl_entity_t* pplayer, ref_params_t& params );
@@ -147,25 +142,6 @@ private:
 
 	// Current view roll
 	Float m_currentViewRoll;
-
-	// Last lean time
-	Double m_leanTime;
-	// Previous buttons when calculating leaning
-	Int32 m_prevLeanButtons;
-	// Previous player flags
-	Int64 m_prevPlayerFlags;
-	// Leaning state
-	bool m_leaningState;
-
-	// Lean angles
-	Vector m_prevLeanAngles;
-	Vector m_idealLeanAngles;
-	Vector m_curLeanAngles;
-
-	// Lean offset
-	Vector m_prevLeanOffset;
-	Vector m_idealLeanOffset;
-	Vector m_curLeanOffset;
 
 	// Last time we calculated step smoothing
 	Double m_lastStepSmoothTime;

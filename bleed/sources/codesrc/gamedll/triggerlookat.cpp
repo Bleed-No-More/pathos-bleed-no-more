@@ -171,7 +171,7 @@ void CTriggerLookAt::LookAtThink( void )
 	}
 
 	trace_t tr;
-	Util::TraceLine(pPlayer->GetEyePosition(true), m_pState->origin, true, false, HasSpawnFlag(FL_IGNORE_GLASS) ? true : false, pPlayer->GetEdict(), tr);
+	Util::TraceLine(pPlayer->GetEyePosition(), m_pState->origin, true, false, HasSpawnFlag(FL_IGNORE_GLASS) ? true : false, pPlayer->GetEdict(), tr);
 	if(!tr.noHit())
 	{
 		if(m_accumulatedTime)
