@@ -37,8 +37,6 @@ struct cache_model_t;
 struct glowquery_t;
 struct fbobind_t;
 
-// Maximum textures bound at once
-static constexpr Uint32 MAX_BOUND_TEXTURES = 16;
 // Near clipping distance
 static constexpr Float NEAR_CLIP_DISTANCE = 4.0f;
 // Max number of model lights
@@ -49,6 +47,10 @@ static constexpr Uint32 MAINFRAME_RENDERPASS_ID = 0;
 static constexpr Uint32 MAX_BATCH_LIGHTS = 4;
 // Max active-load shaders per frame
 static constexpr Uint32 MAX_LIGHTMAP_PADDING = 8;
+// Number of random colors
+static constexpr Uint32 NUM_RANDOM_COLORS = 16;
+// Array of random colors
+extern const Float RANDOM_COLOR_ARRAY[NUM_RANDOM_COLORS][3];
 
 extern CGLExtF gGLExtF;
 
@@ -493,6 +495,7 @@ extern CCVar* g_pCvarBatchDynamicLights;
 extern CCVar* g_pCvarOverdarkenTreshold;
 extern CCVar* g_pCvarDumpLightmaps;
 extern CCVar* g_pCvarLightmapPadding;
+extern CCVar* g_pCvarBicubicLightmaps;
 
 extern void R_InitRenderInterface( r_interface_t &renderFuncs );
 
@@ -508,6 +511,7 @@ extern bool R_DrawLoadingScreen( const Char* pstrText = nullptr );
 extern bool R_DrawPausedLogo( void );
 extern bool R_DrawHUD( bool hudOnly = false, bool noFilmGrain = false );
 extern bool R_DrawShownMaterial( void );
+extern bool R_DrawEntityMinsMaxs( void );
 
 extern bool R_Init( void );
 extern void R_Shutdown( void );
@@ -568,6 +572,7 @@ extern Int32 R_SortEntities( const void* p1, const void* p2 );
 extern void R_AddShaderForLoading( CGLSLShader* pShader );
 extern bool R_PerformPendingShaderLoads( void );
 extern Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultcolor );
+extern void R_GetLightingForPosition( const Vector& position, const Vector& defaultcolor, Vector* pdiffusecolors, Vector* pambientcolors, Vector* plightdirs, byte* plightstyles );
 
 extern void R_SetLightmapTexture( Uint32 glindex, Uint32 width, Uint32 height, bool isvectormap, color32_t* pdata, Uint32& resultsize );
 

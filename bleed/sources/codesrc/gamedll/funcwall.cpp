@@ -38,11 +38,13 @@ CFuncWall::~CFuncWall( void )
 bool CFuncWall::Spawn( void )
 {
 	if(!HasSpawnFlag(FL_TAKE_ANGLES))
-		m_pState->angles = ZERO_VECTOR;
+		SetAngles(ZERO_VECTOR);
 
 	m_pState->movetype = MOVETYPE_PUSH;
 	m_pState->solid = SOLID_BSP;
-	if(m_pFields->targetname == NO_STRING_VALUE)
+
+	if(m_pFields->targetname == NO_STRING_VALUE
+		&& m_pFields->parent == NO_STRING_VALUE)
 		m_pState->effects |= EF_STATICENTITY;
 
 	if(m_pState->rendermode == RENDER_NORMAL
@@ -84,4 +86,20 @@ void CFuncWall::CallUse( CBaseEntity* pActivator, CBaseEntity* pCaller, usemode_
 			m_pState->frame = 1;
 		break;
 	}
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool CFuncWall::KeyValue( const keyvalue_t& kv )
+{
+	if(!qstrcmp(kv.keyname, "zhlt_noclip"))
+	{
+		if(SDL_atoi(kv.value) == 1)
+			m_pState->flags |= FL_POINTHULL_ONLY;
+		return true;
+	}
+	else
+		return CBaseEntity::KeyValue(kv);
 }

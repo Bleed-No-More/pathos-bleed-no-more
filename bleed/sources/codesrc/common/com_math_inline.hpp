@@ -10,6 +10,8 @@ All Rights Reserved.
 #ifndef COM_MATH_INLINE_HPP
 #define COM_MATH_INLINE_HPP
 
+#include "constants.h"
+
 namespace Math
 {
 	//=============================================
@@ -1026,6 +1028,150 @@ namespace Math
 	{
 		min = FindMinValueOf3(v1, v2, v3);
 		max = FindMaxValueOf3(v1, v2, v3);
+	}
+
+	//=============================================
+	// @brief
+	//
+	//=============================================
+	inline Uint32 BoxOnPlaneSide( const Vector& mins, const Vector& maxs, const plane_t* pplane )
+	{
+		Float dist1;
+		Float dist2;
+
+		switch(pplane->signbits)
+		{
+		case 0:
+			dist1 = pplane->normal[0]*maxs[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*maxs[2];
+			dist2 = pplane->normal[0]*mins[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*mins[2];
+			break;
+		case 1:
+			dist1 = pplane->normal[0]*mins[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*maxs[2];
+			dist2 = pplane->normal[0]*maxs[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*mins[2];
+			break;
+		case 2:
+			dist1 = pplane->normal[0]*maxs[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*maxs[2];
+			dist2 = pplane->normal[0]*mins[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*mins[2];
+			break;
+		case 3:
+			dist1 = pplane->normal[0]*mins[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*maxs[2];
+			dist2 = pplane->normal[0]*maxs[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*mins[2];
+			break;
+		case 4:
+			dist1 = pplane->normal[0]*maxs[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*mins[2];
+			dist2 = pplane->normal[0]*mins[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*maxs[2];
+			break;
+		case 5:
+			dist1 = pplane->normal[0]*mins[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*mins[2];
+			dist2 = pplane->normal[0]*maxs[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*maxs[2];
+			break;
+		case 6:
+			dist1 = pplane->normal[0]*maxs[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*mins[2];
+			dist2 = pplane->normal[0]*mins[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*maxs[2];
+			break;
+		case 7:
+			dist1 = pplane->normal[0]*mins[0] + pplane->normal[1]*mins[1] + pplane->normal[2]*mins[2];
+			dist2 = pplane->normal[0]*maxs[0] + pplane->normal[1]*maxs[1] + pplane->normal[2]*maxs[2];
+			break;
+		default:
+			dist1 = 0;
+			dist2 = 0;
+			break;
+		}
+
+		Uint32 sides = 0;
+		if(dist1 >= pplane->dist)
+			sides = SIDE_FRONT;
+		if(dist2 < pplane->dist)
+			sides |= SIDE_BACK;
+
+		return sides;
+	}
+
+	//=============================================
+	// @brief
+	//
+	//=============================================
+	inline void RotatePointAroundVector( const Vector& dir, const Vector& point, Float deg, Vector& dest )
+	{
+		Float halfrad = DEG2RAD(deg)/2;
+		Float sine = SDL_sin(halfrad);
+
+		Vector q;
+		Math::VectorScale(dir, sine, q);
+		Float q3 = SDL_cos(halfrad);
+
+		Vector t;
+		Math::CrossProduct(q, point, t);
+		Math::VectorMA(t, q3, point, t);
+		Float t3 = Math::DotProduct(q, point);
+
+		Math::CrossProduct(q, t, dest);
+		Math::VectorMA(dest, t3, q, dest);
+		Math::VectorMA(dest, q3, t, dest);
+	}
+
+	//=============================================
+	// @brief
+	//
+	//=============================================
+	inline void RotateMinsMaxsByAngle( const Vector& inmins, const Vector& inmaxs, const Vector& angles, Vector& outmins, Vector& outmaxs )
+	{
+		Vector vTemp;
+		static Vector vBounds[8];
+		for (Uint32 i = 0; i < 8; i++)
+		{
+			if ( i & 1 ) 
+				vTemp[0] = inmins[0];
+			else 
+				vTemp[0] = inmaxs[0];
+
+			if ( i & 2 ) 
+				vTemp[1] = inmins[1];
+			else 
+				vTemp[1] = inmaxs[1];
+
+			if ( i & 4 ) 
+				vTemp[2] = inmins[2];
+			else 
+				vTemp[2] = inmaxs[2];
+
+			Math::VectorCopy( vTemp, vBounds[i] );
+		}
+
+		Vector _angles = angles;
+		_angles[PITCH] = -_angles[PITCH];
+
+		Float rotationmatrix[3][4];
+		Math::AngleMatrix(_angles, rotationmatrix);
+
+		for (Uint32 i = 0; i < 8; i++ )
+		{
+			Math::VectorCopy(vBounds[i], vTemp);
+			Math::VectorRotate(vTemp, rotationmatrix, vBounds[i]);
+		}
+
+		// Set the bounding box
+		outmins = NULL_MINS;
+		outmaxs = NULL_MAXS;
+		for(Uint32 i = 0; i < 8; i++)
+		{
+			// Mins
+			if(vBounds[i][0] < outmins[0]) 
+				outmins[0] = vBounds[i][0];
+			if(vBounds[i][1] < outmins[1]) 
+				outmins[1] = vBounds[i][1];
+			if(vBounds[i][2] < outmins[2]) 
+				outmins[2] = vBounds[i][2];
+
+			// Maxs
+			if(vBounds[i][0] > outmaxs[0]) 
+				outmaxs[0] = vBounds[i][0];
+			if(vBounds[i][1] > outmaxs[1]) 
+				outmaxs[1] = vBounds[i][1];
+			if(vBounds[i][2] > outmaxs[2]) 
+				outmaxs[2] = vBounds[i][2];
+		}
 	}
 };
 #endif //Common::MATH_INLINE_HPP

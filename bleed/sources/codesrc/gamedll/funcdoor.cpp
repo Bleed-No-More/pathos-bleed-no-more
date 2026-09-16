@@ -70,15 +70,10 @@ CFuncDoor::CFuncDoor( edict_t* pedict ):
 	m_forcedToClose(false),
 	m_isBlocked(false),
 	m_isSilent(false),
+	m_isOwnedChildDoor(false),
 	m_nextLockedSoundTime(0),
-	m_numSlaveDoors(0),
-	m_numRelatedDoors(0)
+	m_relatedDoorIdentifier(NO_STRING_VALUE)
 {
-	for(Uint32 i = 0; i < MAX_SLAVE_DOORS; i++)
-		m_pSlaveDoors[i] = nullptr;
-	
-	for(Uint32 i = 0; i < MAX_RELATED_DOORS; i++)
-		m_pRelatedDoors[i] = nullptr;
 }
 
 //=============================================
@@ -103,10 +98,8 @@ void CFuncDoor::DeclareSaveFields( void )
 	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_isSilent, EFIELD_BOOLEAN));
 	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_activatorOrigin, EFIELD_COORD));
 	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_nextLockedSoundTime, EFIELD_TIME));
-	DeclareSaveField(DEFINE_DATA_FIELD_ARRAY(CFuncDoor, m_pSlaveDoors, EFIELD_ENTPOINTER, MAX_SLAVE_DOORS));
-	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_numSlaveDoors, EFIELD_UINT32));
-	DeclareSaveField(DEFINE_DATA_FIELD_ARRAY(CFuncDoor, m_pRelatedDoors, EFIELD_ENTPOINTER, MAX_SLAVE_DOORS));
-	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_numRelatedDoors, EFIELD_UINT32));
+	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_relatedDoorsArray, EFIELD_CARRAY_EHANDLE));
+	DeclareSaveField(DEFINE_DATA_FIELD(CFuncDoor, m_relatedDoorIdentifier, EFIELD_STRING));
 }
 
 //=============================================
@@ -165,6 +158,17 @@ bool CFuncDoor::KeyValue( const keyvalue_t& kv )
 		m_unlockedSoundFile = gd_engfuncs.pfnAllocString(kv.value);
 		return true;
 	}
+	else if(!qstrcmp(kv.keyname, "relatedidentifier"))
+	{
+		m_relatedDoorIdentifier = gd_engfuncs.pfnAllocString(kv.value);
+		return true;
+	}
+	else if(!qstrcmp(kv.keyname, "zhlt_noclip"))
+	{
+		if(SDL_atoi(kv.value) == 1)
+			m_pState->flags |= FL_POINTHULL_ONLY;
+		return true;
+	}
 	else
 		return CToggleEntity::KeyValue(kv);
 }
@@ -219,10 +223,8 @@ bool CFuncDoor::Spawn( void )
 	if(m_pState->speed <= 0)
 		m_pState->speed = DEFAULT_SPEED;
 
-	SetMovementVectors();
-
 	// Set toggle state
-	m_toggleState = TS_AT_BOTTOM;
+	m_toggleState = TSTATE_AT_BOTTOM;
 	m_isBlocked = false;
 
 	// Set as nodraw if set
@@ -235,8 +237,7 @@ bool CFuncDoor::Spawn( void )
 
 	// Check for slave doors to be initialized on
 	// non-zero origin door entities
-	if(m_pFields->targetname != NO_STRING_VALUE)
-		m_pState->flags |= FL_INITIALIZE;
+	m_pState->flags |= FL_INITIALIZE;
 
 	return true;
 }
@@ -262,7 +263,7 @@ void CFuncDoor::SetMovementVectors( void )
 	// Swap origins if starting open
 	if(HasSpawnFlag(FL_START_OPEN))
 	{
-		gd_engfuncs.pfnSetOrigin(m_pEdict, m_position2);
+		gd_engfuncs.pfnSetOrigin(m_pEdict, m_position2, false);
 		m_position2 = m_position1;
 		m_position1 = m_pState->origin;
 	}
@@ -275,7 +276,7 @@ void CFuncDoor::SetMovementVectors( void )
 void CFuncDoor::SetSpawnProperties( void )
 {
 	// Set move direction
-	Util::SetMoveDirection(*m_pState);
+	Util::SetMoveDirection(this);
 
 	if(HasSpawnFlag(FL_NOT_SOLID))
 		m_pState->solid = SOLID_NOT;
@@ -289,42 +290,37 @@ void CFuncDoor::SetSpawnProperties( void )
 //=============================================
 void CFuncDoor::InitEntity( void )
 {
+	// Always set this
+	SetMovementVectors();
+
 	const Char* pstrClassName = gd_engfuncs.pfnGetString(m_pFields->classname);
 	const Char* pstrTargetName = gd_engfuncs.pfnGetString(m_pFields->targetname);
-	if(!pstrTargetName || !qstrlen(pstrTargetName))
-		return;
-
-	// Find slave doors with same position and name if set to touch opens
-	if(HasSpawnFlag(FL_TOUCH_OPENS) && !m_pState->origin.IsZero())
+	if(pstrTargetName && qstrlen(pstrTargetName) > 0)
 	{
-		edict_t* pedict = nullptr;
-		while(true)
+		// Find slave doors with same position and name if set to touch opens
+		if(HasSpawnFlag(FL_TOUCH_OPENS) && !m_pState->origin.IsZero())
 		{
-			pedict = Util::FindEntityByTargetName(pedict, pstrTargetName);
-			if(!pedict)
-				break;
-
-			if(Util::IsNullEntity(pedict) || pedict == m_pEdict)
-				continue;
-
-			CBaseEntity* pOther = CBaseEntity::GetClass(pedict);
-			if(!pOther)
-				continue;
-
-			// Check for exact classname
-			if(qstrcmp(pstrClassName, pOther->GetClassName()))
-				continue;
-
-			// Set this as the parent door
-			if(pOther->IsFuncDoorEntity() && Math::VectorCompare(pOther->GetOrigin(), m_pState->origin))
+			edict_t* pedict = nullptr;
+			while(true)
 			{
-				if(m_numSlaveDoors >= MAX_SLAVE_DOORS)
+				pedict = Util::FindEntityByTargetName(pedict, pstrTargetName);
+				if(!pedict)
 					break;
 
-				m_pSlaveDoors[m_numSlaveDoors] = reinterpret_cast<CFuncDoor*>(pOther);
-				m_numSlaveDoors++;
+				if(Util::IsNullEntity(pedict) || pedict == m_pEdict)
+					continue;
 
-				pOther->SetParentDoor(this);
+				CBaseEntity* pOther = CBaseEntity::GetClass(pedict);
+				if(!pOther)
+					continue;
+
+				// Check for exact classname
+				if(qstrcmp(pstrClassName, pOther->GetClassName()))
+					continue;
+
+				// Set this as the parent door
+				if(pOther->IsFuncDoorEntity() && Math::VectorCompare(pOther->GetOrigin(), m_pState->origin))
+					pOther->SetParentDoor(this);
 			}
 		}
 	}
@@ -333,7 +329,7 @@ void CFuncDoor::InitEntity( void )
 	edict_t* pedict = nullptr;
 	while(true)
 	{
-		pedict = Util::FindEntityByTargetName(pedict, pstrTargetName);
+		pedict = Util::FindEntityByClassname(pedict, pstrClassName);
 		if(!pedict)
 			break;
 
@@ -345,29 +341,86 @@ void CFuncDoor::InitEntity( void )
 			continue;
 
 		// Check for exact classname
-		if(qstrcmp(pstrClassName, pOther->GetClassName()))
-			continue;
-
-		// Check that it's not a slave door
-		Uint32 j = 0;
-		for(; j < m_numSlaveDoors; j++)
+		if(pstrTargetName && qstrlen(pstrTargetName) > 0)
 		{
-			if(m_pSlaveDoors[j] == pOther)
-				break;
+			if(qstrcmp(pstrTargetName, pOther->GetTargetName()))
+				continue;
+		}
+		else
+		{
+			if(qstrlen(pOther->GetTargetName()) > 0)
+				continue;
 		}
 
-		if(j != m_numSlaveDoors)
+		// Ensure this isnt' a child of us
+		if(pOther->GetParent() == this)
 			continue;
 
-		if(m_numRelatedDoors == MAX_RELATED_DOORS)
+		// Ensure the two touch eachother to some extent
+		Vector otherAbsMins = pOther->GetAbsMins();
+		Vector otherAbsMaxs = pOther->GetAbsMaxs();
+		Math::VectorSubtract(otherAbsMins, Vector(4, 4, 4), otherAbsMins);
+		Math::VectorAdd(otherAbsMaxs, Vector(4, 4, 4), otherAbsMaxs);
+
+		Vector myAbsMins = GetAbsMins();
+		Vector myAbsMaxs = GetAbsMaxs();
+		Math::VectorSubtract(myAbsMins, Vector(4, 4, 4), myAbsMins);
+		Math::VectorAdd(myAbsMaxs, Vector(4, 4, 4), myAbsMaxs);
+
+		if(Math::CheckMinsMaxs(otherAbsMins, otherAbsMaxs, myAbsMins, myAbsMaxs))
+			continue;
+
+		if(pOther->IsFuncDoorRotatingEntity())
 		{
-			Util::EntityConPrintf(m_pEdict, "Exceeded MAX_RELATED_DOORS.\n");
-			break;
+			// It needs to be on the same axis, either on x or y
+			const Vector& doorOrigin = GetOrigin();
+			const Vector& targetDoorOrigin = pOther->GetOrigin();
+			if(targetDoorOrigin[0] != doorOrigin[0] && targetDoorOrigin[1] != doorOrigin[1])
+				continue;
 		}
 
 		// Add as related door
-		m_pRelatedDoors[m_numRelatedDoors] = reinterpret_cast<CFuncDoor*>(pOther);
-		m_numRelatedDoors++;
+		m_relatedDoorsArray.push_back(pOther);
+	}
+
+	// Find related doors with the same shared identifier
+	if(m_relatedDoorIdentifier != NO_STRING_VALUE)
+	{
+		const Char* pstrMyIdentifier = GetDoorIdentifier();
+		pedict = nullptr;
+		while(true)
+		{
+			pedict = Util::FindEntityByClassname(pedict, pstrClassName);
+			if(!pedict)
+				break;
+
+			if(pedict->free || pedict == m_pEdict)
+				continue;
+
+			CBaseEntity* pOther = CBaseEntity::GetClass(pedict);
+			if(!pOther)
+				continue;
+
+			if(pOther->IsFuncDoorEntity() && pOther->GetParent() != this)
+			{
+				const Char* pstrOtherIdentifier = pOther->GetDoorIdentifier();
+				if(!qstrlen(pstrOtherIdentifier))
+					continue;
+
+				if(!qstrcmp(pstrMyIdentifier, pstrOtherIdentifier))
+				{
+					Uint32 j = 0;
+					for(; j < m_relatedDoorsArray.size(); j++)
+					{
+						if(m_relatedDoorsArray[j].get() == pOther->GetEdict())
+							break;
+					}
+
+					if(j == m_relatedDoorsArray.size())
+						m_relatedDoorsArray.push_back(pOther);
+				}
+			}
+		}
 	}
 }
 
@@ -383,19 +436,20 @@ void CFuncDoor::SetParentDoor( CFuncDoor* pParent )
 	// Use existing parenting for this
 	SetParent(pParent);
 
-	// Set to track angles of parent
-	m_pState->effects |= EF_TRACKANGLES;
+	// Mark as being an owned door
+	m_isOwnedChildDoor = true;
 
 	// Disable block and touch functions
 	SetTouch(nullptr);
 	SetBlocked(nullptr);
+	SetUse(nullptr);
 }
 
 //=============================================
 // @brief
 //
 //=============================================
-void CFuncDoor::RealignRelatedDoor( CFuncDoor* pDoor )
+void CFuncDoor::RealignRelatedDoor( CBaseEntity* pDoor )
 {
 	pDoor->SetOrigin(m_pState->origin);
 	pDoor->SetVelocity(ZERO_VECTOR);
@@ -407,10 +461,6 @@ void CFuncDoor::RealignRelatedDoor( CFuncDoor* pDoor )
 //=============================================
 void CFuncDoor::CallBlocked( CBaseEntity* pOther )
 {
-	// If parented, don't bother
-	if(m_pState->parent != NO_ENTITY_INDEX)
-		return;
-
 	// Set this so we don't try to check for npcs when going back
 	m_isBlocked = true;
 
@@ -427,18 +477,22 @@ void CFuncDoor::CallBlocked( CBaseEntity* pOther )
 	// Don't return of wait is null, or forced to close
 	if(m_waitTime != -1 && !m_forcedToClose)
 	{
-		if(m_toggleState == TS_GOING_DOWN)
+		if(m_toggleState == TSTATE_GOING_DOWN)
 			GoUp();
 		else
 			GoDown();
 	}
 
-	// Reset related pieces
-	for(Uint32 i = 0; i < m_numRelatedDoors; i++)
+	// Reset related pieces(This would not be necessary if
+	// I had parenting back then, but we keep this for legacy
+	// reasons)
+	for(Uint32 i = 0; i < m_relatedDoorsArray.size(); i++)
 	{
-		CFuncDoor* pRelatedDoor = m_pRelatedDoors[i];
-		if(!pRelatedDoor)
+		CBaseEntity* pEntity = m_relatedDoorsArray[i];
+		if(!pEntity || !pEntity->IsFuncDoorEntity())
 			continue;
+
+		CFuncDoor* pRelatedDoor = reinterpret_cast<CFuncDoor*>(pEntity);
 
 		// Realign related door
 		if(pRelatedDoor->GetDelay() >= 0)
@@ -447,7 +501,7 @@ void CFuncDoor::CallBlocked( CBaseEntity* pOther )
 			if(Math::VectorCompare(pOther->GetVelocity(), m_pState->velocity) && Math::VectorCompare(pOther->GetAngularVelocity(), m_pState->avelocity))
 				RealignRelatedDoor(pRelatedDoor);
 
-			if(pRelatedDoor->GetToggleState() == TS_GOING_DOWN)
+			if(pRelatedDoor->GetToggleState() == TSTATE_GOING_DOWN)
 				pRelatedDoor->GoUp();
 			else
 				pRelatedDoor->GoDown();
@@ -475,12 +529,12 @@ Int32 CFuncDoor::GetEntityFlags( void )
 void CFuncDoor::SetToggleState( togglestate_t state, bool reverse )
 {
 	Vector setPosition;
-	if(state == TS_AT_TOP)
+	if(state == TSTATE_AT_TOP)
 		setPosition = m_position2;
 	else
 		setPosition = m_position1;
 
-	gd_engfuncs.pfnSetOrigin(m_pEdict, setPosition);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, setPosition, false);
 	m_toggleState = state;
 }
 
@@ -491,7 +545,7 @@ void CFuncDoor::SetToggleState( togglestate_t state, bool reverse )
 void CFuncDoor::SetForcedClose( void )
 {
 	// Don't bother with closed or closing doors
-	if(m_toggleState == TS_AT_BOTTOM || m_toggleState == TS_GOING_DOWN)
+	if(m_toggleState == TSTATE_AT_BOTTOM || m_toggleState == TSTATE_GOING_DOWN)
 		return;
 
 	// Remember so we don't allow overrides while closing
@@ -535,9 +589,9 @@ bool CFuncDoor::DoorActivate( void )
 	}
 
 	// Don't return if we're moving
-	if(!HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState != TS_AT_BOTTOM 
-		|| HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState != TS_AT_TOP 
-		&& m_toggleState != TS_AT_BOTTOM)
+	if(!HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState != TSTATE_AT_BOTTOM 
+		|| HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState != TSTATE_AT_TOP 
+		&& m_toggleState != TSTATE_AT_BOTTOM)
 		return false;
 
 	// Remember activator's origin for correction
@@ -547,7 +601,7 @@ bool CFuncDoor::DoorActivate( void )
 	// Reset blocked state
 	m_isBlocked = false;
 
-	if(HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState == TS_AT_TOP)
+	if(HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState == TSTATE_AT_TOP)
 	{
 		// Close the door
 		GoDown();
@@ -617,7 +671,7 @@ bool CFuncDoor::ShouldAutoCloseDoor( void )
 void CFuncDoor::GoUp( void )
 {
 	// Set toggle-state
-	m_toggleState = TS_GOING_UP;
+	m_toggleState = TSTATE_GOING_UP;
 
 	// Play sound if not silent
 	if(!m_isSilent)
@@ -649,7 +703,7 @@ void CFuncDoor::GoDown( void )
 		Util::EmitEntitySound(this, m_moveSoundFile, SND_CHAN_BODY, VOL_NORM, ATTN_NORM, PITCH_NORM, SND_FL_OCCLUSIONLESS);
 
 	// Begin moving down
-	m_toggleState = TS_GOING_DOWN;
+	m_toggleState = TSTATE_GOING_DOWN;
 
 	// Go and hit rock bottom
 	SetMoveDone(&CFuncDoor::HitBottom);
@@ -667,7 +721,7 @@ void CFuncDoor::HitTop( void )
 	m_isBlocked = false;
 
 	// Set toggle state
-	m_toggleState = TS_AT_TOP;
+	m_toggleState = TSTATE_AT_TOP;
 
 	if(!m_isSilent)
 	{
@@ -719,7 +773,7 @@ void CFuncDoor::HitBottom( void )
 	m_isBlocked = false;
 
 	// Set toggle state
-	m_toggleState = TS_AT_BOTTOM;
+	m_toggleState = TSTATE_AT_BOTTOM;
 
 	if(!m_isSilent)
 	{
@@ -749,15 +803,15 @@ void CFuncDoor::HitBottom( void )
 //=============================================
 void CFuncDoor::CallUse( CBaseEntity* pActivator, CBaseEntity* pCaller, usemode_t useMode, Float value )
 {
-	// If we're parented, don't react to use function
-	if(m_pState->parent != NO_ENTITY_INDEX)
+	// If owned child door, don't bother
+	if(m_isOwnedChildDoor)
 		return;
 
 	// Remember activator
 	m_activator = pActivator;
 
 	// If not ready to be used, ignore
-	if(m_toggleState == TS_AT_BOTTOM || HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState == TS_AT_TOP)
+	if(m_toggleState == TSTATE_AT_BOTTOM || HasSpawnFlag(FL_NO_AUTO_RETURN) && m_toggleState == TSTATE_AT_TOP)
 		DoorActivate();
 }
 
@@ -774,7 +828,7 @@ void CFuncDoor::DoorTouch( CBaseEntity* pOther )
 	// Don't open is locked by master
 	if(IsLockedByMaster() || m_pFields->targetname != NO_STRING_VALUE && !HasSpawnFlag(FL_TOUCH_OPENS))
 	{
-		if(m_toggleState == TS_AT_BOTTOM)
+		if(m_toggleState == TSTATE_AT_BOTTOM)
 			PlayLockSounds(true, false, LOCKED_SOUND_DELAY, m_nextLockedSoundTime);
 
 		// Don't do anything
@@ -787,10 +841,6 @@ void CFuncDoor::DoorTouch( CBaseEntity* pOther )
 	// Activate the door
 	if(DoorActivate())
 	{
-		// Trigger slave doors
-		for(Uint32 i = 0; i < m_numSlaveDoors; i++)
-			m_pSlaveDoors[i]->CallUse(m_activator, m_activator, USE_TOGGLE, 0);
-
 		// Disable touch function util done
 		SetTouch(nullptr);
 	}
@@ -802,7 +852,7 @@ void CFuncDoor::DoorTouch( CBaseEntity* pOther )
 //=============================================
 void CFuncDoor::SendInitMessage( const CBaseEntity* pPlayer )
 {
-	if(m_toggleState == TS_GOING_UP || m_toggleState == TS_GOING_DOWN)
+	if(m_toggleState == TSTATE_GOING_UP || m_toggleState == TSTATE_GOING_DOWN)
 		Util::EmitEntitySound(this, m_moveSoundFile, SND_CHAN_BODY, VOL_NORM, ATTN_NORM, PITCH_NORM, SND_FL_OCCLUSIONLESS);
 }
 
@@ -812,28 +862,10 @@ void CFuncDoor::SendInitMessage( const CBaseEntity* pPlayer )
 //=============================================
 void CFuncDoor::ChildEntityRemoved( CBaseEntity* pEntity )
 {
-	for(Uint32 i = 0; i < m_numSlaveDoors; i++)
+	for(Uint32 i = 0; i < m_relatedDoorsArray.size(); i++)
 	{
-		if(m_pSlaveDoors[i] == pEntity)
-		{
-			for(Uint32 j = i; j < (m_numSlaveDoors-1); j++)
-				m_pSlaveDoors[j] = m_pSlaveDoors[j+1];
-
-			m_numSlaveDoors--;
-			i--;
-		}
-	}
-
-	for(Uint32 i = 0; i < m_numRelatedDoors; i++)
-	{
-		if(m_pRelatedDoors[i] == pEntity)
-		{
-			for(Uint32 j = i; j < (m_numRelatedDoors-1); j++)
-				m_pRelatedDoors[j] = m_pRelatedDoors[j+1];
-
-			m_numRelatedDoors--;
-			i--;
-		}
+		if(m_relatedDoorsArray[i].get() == pEntity->GetEdict())
+			m_relatedDoorsArray.erase(i);
 	}
 }
 
@@ -847,4 +879,20 @@ usableobject_type_t CFuncDoor::GetUsableObjectType( void )
 		return USABLE_OBJECT_LOCKED;
 	else
 		return USABLE_OBJECT_DEFAULT;
+}
+
+//=============================================
+// @brief Get related door entities from func_door/func_door_rotating
+//
+//=============================================
+void CFuncDoor::GetRelatedDoors( CArray<CBaseEntity*>& entitesArray ) const
+{
+	for(Uint32 i = 0; i < m_relatedDoorsArray.size(); i++)
+	{
+		CBaseEntity* pEntity = m_relatedDoorsArray[i];
+		if(!pEntity || !pEntity->IsFuncDoorEntity())
+			continue;
+
+		entitesArray.push_back(pEntity);
+	}
 }

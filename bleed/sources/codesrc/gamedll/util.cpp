@@ -159,16 +159,20 @@ namespace Util
 	//=============================================
 	//
 	//=============================================
-	void SetMoveDirection( entity_state_t& state )
+	void SetMoveDirection( CBaseEntity* pEntity )
 	{
-		if(state.angles == Vector(0, -1, 0))
-			state.movedir = Vector(0, 0, 1);
-		else if(state.angles == Vector(0, -2, 0))
-			state.movedir = Vector(0, 0, -1);
-		else
-			Math::AngleVectors(state.angles, &state.movedir, nullptr, nullptr);
+		const Vector& angles = pEntity->GetAngles();
 
-		state.angles = ZERO_VECTOR;
+		Vector movedir;
+		if(angles == Vector(0, -1, 0))
+			movedir = Vector(0, 0, 1);
+		else if(angles == Vector(0, -2, 0))
+			movedir = Vector(0, 0, -1);
+		else
+			Math::AngleVectors(angles, &movedir, nullptr, nullptr);
+
+		pEntity->SetAngles(ZERO_VECTOR);
+		pEntity->SetMovementDirection(movedir);
 	}
 
 	//=============================================
@@ -208,6 +212,26 @@ namespace Util
 			return angle1.x - angle2.x;
 		else
 			return angle1.y - angle2.y;
+	}
+
+	//=============================================
+	//
+	//=============================================
+	void TraceLine( const Vector& start, const Vector& end, bool ignorenpcs, bool usehitboxes, bool ignoreglass, bool hitcorpses, bool hitsky, const edict_t* pignoreent, trace_t& tr )
+	{
+		Int32 traceflags = FL_TRACE_NORMAL;
+		if(ignorenpcs)
+			traceflags |= FL_TRACE_NO_NPCS;
+		if(ignoreglass)
+			traceflags |= FL_TRACE_NO_TRANS;
+		if(hitcorpses)
+			traceflags |= FL_TRACE_HIT_CORPSES;
+		if(usehitboxes)
+			traceflags |= FL_TRACE_HITBOXES;
+		if(hitsky)
+			traceflags |= FL_TRACE_SKYBRUSHES;
+
+		gd_tracefuncs.pfnTraceLine(start, end, traceflags, HULL_POINT, pignoreent ? pignoreent->entindex : NO_ENTITY_INDEX, tr);
 	}
 
 	//=============================================
@@ -1038,7 +1062,7 @@ namespace Util
 		if(!gd_engfuncs.pfnRecursiveLightPoint(pbrushmodel, pbrushmodel->pnodes, startPos, endPos, lightcolors, lightstyles))
 			return 0;
 
-		CArray<Float>* plightstylesarray = gSVLightStyles.GetLightStyleValuesArray();
+		const CArray<Float>* plightstylesarray = gSVLightStyles.GetLightStyleValuesArray();
 
 		// Calculate illumination
 		Vector lightcolor;
@@ -1234,7 +1258,7 @@ namespace Util
 		pedict->state.effects |= EF_NODRAW;
 		pedict->state.nextthink = 0;
 		
-		gd_engfuncs.pfnSetOrigin(pedict, pedict->state.origin);
+		gd_engfuncs.pfnSetOrigin(pedict, pedict->state.origin, false);
 	}
 
 	//=============================================
@@ -1584,13 +1608,12 @@ namespace Util
 	//=============================================
 	//
 	//=============================================
-	void CreateRocketExplosion( const Vector& origin, Int32 color )
+	void CreateRocketExplosion( const Vector& origin )
 	{
 		gd_engfuncs.pfnUserMessageBegin(MSG_ALL, g_usermsgs.createtempentity, nullptr, nullptr);
 			gd_engfuncs.pfnMsgWriteByte(TE_ROCKETEXPLOSION);
 			for(Uint32 i = 0; i < 3; i++)
 				gd_engfuncs.pfnMsgWriteFloat(origin[i]);
-			gd_engfuncs.pfnMsgWriteByte(color);
 		gd_engfuncs.pfnUserMessageEnd();
 	}
 
@@ -1940,20 +1963,23 @@ namespace Util
 	// @brief
 	//
 	//=============================================
-	void AlignEntityToSurface( edict_t* pedict )
+	void AlignEntityToSurface( CBaseEntity* pEntity )
 	{
 		// Reset pitch pitch and roll
-		pedict->state.angles[0] = 0;
-		pedict->state.angles[2] = 0;
+		pEntity->SetPitch(0);
+		pEntity->SetRoll(0);
+
+		const Vector& angles = pEntity->GetAngles();
+		const Vector& origin = pEntity->GetOrigin();
 
 		trace_t tr;
-		Util::TraceLine(pedict->state.origin+Vector(0, 0, 8), pedict->state.origin-Vector(0, 0, 8), false, false, pedict, tr);
+		Util::TraceLine(origin+Vector(0, 0, 8), origin-Vector(0, 0, 8), false, false, pEntity->GetEdict(), tr);
 		if(tr.noHit() || tr.allSolid() || tr.startSolid())
 			return;
 
 		// Do not directly use m_pState->angles
-		Vector newangles = Math::AdjustAnglesToNormal(tr.plane.normal, pedict->state.angles);
-		pedict->state.angles = newangles;
+		Vector newangles = Math::AdjustAnglesToNormal(tr.plane.normal, angles);
+		pEntity->SetAngles(newangles);
 	}
 
 	//=============================================
@@ -2095,7 +2121,11 @@ namespace Util
 	void ExplosionSound( const Vector& origin )
 	{
 		CString soundname;
-		soundname << "weapons/explosion" << (Int32)Common::RandomLong(1, 3) << ".wav";
+
+		if(g_pCvarOldSchoolExplosions->GetValue() >= 1)
+			soundname << OLDSCHOOL_EXPLOSION_SOUND_PATH;
+		else
+			soundname << "weapons/explosion" << (Int32)Common::RandomLong(1, 3) << ".wav";
 
 		Util::EmitAmbientSound(origin, soundname.c_str(), VOL_NORM, 0.3, PITCH_NORM, SND_FL_NONE);
 	}
@@ -2532,10 +2562,12 @@ namespace Util
 	void FindLinkEntities( CBaseEntity* pLinkEntity, CArray<CBaseEntity*>& entitesArray, CBaseEntity* pNPC )
 	{
 		// If triggered by a trigger_multiple, tell it to wait
+		if(!pLinkEntity->IsFuncDoorEntity())
+			return;
+
 		if(pLinkEntity->HasTargetName())
 		{
 			const Char* pstrTargetName = pLinkEntity->GetTargetName();
-
 			if(pNPC)
 			{
 				edict_t* pTriggerEdict = Util::FindEntityByTarget(nullptr, pstrTargetName);
@@ -2546,66 +2578,10 @@ namespace Util
 						pEntity->TriggerWait(pNPC);
 				}
 			}
-
-			// See if there are other doors with the same name
-			edict_t* pEdict = nullptr;
-			while(true)
-			{
-				pEdict = Util::FindEntityByTargetName(pEdict, pstrTargetName);
-				if(!pEdict)
-					break;
-
-				if(pEdict == pLinkEntity->GetEdict())
-					continue;
-
-				// Only do anything if it's an actual func_door
-				CBaseEntity* pTargetEntity = CBaseEntity::GetClass(pEdict);
-				if(!pTargetEntity->IsFuncDoorEntity())
-					continue;
-
-				entitesArray.push_back(pTargetEntity);
-			}
 		}
-		else if(pLinkEntity->IsFuncDoorEntity())
-		{
-			Vector mins, maxs;
-			Vector doorOrigin = pLinkEntity->GetOrigin();
-			for(Uint32 i = 0; i < 3; i++)
-			{
-				mins[i] = doorOrigin[i] - CBaseNPC::NPC_DOOR_SEARCH_RADIUS;
-				maxs[i] = doorOrigin[i] + CBaseNPC::NPC_DOOR_SEARCH_RADIUS;
-			}
 
-			// See if there are other doors with the same name
-			edict_t* pEdict = nullptr;
-			while(true)
-			{
-				pEdict = Util::FindEntityInBBox(pEdict, mins, maxs);
-				if(!pEdict)
-					break;
-
-				if(pEdict == pLinkEntity->GetEdict())
-					continue;
-
-				// Only do anything if it's an actual func_door
-				CBaseEntity* pTargetEntity = CBaseEntity::GetClass(pEdict);
-				if(!pTargetEntity->IsFuncDoorRotatingEntity())
-					continue;
-
-				// It needs to be on the same axis, either on x or y
-				Vector targetDoorOrigin = pTargetEntity->GetOrigin();
-				if(targetDoorOrigin[0] != doorOrigin[0] && targetDoorOrigin[1] != doorOrigin[1])
-					continue;
-
-				// Make sure we can actually trigger this
-				if(pTargetEntity->HasSpawnFlag(CFuncDoor::FL_NO_NPCS)
-					|| pTargetEntity->GetToggleState() == TS_AT_TOP
-					|| pTargetEntity->GetToggleState() == TS_GOING_UP)
-					continue;
-
-				entitesArray.push_back(pTargetEntity);
-			}
-		}
+		// Add doors related to this one
+		pLinkEntity->GetRelatedDoors(entitesArray);
 	}
 
 	//=============================================

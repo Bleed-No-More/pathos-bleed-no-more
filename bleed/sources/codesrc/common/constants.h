@@ -34,7 +34,7 @@ static const Vector VEC_VIEW = Vector( 0, 0, 32 );
 
 // Use this definition globally
 static const Float ON_EPSILON = 0.01;
-static const Float EQUAL_EPSILON = 0.001;
+static const Float P_EQUAL_EPSILON = 0.001;
 
 // View punch damping related
 static constexpr Float VIEW_PUNCH_DAMPING = 9.0f;
@@ -68,11 +68,11 @@ static constexpr Float PLAYER_NORMAL_SPEED = 320.0f;
 // Crouching player speed
 static constexpr Float PLAYER_CROUCH_SPEED = 210.0f;
 // Sneaking/ducking player speed
-static constexpr Float PLAYER_SNEAK_SPEED = 100.0f;
+static constexpr Float PLAYER_SNEAK_SPEED = 150.0f;
 // Swimming player speed
 static constexpr Float PLAYER_SWIM_SPEED = 115.0f;
 // Ducking multiplier for speed
-static constexpr Float DUCKING_SPEED_MULTIPLIER = 0.4;
+static constexpr Float DUCKING_SPEED_MULTIPLIER = 0.333;
 // Noclip movement speed
 static constexpr Float PLAYER_NOCLIP_SPEED = 600;
 
@@ -132,6 +132,8 @@ static constexpr Int32 NO_POSITION = -1;
 
 // Max floating point value
 static constexpr Float MAX_FLOAT_VALUE = 1e30f;
+// Maximum textures bound at once
+static constexpr Uint32 MAX_BOUND_TEXTURES = 16;
 
 // Path to default footstep file for player
 static const Char FOOTSTEP_SCRIPT_FILE[] = "scripts/footsteps.txt";
@@ -284,6 +286,15 @@ static constexpr Uint32 NULL_LIGHTSTYLE_INDEX = 255;
 
 // Macro for usermsg exports
 #define MSGFN extern "C" bool _declspec( dllexport )
+
+// Results from BoxOnPlaneSide
+enum box_planeside_t
+{
+	SIDE_NONE	= 0,
+	SIDE_FRONT	= (1<<0),
+	SIDE_BACK	= (1<<1),
+	SIDE_BOTH	= (SIDE_FRONT | SIDE_BACK)
+};
 
 // For legacy support
 enum entitysteptypes_t
@@ -611,11 +622,11 @@ enum npcstate_t
 
 enum togglestate_t
 {
-	TS_NONE = 0,
-	TS_AT_TOP,
-	TS_AT_BOTTOM,
-	TS_GOING_UP,
-	TS_GOING_DOWN
+	TSTATE_NONE = 0,
+	TSTATE_AT_TOP,
+	TSTATE_AT_BOTTOM,
+	TSTATE_GOING_UP,
+	TSTATE_GOING_DOWN
 };
 
 enum scriptstate_t
@@ -998,10 +1009,10 @@ enum bm_velocity_t
 
 enum planeside_t
 {
-	SIDE_CROSS = -2,
-	SIDE_FRONT = 0,
-	SIDE_BACK,
-	SIDE_ON,
+	PLANESIDE_CROSS = -2,
+	PLANESIDE_FRONT = 0,
+	PLANESIDE_BACK,
+	PLANESIDE_ON,
 
 	SIDE_NB
 };

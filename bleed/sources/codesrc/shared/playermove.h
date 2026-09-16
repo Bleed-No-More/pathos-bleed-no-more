@@ -195,8 +195,6 @@ private:
 	hull_types_t m_hullIndex;
 	// Max speed
 	Float m_maxSpeed;
-	// Max forward speed
-	Float m_maxForwardSpeed;
 	// Previous water level
 	Int32 m_oldWaterLevel;
 

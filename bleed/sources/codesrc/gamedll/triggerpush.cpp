@@ -54,10 +54,10 @@ void CTriggerPush::DeclareSaveFields( void )
 bool CTriggerPush::Spawn( void )
 {
 	if(m_pState->angles.IsZero())
-		m_pState->angles[YAW] = 360;
+		SetYaw(360);
 
 	if(!m_pState->angles.IsZero())
-		Util::SetMoveDirection(*m_pState);
+		Util::SetMoveDirection(this);
 
 	if(!CTriggerEntity::Spawn())
 		return false;
@@ -134,6 +134,7 @@ void CTriggerPush::CallTouch( CBaseEntity* pOther )
 
 		SetThink(&CBaseEntity::RemoveThink);
 		m_pState->nextthink = g_pGameVars->time + 0.1;
+		m_isActive = false;
 	}
 	else
 	{

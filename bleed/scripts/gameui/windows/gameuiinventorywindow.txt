@@ -1,0 +1,35 @@
+window "GameUIInventoryWindow"
+{
+	$schema "defaultgameuiwindow.txt"
+	$flags resolution_relative
+	$title "Text Window"
+	$width 800
+	$height 800
+	$alpha 100
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+text "GameUIInventoryWindowTitleText"
+{
+	$text "Inventory"
+	$originx 0
+	$originy 25
+	$width 750
+	$height 80
+	$flags align_center_horizontal resolution_relative
+	$textschema "textwindowtitle"
+	$textcolor 255 255 255 255
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}
+button "GameUIInventoryWindowExitButton"
+{
+	$schema "defaultgameuibutton.txt"
+	$flags align_bottom align_center_horizontal resolution_relative
+	$originy 50
+	$text "Exit"
+	$width 200
+	$height 60
+	$basescreenwidth 1920
+	$basescreenheight 1080
+}

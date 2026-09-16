@@ -66,7 +66,22 @@ enum pbspv2_lumps_t
 	PBSPV2_LUMP_EDGES,
 	PBSPV2_LUMP_SURFEDGES,
 	PBSPV2_LUMP_MODELS,
-	PBSPV2_NB_LUMPS
+
+	// These lumps are available if header->flags has PBSPV2_FL_HAS_VERTEX_LIGHTING set
+	PBSPV2_LUMP_VERTEX_LIGHTING_AMBIENT,
+	PBSPV2_LUMP_VERTEX_LIGHTING_DIFFUSE,
+	PBSPV2_LUMP_VERTEX_LIGHTING_VECTORS,
+
+	// This lump is available if header->flags has PBSPV2_FL_HAS_LIGHTGRID_DATA set
+	PBSPV2_LUMP_LIGHTGRID_DATA,
+
+	// This lump is available if header->flags has PBSPV2_FL_HAS_BRUSH_COLLISION_DATA set
+    PBSPV2_LUMP_BRUSHES,
+    PBSPV2_LUMP_BRUSHSIDES,
+    PBSPV2_LUMP_LEAFBRUSHES,
+
+	// MUST BE LAST
+	PBSPV2_NB_LUMPS // Don't actually use this anywhere if possible
 };
 
 //
@@ -74,12 +89,24 @@ enum pbspv2_lumps_t
 //
 enum pbspv2_flags_t
 {
-	PBSPV2_FL_NONE					= 0,
-	PBSPV2_FL_HAS_SMOOTHING_GROUPS	= (1<<0)
+	PBSPV2_FL_NONE						= 0,
+	PBSPV2_FL_HAS_SMOOTHING_GROUPS		= (1<<0),
+	PBSPV2_FL_HAS_VERTEX_LIGHTING		= (1<<1),
+	PBSPV2_FL_HAS_LIGHTGRID_DATA		= (1<<2),
+	PBSPV2_FL_HAS_BRUSH_COLLISION_DATA	= (1<<3)
 };
 
 //
-// Header for Pathos BSP V1
+// Flags for brush side
+//
+enum pbspv2_brushside_flags_t
+{
+	PBSPV2_BSIDE_FL_PLANEBACK			= (1<<0),
+	PBSPV2_BSIDE_FL_BEVEL				= (1<<1)
+};
+
+//
+// Header for Pathos BSP V2
 //
 
 struct dpbspv2lump_t
@@ -107,7 +134,7 @@ struct dpbspv2header_t
 	Int32 version;
 	Int64 flags;
 
-	dpbspv2lump_t lumps[PBSPV2_NB_LUMPS];
+	dpbspv2lump_t lumps[1];
 };
 
 //
@@ -236,15 +263,15 @@ struct dpbspv2face_t
 	Int32 numedges;
 	Int32 texinfo;
 	Float samplescale;
-	Int32 smoothgroupbits;
+	Int32 smoothgroupbits; // This is set if pheader->flags has PBSPV2_FL_HAS_SMOOTHING_GROUPS set
 
 	byte lmstyles[PBSPV2_MAX_LIGHTMAPS];
 	Int32 lightoffset;
 };
 
-struct dpbspv2leaf_t
+struct dpbspv2leaf_nobrush_t
 {
-	dpbspv2leaf_t():
+	dpbspv2leaf_nobrush_t():
 		contents(0),
 		visoffset(0),
 		firstmarksurface(0),
@@ -267,9 +294,36 @@ struct dpbspv2leaf_t
 	byte ambient_level[PBSPV2_NUM_AMBIENTS];
 };
 
-struct dpbspv2lmapdata_t
+struct dpbspv2leaf_brush_t
 {
-	dpbspv2lmapdata_t():
+	dpbspv2leaf_brush_t():
+		contents(0),
+		visoffset(0),
+		firstmarksurface(0),
+		nummarksurfaces(0),
+		firstleafbrush(0),
+		numleafbrushes(0)
+	{
+		memset(mins, 0, sizeof(mins));
+		memset(maxs, 0, sizeof(maxs));
+	}
+
+	Int32 contents;
+	Int32 visoffset;
+
+	Int16 mins[3];
+	Int16 maxs[3];
+
+	Uint32 firstmarksurface;
+	Uint32 nummarksurfaces;
+
+	Uint32 firstleafbrush;
+	Uint32 numleafbrushes;
+};
+
+struct dpbspv2lightingdata_t
+{
+	dpbspv2lightingdata_t():
 		compression(0),
 		compressionlevel(0),
 		dataoffset(0),
@@ -282,5 +336,157 @@ struct dpbspv2lmapdata_t
 	Int32 dataoffset;
 	Int32 datasize;
 	Int32 noncompressedsize;
+};
+
+struct dpbspv2lightgridlumpheader_t
+{
+    dpbspv2lightgridlumpheader_t():
+        rootnodeindex(NO_POSITION),
+		totalsize(0),
+        leafsoffset(NO_POSITION),
+        numleafs(0),
+        nodesoffset(NO_POSITION),
+        numnodes(0),
+        sampleoffset(NO_POSITION),
+        numsamples(0),
+        rawsampledatasize(0),
+        ambientdataoffset(-1),
+        ambientcompressedsize(0),
+        ambientcompressionlevel(0),
+        ambientcompressiontype(0),
+        diffusedataoffset(-1),
+        diffusecompressedsize(0),
+        diffusecompressionlevel(0),
+        diffusecompressiontype(0),
+        vectorsdataoffset(-1),
+        vectorscompressedsize(0),
+        vectorscompressionlevel(0),
+        vectorscompressiontype(0)
+    {
+        for(Uint32 i = 0; i < 3; i++)
+			grid_distance[i] = 0;
+
+        for(Uint32 i = 0; i < 3; i++)
+			grid_size[i] = 0;
+			
+        for(Uint32 i = 0; i < 3; i++)
+			grid_mins[i] = 0;			
+    }
+
+    Int32 grid_distance[3];
+    Int32 grid_size[3];
+    Float grid_mins[3];
+    Int32 rootnodeindex;
+    Uint32 totalsize;
+
+    Int32 leafsoffset;
+    Int32 numleafs;
+
+    Int32 nodesoffset;
+    Int32 numnodes;
+
+    Int32 sampleoffset;
+    Int32 numsamples;
+
+	Int32 rawsampledatasize;
+
+    Int32 ambientdataoffset;
+    Int32 ambientcompressedsize;
+    Int32 ambientcompressionlevel;
+    Int32 ambientcompressiontype;
+
+    Int32 diffusedataoffset;
+    Int32 diffusecompressedsize;
+    Int32 diffusecompressionlevel;
+    Int32 diffusecompressiontype;
+
+    Int32 vectorsdataoffset;
+    Int32 vectorscompressedsize;
+    Int32 vectorscompressionlevel;
+    Int32 vectorscompressiontype;
+};
+
+struct dpbspv2lightgridnode_t
+{
+    dpbspv2lightgridnode_t()
+    {
+        for(Uint32 i = 0; i < 3; i++)
+			divisionpoint[i] = 0;
+
+         for(Uint32 i = 0; i < 8; i++)
+			children[i] = 0;
+    }
+
+    Int32 divisionpoint[3];
+    Int32 children[8];
+};
+
+struct dpbspv2lightgridleaf_t
+{
+    dpbspv2lightgridleaf_t():
+        firstsample(NO_POSITION),
+        numsamples(0)
+    {
+        for(Uint32 i = 0; i < 3; i++)
+			mins[i] = 0;
+
+        for(Uint32 i = 0; i < 3; i++)
+			size[i] = 0;
+    }
+
+	Int32 mins[3];
+	Int32 size[3];
+    
+    Int32 firstsample;
+    Int32 numsamples;
+};
+
+struct dpbspv2lightgridsample_t
+{
+    dpbspv2lightgridsample_t():
+        rawsampleoffset(NO_POSITION)
+    {
+        memset(styles, 0, sizeof(styles));
+    }
+
+	byte styles[PBSPV2_MAX_LIGHTMAPS];
+    Int32 rawsampleoffset;
+};
+
+struct dpbspv2brushside_t
+{
+    dpbspv2brushside_t():
+        planenum(0),
+        texinfo(0),
+		flags(0)
+    {}
+
+    Int32 planenum;
+    Int32 texinfo;
+	Int32 flags;
+};
+
+struct dpbspv2brush_t
+{
+    dpbspv2brush_t():
+        firstside(0),
+        numsides(0),
+        contents(0),
+		noclip(0)
+    {
+		for(Uint32 i = 0; i < 3; i++)
+		{
+			mins[i] = 0;
+			maxs[i] = 0;
+		}
+	}
+
+    Int32 firstside;
+    Int32 numsides;
+    Int32 contents;
+	Int32 noclip;
+
+	Float mins[3];
+	Float maxs[3];
 };
 #endif //PBSPV2FILE_H

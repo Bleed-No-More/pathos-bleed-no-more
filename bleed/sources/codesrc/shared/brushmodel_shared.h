@@ -13,6 +13,7 @@ All Rights Reserved.
 #include "bspv30file.h"
 #include "plane.h"
 #include "constants.h"
+#include "leafbrushbvh.h"
 
 // No lightmaps for this surface
 #define	TEXFLAG_SPECIAL		1
@@ -33,6 +34,49 @@ enum surf_lmap_layers_t
 
 	// Must be last
 	NB_SURF_LIGHTMAP_LAYERS
+};
+
+// Baked vertex lighting layers
+enum baked_vertexlight_layers_t
+{
+	VERTEX_LIGHTING_VECTORS = 0,
+	VERTEX_LIGHTING_AMBIENT,
+	VERTEX_LIGHTING_DIFFUSE,
+
+	// Must be last
+	NB_BAKED_VERTEXLIGHT_LAYERS
+};
+
+// Light grid layers
+enum lightgrid_data_layers_t
+{
+	LIGHTGRID_LAYER_VECTORS = 0,
+	LIGHTGRID_LAYER_AMBIENT,
+	LIGHTGRID_LAYER_DIFFUSE,
+
+	// Must be last
+	NB_LIGHTGRID_DATA_LAYERS
+};
+
+// Brush type based on texture
+enum brushtype_t
+{
+	BRUSHTYPE_NORMAL = 0,		// Normal structural brush, use it for bullets/visibility AND collisions
+	BRUSHTYPE_EDITOR_SPECIAL,	// HINT, SKIP, etc. Do not use for anything.
+	BRUSHTYPE_CLIP_BRUSH,		// Clipping hull brush, only use for non-point hull collisions
+	BRUSHTYPE_SKY,				// Sky brush
+
+	// Must be last
+	NB_BRUSH_TYPES
+};
+
+//
+// Light grid flags
+//
+enum lg_octree_flags_t
+{
+	FL_OCTREE_NODE_OCCLUDED	= (1<<31),	// Flag for if the entire bounds is occluded for a node
+	FL_OCTREE_NODE_LEAF		= (1<<30)	// Flag for if an octree node is a leaf
 };
 
 //
@@ -158,6 +202,59 @@ struct mnode_t
 	Uint32 numsurfaces;
 };
 
+
+struct mbrushside_t
+{
+	mbrushside_t():
+		ptexinfo(nullptr),
+		pplane(nullptr),
+		planeback(false),
+		isbevel(false)
+	{}
+
+	// Texinfo of surface
+	mtexinfo_t* ptexinfo;
+	// Plane of surface
+	plane_t* pplane;
+	// TRUE if normal is reversed
+	bool planeback;
+	// TRUE if bevel
+	bool isbevel;
+};
+
+
+struct mbrush_t
+{
+	mbrush_t():
+		contents(CONTENTS_NONE),
+		firstbrushside(0),
+		numbrushsides(0),
+		type(BRUSHTYPE_NORMAL),
+		checkcount(0),
+		noclip(0)
+	{}
+
+	// Contents(ie water, lava, slime, etc)
+	Int32 contents;
+	// First brush into leafbrushes array
+	Uint32 firstbrushside;
+	// Number of sides on brush
+	Uint32 numbrushsides;
+	// Brush type(standard structural, clip brush, editor special texture, etc)
+	brushtype_t type;
+	// Check counter
+	Uint64 checkcount;
+
+	// Brush mins
+	Vector mins;
+	// Brush maxs
+	Vector maxs;
+	// Brush centroid(used by BVH)
+	Vector centroid;
+	// TRUE if brush was generated without bevel brushes
+	bool noclip;
+};
+
 struct mleaf_t
 {
 	mleaf_t():
@@ -167,8 +264,17 @@ struct mleaf_t
 		pcompressedvis(nullptr),
 		pcompressedpas(nullptr),
 		pfirstmarksurface(nullptr),
-		nummarksurfaces(0)
+		nummarksurfaces(0),
+		pfirstleafbrush(nullptr),
+		numleafbrushes(0),
+		pleafbrushbvh(nullptr)
 	{
+	}
+
+	~mleaf_t()
+	{
+		if(pleafbrushbvh)
+			delete pleafbrushbvh;
 	}
 
 	// Node contents
@@ -193,6 +299,14 @@ struct mleaf_t
 	msurface_t** pfirstmarksurface;
 	// Number of marksurfaces
 	Uint32 nummarksurfaces;
+
+	// Leaf brushes pointer
+	mbrush_t** pfirstleafbrush;
+	// Number of leaf brushes
+	Uint32 numleafbrushes;
+
+	// Leaf brush BVH if present
+	class CLeafBrushBVH* pleafbrushbvh;
 };
 
 struct msurface_t
@@ -339,11 +453,122 @@ struct hull_t
 	Vector clipmaxs;
 };
 
+struct lightgridnode_t
+{
+	lightgridnode_t()
+	{
+		for(Uint32 i = 0; i < 3; i++)
+			divisionpoint[i] = 0;
+
+		for(Uint32 i = 0; i < 8; i++)
+			children[i] = 0;
+	}
+
+	Int32 divisionpoint[3];
+	Int32 children[8];
+};
+
+struct lightgridleaf_t
+{
+	lightgridleaf_t():
+		firstsample(NO_POSITION),
+		numsamples(0)
+	{
+		for(Uint32 i = 0; i < 3; i++)
+			mins[i] = 0;
+
+		for(Uint32 i = 0; i < 3; i++)
+			size[i] = 0;
+	}
+
+	Int32 mins[3];
+	Int32 size[3];
+
+	Int32 firstsample;
+	Int32 numsamples;
+};
+
+struct lightgridsample_t
+{
+	lightgridsample_t():
+		rawsampleoffset(NO_POSITION)
+	{
+		for(Uint32 i = 0; i < MAX_SURFACE_STYLES; i++)
+			styles[i] = 0;
+
+		for(Uint32 i = 0; i < NB_LIGHTGRID_DATA_LAYERS; i++)
+			plightdata[i] = nullptr;
+	}
+
+	byte styles[MAX_SURFACE_STYLES];
+	Int32 rawsampleoffset;
+	byte* plightdata[NB_LIGHTGRID_DATA_LAYERS];
+};
+
+struct lightgriddata_t
+{
+	lightgriddata_t():
+		rootnodeindex(NO_POSITION),
+		rawsampledatasize(0)
+	{
+		for(Uint32 i = 0; i < 3; i++)
+			gridscale[i] = 0;
+
+		for(Uint32 i = 0; i < 3; i++)
+			gridsize[i] = 0;
+
+		for(Uint32 i = 0; i < NB_LIGHTGRID_DATA_LAYERS; i++)
+		{
+			prawsampledata[i] = nullptr;
+			psampledata_original[i] = nullptr;
+			sampledatasize_original[i] = 0;
+			original_compressiontypes[i] = 0;
+			original_compressionlevels[i] = 0;
+		}
+	}
+
+	~lightgriddata_t()
+	{
+		for(Uint32 i = 0; i < NB_LIGHTGRID_DATA_LAYERS; i++)
+		{
+			if(psampledata_original[i] && psampledata_original[i] != reinterpret_cast<byte*>(prawsampledata[i]))
+			{
+				delete[] psampledata_original[i];
+				psampledata_original[i] = nullptr;
+			}
+
+			if(prawsampledata[i])
+			{
+				delete[] prawsampledata[i];
+				prawsampledata[i] = nullptr;
+			}
+		}
+	}
+
+	Float gridscale[3];
+	Int32 gridsize[3];
+	Vector gridmins;
+
+	Int32 rootnodeindex;
+
+	CArray<lightgridnode_t> nodes;
+	CArray<lightgridleaf_t> leaves;
+	CArray<lightgridsample_t> samples;
+
+	color24_t* prawsampledata[NB_LIGHTGRID_DATA_LAYERS];
+	byte* psampledata_original[NB_LIGHTGRID_DATA_LAYERS];
+	Uint32 sampledatasize_original[NB_LIGHTGRID_DATA_LAYERS];
+	Int32 original_compressiontypes[NB_LIGHTGRID_DATA_LAYERS];
+	Int32 original_compressionlevels[NB_LIGHTGRID_DATA_LAYERS];
+	Uint32 rawsampledatasize;
+};
+
 struct brushmodel_t
 {
 	brushmodel_t():
 		version(0),
 		freedata(false),
+		headnodeindex(0),
 		radius(0),
 		firstmodelsurface(0),
 		nummodelsurfaces(0),
@@ -375,7 +600,15 @@ struct brushmodel_t
 		visdatasize(0),
 		ppasdata(nullptr),
 		pasdatasize(0),
+		pbrushes(nullptr),
+		numbrushes(0),
+		pbrushsides(nullptr),
+		numbrushsides(0),
+		pleafbrushes(nullptr),
+		numleafbrushes(0),
+		plightgrid(nullptr),
 		lightdatasize(0),
+		vertexlightdatasize(0),
 		lightmaplayercount(0),
 		pentdata(nullptr),
 		entdatasize(0)
@@ -388,6 +621,15 @@ struct brushmodel_t
 			original_compressiontype[i] = 0;
 			original_compressionlevel[i] = 0;
 			plightdata_water[i] = nullptr;
+		}
+
+		for(Uint32 i = 0; i < NB_BAKED_VERTEXLIGHT_LAYERS; i++)
+		{
+			pvertexlightdata[i] = nullptr;
+			pvertexlightdata_original[i] = nullptr;
+			original_vertexlightdatasizes[i] = 0;
+			original_vertexlightcompressiontype[i] = 0;
+			original_vertexlightcompressionlevel[i] = 0;
 		}
 	}
 
@@ -427,6 +669,14 @@ struct brushmodel_t
 				delete[] pentdata;
 			if(hulls[0].pclipnodes)
 				delete[] hulls[0].pclipnodes;
+			if(plightgrid)
+				delete plightgrid;
+			if(pbrushes)
+				delete pbrushes;
+			if(pbrushsides)
+				delete pbrushsides;
+			if(pleafbrushes)
+				delete pleafbrushes;
 
 			for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
 			{
@@ -440,6 +690,22 @@ struct brushmodel_t
 				{
 					delete[] plightdata[i];
 					plightdata[i] = nullptr;
+				}
+
+			}
+
+			for(Uint32 i = 0; i < NB_BAKED_VERTEXLIGHT_LAYERS; i++)
+			{
+				if(pvertexlightdata_original[i] && pvertexlightdata_original[i] != reinterpret_cast<byte*>(pvertexlightdata[i]))
+				{
+					delete[] pvertexlightdata_original[i];
+					pvertexlightdata_original[i] = nullptr;
+				}
+
+				if(pvertexlightdata[i])
+				{
+					delete[] pvertexlightdata[i];
+					pvertexlightdata[i] = nullptr;
 				}
 			}
 		}
@@ -460,6 +726,9 @@ struct brushmodel_t
 	Int32 version;
 	// Tells if we should free our data
 	bool freedata;
+
+	// Head node for draw nodes
+	Int32 headnodeindex;
 
 	// for bounding boxes
 	Vector mins;
@@ -530,6 +799,21 @@ struct brushmodel_t
 	byte *ppasdata;
 	Uint32 pasdatasize;
 
+	// Brushes
+	mbrush_t* pbrushes;
+	Uint32 numbrushes;
+
+	// Brush sides
+	mbrushside_t* pbrushsides;
+	Uint32 numbrushsides;
+
+	// Leaf brushes
+	mbrush_t** pleafbrushes;
+	Uint32 numleafbrushes;
+
+	// Light grid data
+	lightgriddata_t* plightgrid;
+
 	// light data
 	color24_t* plightdata[NB_SURF_LIGHTMAP_LAYERS];
 	Uint32 lightdatasize;
@@ -542,6 +826,16 @@ struct brushmodel_t
 
 	// For water
 	color24_t* plightdata_water[NB_SURF_LIGHTMAP_LAYERS];
+
+	// Vertex light data
+	color24_t* pvertexlightdata[NB_BAKED_VERTEXLIGHT_LAYERS];
+	Uint32 vertexlightdatasize;
+
+	// Original vertex light data without decompression
+	byte* pvertexlightdata_original[NB_BAKED_VERTEXLIGHT_LAYERS];
+	Uint32 original_vertexlightdatasizes[NB_BAKED_VERTEXLIGHT_LAYERS];
+	Int32 original_vertexlightcompressiontype[NB_BAKED_VERTEXLIGHT_LAYERS];
+	Int32 original_vertexlightcompressionlevel[NB_BAKED_VERTEXLIGHT_LAYERS];
 
 	// Number of lightmap layers
 	Uint32 lightmaplayercount;

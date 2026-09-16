@@ -25,8 +25,9 @@ enum cmodel_type_t
 
 enum cmodel_cacheflags_t
 {
-	CACHE_FL_NONE		= 0,
-	CACHE_FL_HAS_MCD	= (1<<0)
+	CACHE_FL_NONE					= 0,
+	CACHE_FL_HAS_MCD				= (1<<0),
+	CACHE_FL_HAS_BRUSH_COLLISIONS	= (1<<1)
 };
 
 // Model cache structure
@@ -38,7 +39,6 @@ struct cache_model_t
 		type(MOD_NONE),
 		cacheindex(0),
 		isloaded(false),
-		radius(0),
 		pcachedata(nullptr)
 	{}
 
@@ -125,8 +125,6 @@ struct cache_model_t
 	Vector mins;
 	// Maxs of the model
 	Vector maxs;
-	// Radius of the model
-	Float radius;
 
 	// Pointer to cache data
 	void *pcachedata;

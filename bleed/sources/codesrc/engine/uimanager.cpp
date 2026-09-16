@@ -113,7 +113,7 @@ void CUIManager::Init( void )
 
 	CUIObject::SetRenderInterface(uiFuncs);
 
-	m_pSchemaManager = new CUISchemaManager(FL_GetInterface(), R_GetDummyTexture, R_LoadTexture, CL_GetSchemaFontSet, m_pFontSet);
+	m_pSchemaManager = new CUISchemaManager(FL_GetInterface(), R_GetDummyTexture, R_LoadTexture, CL_GetSchemaFontSet, m_pFontSet, "ui");
 	m_pSchemaManager->SetScreenResolution(gWindow.GetWidth(), gWindow.GetHeight());
 }
 

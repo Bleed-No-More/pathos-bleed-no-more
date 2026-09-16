@@ -38,7 +38,6 @@ CPlayerMovement::CPlayerMovement( void ):
 	m_pPlayerState(nullptr),
 	m_hullIndex(HULL_AUTO),
 	m_maxSpeed(0),
-	m_maxForwardSpeed(0),
 	m_oldWaterLevel(0),
 	m_planeZCap(0),
 	m_isOnLadder(false),
@@ -623,7 +622,7 @@ Int32 CPlayerMovement::ClipVelocity( const Vector& in, const Vector& normal, Vec
 //=============================================
 void CPlayerMovement::PreventMegaBunnyJumping( void )
 {
-	// Restore HL behavior for BNM
+	// Restore HL behavior
 	const Float bunnyJumpMaxSpeedFactor = 1.7;
 	Float maxScaledSpeed = bunnyJumpMaxSpeedFactor * m_maxSpeed;
 
@@ -855,7 +854,7 @@ bool CPlayerMovement::CheckWater( void )
 	m_pPlayerState->watertype = CONTENTS_EMPTY;
 
 	Int32 contents = m_traceInterface.pfnPointContents(checkpos, nullptr, false);
-	if(contents <= CONTENTS_WATER && contents  >= CONTENTS_LAVA)
+	if(contents <= CONTENTS_WATER && contents >= CONTENTS_LAVA)
 	{
 		m_pPlayerState->watertype = contents;
 		m_pPlayerState->waterlevel = WATERLEVEL_LOW;
@@ -866,7 +865,7 @@ bool CPlayerMovement::CheckWater( void )
 
 		checkpos[2] = m_pPlayerState->origin[2] + heighthalf;
 		contents = m_traceInterface.pfnPointContents(checkpos, nullptr, false);
-		if(contents <= CONTENTS_WATER && contents  >= CONTENTS_LAVA)
+		if(contents <= CONTENTS_WATER && contents >= CONTENTS_LAVA)
 		{
 			m_pPlayerState->waterlevel = WATERLEVEL_MID;
 
@@ -874,7 +873,7 @@ bool CPlayerMovement::CheckWater( void )
 			checkpos[2] = m_pPlayerState->origin[2] + m_pPlayerState->view_offset[2];
 
 			contents = m_traceInterface.pfnPointContents(checkpos, nullptr, false);
-			if(contents <= CONTENTS_WATER && contents  >= CONTENTS_LAVA)
+			if(contents <= CONTENTS_WATER && contents >= CONTENTS_LAVA)
 				m_pPlayerState->waterlevel = WATERLEVEL_FULL;
 		}
 	}
@@ -937,11 +936,8 @@ const entity_state_t* CPlayerMovement::GetLadder( void )
 		if(pentity->skin == CONTENTS_LADDER)
 		{
 			Vector offset, test;
-			const hull_t* phull = m_traceInterface.pfnHullForBSP(pentity->entindex, m_hullIndex, &offset);
-			Int32 firstclipnode = phull->firstclipnode;
-
 			Math::VectorSubtract( m_pPlayerState->origin, offset, test );
-			if(m_traceInterface.pfnHullPointContents(phull, firstclipnode, test) == CONTENTS_EMPTY)
+			if(m_traceInterface.pfnHullPointContents(pentity->entindex, m_hullIndex, test) == CONTENTS_EMPTY)
 				continue;
 
 			return pentity;
@@ -1159,10 +1155,7 @@ void CPlayerMovement::Move_Water( void )
 	{
 		// Cap swim speed
 		if(m_pPlayerState->waterlevel >= 3)
-		{
-			m_maxForwardSpeed = PLAYER_SWIM_SPEED;
 			m_maxSpeed = PLAYER_SWIM_SPEED;
-		}
 
 		if((m_pPlayerState->waterlevel >= WATERLEVEL_FULL && m_pPlayerState->groundent != NO_ENTITY_INDEX
 			|| m_pPlayerState->waterlevel >= WATERLEVEL_MID && m_pPlayerState->groundent == NO_ENTITY_INDEX)
@@ -1275,11 +1268,12 @@ void CPlayerMovement::AirAccelerate( const Vector& wishdir, Float wishspeed, Flo
 	if(m_pPlayerState->flags & FL_DEAD || m_pPlayerState->waterjumptime)
 		return;
 
-	if(wishspeed > AIR_ACCELERATE_MAX_SPEED)
-		wishspeed = AIR_ACCELERATE_MAX_SPEED;
+	Float _wishspeed = wishspeed;
+	if(_wishspeed > AIR_ACCELERATE_MAX_SPEED)
+		_wishspeed = AIR_ACCELERATE_MAX_SPEED;
 
 	Float currspeed = Math::DotProduct(m_pPlayerState->velocity, wishdir);
-	Float addspeed = wishspeed - currspeed;
+	Float addspeed = _wishspeed - currspeed;
 	if(addspeed <= 0)
 		return;
 
@@ -1335,7 +1329,6 @@ void CPlayerMovement::Move_Air( void )
 
 	Vector wishdir = wishvel;
 	Float wishspeed = Math::VectorNormalize(wishdir);
-
 	if(wishspeed > m_maxSpeed)
 	{
 		Math::VectorScale(wishvel, m_maxSpeed/wishspeed, wishvel);
@@ -1357,14 +1350,6 @@ void CPlayerMovement::Move_Air( void )
 //=============================================
 void CPlayerMovement::DetermineTextureType( void )
 {
-	Vector sideOffset;
-	sideOffset = m_vRight * 16;
-	if(m_pPlayerState->stepleft)
-		Math::VectorScale(sideOffset, -1, sideOffset);
-
-	Vector start = m_pPlayerState->origin + sideOffset;
-	Vector end = start - Vector(0, 0, 64);
-
 	if(m_pPlayerState->movetype == MOVETYPE_FLY)
 	{
 		m_pTextureMaterial = &m_defaultMaterial;
@@ -1374,14 +1359,32 @@ void CPlayerMovement::DetermineTextureType( void )
 	// Clear this
 	m_pTextureMaterial = nullptr;
 
+	const Float sideDist = 16;
+	Vector sideOffset;
+	sideOffset = m_vRight * sideDist;
+	if(m_pPlayerState->stepleft)
+		Math::VectorScale(sideOffset, -1, sideOffset);
+
+	Float height = SDL_fabs(m_pPMInfo->player_mins[m_hullIndex][2]);
+	Vector start = m_pPlayerState->origin - Vector(0, 0, height) + Vector(0, 0, (sideDist + 2)) + sideOffset;
+	Vector end = start - Vector(0, 0, 64);
+
 	trace_t tr;
 	m_traceInterface.pfnPlayerTrace(start, end, FL_TRACE_NORMAL, HULL_POINT, NO_ENTITY_INDEX, tr);
 	if(tr.fraction == 1.0)
 	{
-		if(m_pPlayerState->groundent != NO_ENTITY_INDEX)
-			m_pTextureMaterial = &m_defaultMaterial;
-		
-		return;
+		// Try again without the side offsets
+		start = m_pPlayerState->origin - Vector(0, 0, height) + Vector(0, 0, 4);
+		end = start - Vector(0, 0, 64);
+
+		m_traceInterface.pfnPlayerTrace(start, end, FL_TRACE_NORMAL, HULL_POINT, NO_ENTITY_INDEX, tr);
+		if(tr.fraction == 1.0)
+		{
+			if(m_pPlayerState->groundent != NO_ENTITY_INDEX)
+				m_pTextureMaterial = &m_defaultMaterial;
+
+			return;
+		}
 	}
 
 	const entity_state_t* pstate = m_pmInterface.pfnGetEntityState(tr.hitentity);
@@ -2076,28 +2079,17 @@ void CPlayerMovement::RunMovement( const usercmd_t& cmd, pm_info_t* pminfo, bool
 	if(m_pPlayerState->flags & FL_ON_BIKE)
 	{
 		m_maxSpeed = MOTORBIKE_MAX_SPEED;
-		m_maxForwardSpeed = MOTORBIKE_MAX_SPEED;
 
-		// Save client acceleration
 		m_pPlayerState->fuser2 = cmd.forwardmove;
 	}
 	else
 	{
 		if(m_pPlayerState->movetype == MOVETYPE_NOCLIP)
-		{
 			m_maxSpeed = PLAYER_NOCLIP_SPEED;
-			m_maxForwardSpeed = PLAYER_NOCLIP_SPEED;
-		}
 		else if(m_pPlayerState->flags & FL_SLOWMOVE)
-		{
 			m_maxSpeed = PLAYER_SNEAK_SPEED;
-			m_maxForwardSpeed = PLAYER_SNEAK_SPEED;
-		}
 		else
-		{
 			m_maxSpeed = PLAYER_NORMAL_SPEED;
-			m_maxForwardSpeed = PLAYER_NORMAL_SPEED;
-		}
 	}
 
 	// Perform movement

@@ -186,7 +186,7 @@ CBaseNPC::CBaseNPC( edict_t* pedict ):
 	m_scheduleTaskIndex(0),
 	m_failureScheduleIndex(AI_SCHED_NONE),
 	m_nextScheduleIndex(AI_SCHED_NONE),
-	m_ownPositionNavigability(false),
+	m_lastCheckedPositionNavigability(false),
 	m_npcState(0),
 	m_idealNPCState(0),
 	m_currentScheduleIndex(0),
@@ -1204,7 +1204,9 @@ void CBaseNPC::BecomeDead( bool startedDead )
 		Float blastVelocity = upDp * Common::RandomFloat(250, 350) + (1.0 - upDp) * Common::RandomFloat(1250, 1450);
 
 		// Set angles
-		m_pState->angles = Math::VectorToAngles(-gMultiDamage.GetShotDirection());
+		Vector angles = Math::VectorToAngles(-gMultiDamage.GetShotDirection());
+		SetAngles(angles);
+
 		m_pState->idealyaw = m_pState->angles[YAW];
 		m_updateYaw = false;
 
@@ -1529,7 +1531,7 @@ bool CBaseNPC::TakeDamage( CBaseEntity* pInflictor, CBaseEntity* pAttacker, Floa
 			// Set velocity and angles
 			const Float blowbackReferenceDmg = 100;
 			m_pState->velocity += -m_damageDirection * Common::RandomFloat(155, 225) * (_dmgAmount / blowbackReferenceDmg) * GetBlowbackDmgAccelerationMultiplier();
-			m_pState->angles[YAW] = Util::VectorToYaw(m_damageDirection);
+			SetYaw(Util::VectorToYaw(m_damageDirection));
 			m_pState->idealyaw = m_pState->angles[YAW];
 			m_updateYaw = false;
 
@@ -1637,7 +1639,9 @@ bool CBaseNPC::TakeDamageDead( CBaseEntity* pInflictor, CBaseEntity* pAttacker, 
 
 		// Set angles
 		m_pState->flags &= FL_ONGROUND;
-		m_pState->angles = Math::VectorToAngles(-gMultiDamage.GetShotDirection());
+		Vector angles = Math::VectorToAngles(-gMultiDamage.GetShotDirection());
+		SetAngles(angles);
+
 		m_pState->idealyaw = m_pState->angles[YAW];
 		m_updateYaw = false;
 
@@ -1920,7 +1924,10 @@ void CBaseNPC::StartNPC( void )
 		if(!HasSpawnFlag(FL_NPC_DONT_FALL))
 		{
 			// Raise the NPC off the floor, then drop him
-			m_pState->origin.z += 1.0f;
+			Vector raisedOrigin = m_pState->origin;
+			raisedOrigin.z += 1.0f;
+			SetOrigin(raisedOrigin);
+
 			gd_engfuncs.pfnDropToFloor(m_pEdict);
 
 			if(!gd_engfuncs.pfnWalkMove(m_pEdict, 0, 0, WALKMOVE_NORMAL))
@@ -2350,15 +2357,13 @@ void CBaseNPC::CleanupScriptedSequence( void )
 			if((m_pState->origin - bonePosition).Length2D() > NPC_SCRIPT_MOVE_MIN_DIST)
 			{
 				Vector prevOrigin = m_pState->origin;
-				m_pState->origin[0] = bonePosition[0];
-				m_pState->origin[1] = bonePosition[1];
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+				Vector newOrigin = bonePosition;
+				newOrigin.z = prevOrigin.z;
+
+				SetOrigin(newOrigin);
 
 				if(!gd_engfuncs.pfnWalkMove(m_pEdict, 0, 0, WALKMOVE_NORMAL))
-				{
-					m_pState->origin = prevOrigin;
-					gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
-				}
+					SetOrigin(prevOrigin);
 			}
 
 			// Set ideal yaw to current angles
@@ -2374,7 +2379,7 @@ void CBaseNPC::CleanupScriptedSequence( void )
 		GroundEntityNudge();
 
 	// Link it back to the world
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pEdict->state.origin);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pEdict->state.origin, false);
 
 	// Clear enemy
 	m_enemy.reset();
@@ -2550,16 +2555,41 @@ void CBaseNPC::GroundEntityNudge( bool noExceptions )
 			return;
 	}
 
-	// Move the NPC up a bit, then drop him
 	Vector preNudgeOrigin = m_pState->origin;
-	m_pState->flags &= ~FL_ONGROUND;
-	m_pState->origin.z += 4;
+	bool succeeded = false;
 
-	if(!gd_engfuncs.pfnDropToFloor(m_pEdict))
+	// Try cheap one first
+	Vector nudgeOrigin = preNudgeOrigin;
+	nudgeOrigin.z += 4;
+
+	SetOrigin(nudgeOrigin);
+	m_pState->flags &= ~FL_ONGROUND;
+
+	if(gd_engfuncs.pfnDropToFloor(m_pEdict))
+		succeeded = true;
+
+	if(!succeeded)
 	{
-		// If nudge fails, re-set the previous origin
-		gd_engfuncs.pfnSetOrigin(m_pEdict, preNudgeOrigin);
+		Float distance = 0;
+		for(; distance <= 4.0f; distance += 0.25f)
+		{
+			// Move the NPC up a bit, then drop him
+			nudgeOrigin = preNudgeOrigin;
+			nudgeOrigin.z += distance;
+
+			SetOrigin(nudgeOrigin);
+			m_pState->flags &= ~FL_ONGROUND;
+
+			if(gd_engfuncs.pfnDropToFloor(m_pEdict))
+			{
+				succeeded = true;
+				break;
+			}
+		}
 	}
+
+	if(!succeeded)
+		SetOrigin(preNudgeOrigin);
 }
 
 //=============================================
@@ -2568,7 +2598,7 @@ void CBaseNPC::GroundEntityNudge( bool noExceptions )
 //=============================================
 Float CBaseNPC::GetYawDifference( void )
 {
-	Float currentYaw = Math::AngleMod(m_pState->angles[1]);
+	Float currentYaw = Math::AngleMod(m_pState->angles[YAW]);
 	if(currentYaw != m_pState->idealyaw)
 		return Util::AngleDistance(m_pState->idealyaw, currentYaw);
 	else
@@ -2611,7 +2641,7 @@ void CBaseNPC::ChangeYaw( Double timeInterval )
 			yawMove = -yawSpeed;
 
 		// Set the yaw angle
-		m_pState->angles[YAW] = Math::AngleMod(currentYaw+yawMove);
+		SetYaw(Math::AngleMod(currentYaw+yawMove));
 
 		// Turn head in desired direction if we can turn heads
 		if(HasCapability(AI_CAP_TURN_HEAD))
@@ -2861,21 +2891,30 @@ void CBaseNPC::UpdateDistances( void )
 	Int32 endDistance = CEnvFog::GetFogEndDistance();
 	if(endDistance > 0)
 	{
+		// Get fog color also
+		color24_t& fogColor = CEnvFog::GetFogColor();
+		Float colorStrength = (fogColor.r / 255.0f + fogColor.g / 255.0f + fogColor.b / 255.0f) / 3.0f;
+
 		// These fractions should depend on fog end distance
 		Float minVisibilityFraction;
 		Float minFiringFractionEdgeCase;
 		Float minFiringFractionGeneric;
-		if(endDistance < 2000)
+		if(colorStrength < 0.25)
+		{
+			minVisibilityFraction = 0.9;
+			minFiringFractionEdgeCase = 0.4;
+			minFiringFractionGeneric = 0.5;
+		}
+		else if(endDistance < 2000)
 		{
 			minVisibilityFraction = 0.9;
 			minFiringFractionEdgeCase = 0.6;
 			minFiringFractionGeneric = 0.7;
 		}
-		else
 		{
 			minVisibilityFraction = 0.9;
-			minFiringFractionEdgeCase = 0.8;
-			minFiringFractionGeneric = 0.8;
+			minFiringFractionEdgeCase = 0.7;
+			minFiringFractionGeneric = 0.7;
 		}
 
 		// Put visibility at very edge
@@ -3248,7 +3287,7 @@ void CBaseNPC::CorpseFallThink( void )
 		SetThink(nullptr);
 
 		SetSequenceBox(false);
-		gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+		gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 	}
 	else
 	{
@@ -3340,7 +3379,7 @@ npcstate_t CBaseNPC::GetIdealNPCState( void )
 					m_enemy.reset();
 
 				m_idealNPCState = NPC_STATE_ALERT;
-				Util::EntityConPrintf(m_pEdict, "Combat state with no enemy.\n");
+				Util::EntityConDPrintf(m_pEdict, "Combat state with no enemy.\n");
 			}
 		}
 		break;
@@ -3958,6 +3997,9 @@ void CBaseNPC::SimplifyRoute( CBaseEntity* pTargetEntity )
 	// Terminate the route
 	if(i < MAX_ROUTE_POINTS)
 		m_routePointsArray[i].type = MF_NONE;
+
+	// Make sure this is reset
+	m_routePointIndex = 0;
 }
 
 //=============================================
@@ -4468,7 +4510,7 @@ bool CBaseNPC::FindCover( const Vector& threatPosition, const Vector& viewOffset
 	}
 
 	// Get threat's node
-	Int32 threatNode = gNodeGraph.GetNearestNode(threatPosition, pThreatEntity ? pThreatEntity : this);
+	Int32 threatNode = gNodeGraph.GetNearestNode(threatPosition, pThreatEntity ? pThreatEntity : this, nullptr, -1, nullptr, true);
 	if(threatNode == NO_POSITION)
 		threatNode = startNode;
 
@@ -4482,9 +4524,9 @@ bool CBaseNPC::FindCover( const Vector& threatPosition, const Vector& viewOffset
 		Vector skyOffset = m_pState->origin + Vector(0, 0, 4096);
 
 		trace_t tr;
-		Util::TraceLine(m_pState->origin, skyOffset, true, false, m_pEdict, tr);
+		Util::TraceLine(m_pState->origin, skyOffset, true, false, true, false, true, m_pEdict, tr);
 
-		bool isThreatOutdoors = (gd_tracefuncs.pfnPointContents(tr.endpos, nullptr, false) == CONTENTS_SKY) ? true : false;
+		bool isThreatOutdoors = tr.hasContents(CONTENTS_SKY) ? true : false;
 
 		Int32 nodeIndex = NO_POSITION;
 		for(Int32 i = 0; i < gNodeGraph.GetNumNodes(); i++)
@@ -4509,8 +4551,8 @@ bool CBaseNPC::FindCover( const Vector& threatPosition, const Vector& viewOffset
 			}
 
 			skyOffset = pNode->origin + Vector(0, 0, 4096);
-			Util::TraceLine(pNode->origin, skyOffset, true, false, m_pEdict, tr);
-			bool isNodeOutdoors = gd_tracefuncs.pfnPointContents(tr.endpos, nullptr, false) == CONTENTS_SKY ? true : false;
+			Util::TraceLine(pNode->origin, skyOffset, true, false, true, false, true, m_pEdict, tr);
+			bool isNodeOutdoors = tr.hasContents(CONTENTS_SKY) ? true : false;
 			if(isNodeOutdoors && isThreatOutdoors || !isNodeOutdoors && !isThreatOutdoors)
 				continue;
 
@@ -5847,7 +5889,7 @@ bool CBaseNPC::GetWeaponDropPosition( Uint32 attachmentIndex, Vector& outPositio
 // @brief
 //
 //=============================================
-CBaseEntity* CBaseNPC::DropItem( weaponid_t weaponId, Uint32 attachmentIndex, bool wasGibbed )
+CBaseEntity* CBaseNPC::DropItem( weaponid_t weaponId, Uint32 attachmentIndex, bool wasGibbed, Int32 clipAmmoCount )
 {
 	if(weaponId <= WEAPON_NONE || WEAPON_NONE >= NUM_WEAPONS)
 		return nullptr;
@@ -5904,6 +5946,9 @@ CBaseEntity* CBaseNPC::DropItem( weaponid_t weaponId, Uint32 attachmentIndex, bo
 		Util::RemoveEntity(pEntity);
 		return nullptr;
 	}
+
+	if(clipAmmoCount != -1)
+		pEntity->SetDefaultAmmo(clipAmmoCount);
 
 	return pEntity;
 }
@@ -6097,7 +6142,7 @@ bool CBaseNPC::WalkMoveTrace( const Vector& origin, const Vector& moveDirection,
 	bool traceResult = true;
 
 	// Move NPC to the start of the move
-	gd_engfuncs.pfnSetOrigin(m_pEdict, startPosition);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, startPosition, false);
 
 	// Make sure we're on the floor
 	if(!(m_pState->flags & (FL_FLY|FL_SWIM)))
@@ -6162,7 +6207,7 @@ bool CBaseNPC::WalkMoveTrace( const Vector& origin, const Vector& moveDirection,
 	// Set output position
 	outPosition = lastValidPosition;
 	// Since we've actually moved the NPC, move him back
-	gd_engfuncs.pfnSetOrigin(m_pEdict, originalPosition);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, originalPosition, false);
 
 	// Restore original state
 	m_pState->flags = savedFlags;
@@ -6184,36 +6229,53 @@ localmove_t CBaseNPC::CheckLocalMove( const Vector startPosition, const Vector& 
 	// Save these for after-test restore
 	Uint64 savedFlags = m_pState->flags;
 	entindex_t savedGroundEntity = m_pState->groundent;
-
-	// Move NPC to start position and drop him to the floor
 	Vector moveStart = m_pState->origin;
-	gd_engfuncs.pfnSetOrigin(m_pEdict, startPosition);
 
 	// Drop entity to floor
 	if(!(m_pState->flags & (FL_FLY|FL_SWIM)))
 		gd_engfuncs.pfnDropToFloor(m_pEdict);
 
 	// Make sure it's a valid position, not something inside a solid
-	if(!Math::VectorCompare(m_pState->origin, m_lastCheckedNavigabilityPosition))
+	Vector localStartPosition = startPosition;
+	gd_engfuncs.pfnSetOrigin(m_pEdict, localStartPosition, false);
+
+	if(!Math::VectorCompare(localStartPosition, m_lastCheckedNavigabilityPosition))
 	{
-		m_ownPositionNavigability = IsPositionNavigable(endPosition);
-		m_lastCheckedNavigabilityPosition = m_pState->origin;
+		m_lastCheckedPositionNavigability = IsPositionNavigable(localStartPosition);
+		m_lastCheckedNavigabilityPosition = localStartPosition;
 
-		if(!m_ownPositionNavigability)
+		if(!m_lastCheckedPositionNavigability)
 		{
-			m_pState->flags = savedFlags;
-			m_pState->groundent = savedGroundEntity;
+			Vector checkPosition = localStartPosition + Vector(0, 0, 4);
+			gd_engfuncs.pfnSetOrigin(m_pEdict, checkPosition, false);
 
-			gd_engfuncs.pfnSetOrigin(m_pEdict, moveStart);
-			return LOCAL_MOVE_INVALID_NO_TRIANGULATION;
+			if(!(m_pState->flags & (FL_FLY|FL_SWIM)))
+				gd_engfuncs.pfnDropToFloor(m_pEdict);
+
+			localStartPosition = m_pEdict->state.origin;
+
+			if(!IsPositionNavigable(localStartPosition))
+			{
+				m_pState->flags = savedFlags;
+				m_pState->groundent = savedGroundEntity;
+
+				gd_engfuncs.pfnSetOrigin(m_pEdict, moveStart, false);
+				return LOCAL_MOVE_INVALID_NO_TRIANGULATION;
+			}
+			else
+			{
+				// This position is valid after being nudged
+				gd_engfuncs.pfnSetOrigin(m_pEdict, localStartPosition, false);
+				m_lastCheckedPositionNavigability = true;
+			}
 		}
 	}
 
 	// Reset blocker entity
 	m_blockerEntity.reset();
 	
-	Float yaw = Util::VectorToYaw(endPosition - startPosition);
-	Float distance = (endPosition - startPosition).Length2D();
+	Float yaw = Util::VectorToYaw(endPosition - localStartPosition);
+	Float distance = (endPosition - localStartPosition).Length2D();
 
 	// Result of move
 	localmove_t moveResult = LOCAL_MOVE_VALID;
@@ -6296,7 +6358,7 @@ localmove_t CBaseNPC::CheckLocalMove( const Vector startPosition, const Vector& 
 
 	// Since we've actually moved the NPC, move him back
 	Vector moveEnd = m_pState->origin;
-	gd_engfuncs.pfnSetOrigin(m_pEdict, moveStart);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, moveStart, false);
 
 	if(!(m_pState->flags & (FL_FLY|FL_SWIM)) && (!pTargetEntity || pTargetEntity->GetFlags() & FL_ONGROUND))
 	{
@@ -6325,8 +6387,8 @@ Double CBaseNPC::OpenDoor( CBaseEntity* pDoorEntity )
 		return g_pGameVars->time;
 
 	if(pDoorEntity->HasSpawnFlag(CFuncDoor::FL_NO_NPCS)
-		|| pDoorEntity->GetToggleState() == TS_AT_TOP
-		|| pDoorEntity->GetToggleState() == TS_GOING_UP)
+		|| pDoorEntity->GetToggleState() == TSTATE_AT_TOP
+		|| pDoorEntity->GetToggleState() == TSTATE_GOING_UP)
 		return g_pGameVars->time;
 
 	// Trigger the door to open
@@ -6365,7 +6427,16 @@ Double CBaseNPC::OpenDoor( CBaseEntity* pDoorEntity )
 	if(!linkEntityArray.empty())
 	{
 		for(Uint32 i = 0; i < linkEntityArray.size(); i++)
+		{
+			CBaseEntity* pLinkEntity = linkEntityArray[i];
+
+			if(pLinkEntity->HasSpawnFlag(CFuncDoor::FL_NO_NPCS)
+				|| pLinkEntity->GetToggleState() == TSTATE_AT_TOP
+				|| pLinkEntity->GetToggleState() == TSTATE_GOING_UP)
+				continue;
+
 			linkEntityArray[i]->CallUse(this, this, USE_ON, 0);
+		}
 	}
 
 	return g_pGameVars->time + openTime;
@@ -6534,14 +6605,15 @@ bool CBaseNPC::UpdateRoute( CBaseEntity* pTargetEntity, const Vector& destinatio
 		lastPointIndex = i;
 	}
 
-	if(lastPointIndex == NO_POSITION)
+	if(lastPointIndex == NO_POSITION || lastPointIndex < 2)
 		return false;
 
 	// Try going straight for them
 	route_point_t& lastPoint = m_routePointsArray[lastPointIndex];
-	if(lastPoint.type & MF_IS_GOAL)
+	route_point_t& secondLastPoint = m_routePointsArray[lastPointIndex-1];
+	if(lastPointIndex > 0 && lastPoint.type & MF_IS_GOAL)
 	{
-		localmove_t moveResult = CheckLocalMove(m_pState->origin, destination, m_movementGoalEntity);
+		localmove_t moveResult = CheckLocalMove(secondLastPoint.position, destination, m_movementGoalEntity);
 		if(moveResult > LOCAL_MOVE_RESULT_FAILURE)
 		{
 			if(m_enemy && m_enemy == reinterpret_cast<const CBaseEntity*>(pTargetEntity))
@@ -6568,21 +6640,21 @@ bool CBaseNPC::UpdateRoute( CBaseEntity* pTargetEntity, const Vector& destinatio
 
 	// the "destination" variable should already be coming from GetNavigableOrigin
 	// if the destination is an NPC
-	Int32 destNode = gNodeGraph.GetNearestNode( destination, this, pTargetEntity );
+	Int32 destNode = gNodeGraph.GetNearestNode( destination, this, pTargetEntity, -1, nullptr, true );
 	if(destNode == NO_POSITION)
 		return false;
 
 	Int32 srcNode;
-	if(lastPoint.nodeindex == NO_POSITION)
+	if(secondLastPoint.nodeindex == NO_POSITION)
 	{
-		srcNode = gNodeGraph.GetNearestNode(lastPoint.position, this, pTargetEntity);
+		srcNode = gNodeGraph.GetNearestNode(secondLastPoint.position, this, pTargetEntity);
 		if(srcNode == NO_POSITION)
 			return false;
 	}
 	else
 	{
 		// Just use the already present node index
-		srcNode = lastPoint.nodeindex;
+		srcNode = secondLastPoint.nodeindex;
 	}
 
 	// If target is still reachable by last node, only update destination
@@ -6634,6 +6706,10 @@ bool CBaseNPC::UpdateRoute( CBaseEntity* pTargetEntity, const Vector& destinatio
 
 	// Set this always
 	m_movementGoalPosition = destination;
+
+	// Try to simplify the route
+	SimplifyRoute(pTargetEntity);
+
 	return true;
 }
 
@@ -6647,15 +6723,30 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 	NewRoute();
 	
 	// Make sure it's a valid position, not something inside a solid
+	Vector destinationPosition = destination;
 	if(!IsPositionNavigable(destination))
 	{
-		route_point_t& firstPoint = m_routePointsArray[0];
-		firstPoint.position = destination;
-		firstPoint.type = moveFlags | MF_IS_GOAL;
-		firstPoint.nodeindex = NO_POSITION;
-		m_routePointsArray[1].type = MF_NONE;
-		ShowRoute(false, MAX_ROUTE_POINTS, destination);
-		return false;
+		// If the previous failed, try lifting the NPC off the ground
+		Vector prevPosition = m_pState->origin;
+		Vector checkPosition = destinationPosition + Vector(0, 0, 4);
+		gd_engfuncs.pfnSetOrigin(m_pEdict, checkPosition, false);
+
+		if(!(m_pState->flags & (FL_FLY|FL_SWIM)))
+			gd_engfuncs.pfnDropToFloor(m_pEdict);
+
+		destinationPosition = m_pEdict->state.origin;
+		gd_engfuncs.pfnSetOrigin(m_pEdict, prevPosition, false);
+
+		if(!IsPositionNavigable(destinationPosition))
+		{
+			route_point_t& firstPoint = m_routePointsArray[0];
+			firstPoint.position = destinationPosition;
+			firstPoint.type = moveFlags | MF_IS_GOAL;
+			firstPoint.nodeindex = NO_POSITION;
+			m_routePointsArray[1].type = MF_NONE;
+			ShowRoute(false, MAX_ROUTE_POINTS, destinationPosition);
+			return false;
+		}
 	}
 
 	// Set movement goal and entity
@@ -6664,7 +6755,7 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 
 	// Set first route point always
 	route_point_t& firstPoint = m_routePointsArray[0];
-	firstPoint.position = destination;
+	firstPoint.position = destinationPosition;
 	firstPoint.type = moveFlags | MF_IS_GOAL;
 	firstPoint.nodeindex = NO_POSITION;
 
@@ -6673,8 +6764,8 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 	Vector apexPosition;
 	Float moveDistance = -1;
 	localmove_t moveResult = LOCAL_MOVE_INVALID_NO_TRIANGULATION;
-	if(!(moveFlags & MF_TO_ENEMY) || SDL_fabs(m_pState->origin.z - destination.z) < NPC_TRIANGULATION_MAX_HEIGHT)
-		moveResult = CheckLocalMove(m_pState->origin, destination, pTargetEntity, &moveDistance, true);
+	if(!(moveFlags & MF_TO_ENEMY) || SDL_fabs(m_pState->origin.z - destinationPosition.z) < NPC_TRIANGULATION_MAX_HEIGHT)
+		moveResult = CheckLocalMove(m_pState->origin, destinationPosition, pTargetEntity, &moveDistance, true);
 
 	if(moveResult > LOCAL_MOVE_RESULT_FAILURE)
 	{
@@ -6682,10 +6773,10 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 		m_routePointsArray[1].type = MF_NONE;
 
 		// We can go there straight
-		ShowRoute(false, MAX_ROUTE_POINTS, destination);
+		ShowRoute(false, MAX_ROUTE_POINTS, destinationPosition);
 		return true;
 	}
-	else if(moveResult != LOCAL_MOVE_INVALID_NO_TRIANGULATION && AttemptTriangulation(m_pState->origin, destination, moveDistance, pTargetEntity, &apexPosition))
+	else if(moveResult != LOCAL_MOVE_INVALID_NO_TRIANGULATION && AttemptTriangulation(m_pState->origin, destinationPosition, moveDistance, pTargetEntity, &apexPosition))
 	{
 		// Set first position to the apex position
 		firstPoint.position = apexPosition;
@@ -6694,24 +6785,24 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 
 		// Set destination
 		route_point_t& destPoint = m_routePointsArray[1];
-		destPoint.position = destination;
+		destPoint.position = destinationPosition;
 		destPoint.type = (moveFlags | MF_IS_GOAL);
 		destPoint.nodeindex = NO_POSITION;
 
 		// Set last point to none
 		m_routePointsArray[2].type = MF_NONE;
 
-		ShowRoute(false, MAX_ROUTE_POINTS, destination);
+		ShowRoute(false, MAX_ROUTE_POINTS, destinationPosition);
 		return true;
 	}
-	else if(BuildNodeRoute(destination, pTargetEntity))
+	else if(BuildNodeRoute(destinationPosition, pTargetEntity))
 	{
-		m_movementGoalPosition = destination;
+		m_movementGoalPosition = destinationPosition;
 		SimplifyRoute(pTargetEntity);
-		ShowRoute(false, MAX_ROUTE_POINTS, destination);
+		ShowRoute(false, MAX_ROUTE_POINTS, destinationPosition);
 		return true;
 	}
-
+	/*
 	// HACK: Teleport the NPC if he's stuck on a scripted_sequence, so
 	// we don't end up locking the game
 	if(m_npcState == NPC_STATE_SCRIPT 
@@ -6721,7 +6812,7 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 		&& !m_distanceTravelled)
 	{
 		Vector savedOrigin = m_pState->origin;
-		gd_engfuncs.pfnSetOrigin(m_pEdict, destination);
+		gd_engfuncs.pfnSetOrigin(m_pEdict, destinationPosition, false);
 
 		// Make sure it's a valid position
 		if(!gd_engfuncs.pfnWalkMove(m_pEdict, 0, 0, WALKMOVE_CHECKONLY))
@@ -6732,14 +6823,14 @@ bool CBaseNPC::BuildRoute( const Vector& destination, Uint64 moveFlags, CBaseEnt
 				if(pHitEntity && (pHitEntity->IsNPC() || pHitEntity->IsPlayer()))
 				{
 					// Failed, try again later
-					gd_engfuncs.pfnSetOrigin(m_pEdict, savedOrigin);
+					gd_engfuncs.pfnSetOrigin(m_pEdict, savedOrigin, false);
 				}
 			}
 		}
 
 		// Try to nudge the NPC
 		GroundEntityNudge();
-	}
+	}*/
 
 	return false;
 }
@@ -6755,24 +6846,13 @@ bool CBaseNPC::IsPositionNavigable( const Vector& position )
 
 	// Remember original position
 	Vector moveStart = m_pState->origin;
-	gd_engfuncs.pfnSetOrigin(m_pEdict, position);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, position, false);
 
 	// See result of moving in said location
 	bool checkResult = gd_engfuncs.pfnWalkMove(m_pEdict, 0, 0, WALKMOVE_NO_NPCS);
-	if(!checkResult)
-	{
-		// If the previous failed, try lifting NPC off the ground
-		Vector checkPosition = position + Vector(0, 0, 4);
-		gd_engfuncs.pfnSetOrigin(m_pEdict, position);
-
-		if(!(m_pState->flags & (FL_FLY|FL_SWIM)))
-			gd_engfuncs.pfnDropToFloor(m_pEdict);
-
-		checkResult = gd_engfuncs.pfnWalkMove(m_pEdict, 0, 0, WALKMOVE_NO_NPCS);
-	}
 
 	// Always restore original position
-	gd_engfuncs.pfnSetOrigin(m_pEdict, moveStart);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, moveStart, false);
 
 	// Restore original state
 	m_pState->flags = savedFlags;
@@ -6892,10 +6972,10 @@ bool CBaseNPC::BuildNodeRoute( const Vector& destination, CBaseEntity* pTargetEn
 	}
 
 	// Get end node
-	Int32 endNode = gNodeGraph.GetNearestNode(destination, nodeTypeBits, this, pTargetEntity);
+	Int32 endNode = gNodeGraph.GetNearestNode(destination, nodeTypeBits, this, pTargetEntity, -1, nullptr, true);
 	if(endNode == NO_POSITION)
 	{
-		endNode = gNodeGraph.GetNearestNode(destination, (nodeTypeBits|CAINodeGraph::AI_NODE_PRECISE_CHECK), this, pTargetEntity);
+		endNode = gNodeGraph.GetNearestNode(destination, (nodeTypeBits|CAINodeGraph::AI_NODE_PRECISE_CHECK), this, pTargetEntity, -1.0f, nullptr, true);
 		if(endNode == NO_POSITION)
 			return false;
 	}
@@ -6912,7 +6992,7 @@ bool CBaseNPC::BuildNodeRoute( const Vector& destination, CBaseEntity* pTargetEn
 			break;
 
 		startIgnoreList.AddNode(startNode);
-		startNode = gNodeGraph.GetNearestNode(m_pState->origin, nodeTypeBits, this, pTargetEntity, -1.0f, &startIgnoreList);
+		startNode = gNodeGraph.GetNearestNode(m_pState->origin, nodeTypeBits, this, pTargetEntity, -1, &startIgnoreList);
 		if(startNode == NO_POSITION)
 			break;
 	}
@@ -7322,7 +7402,7 @@ bool CBaseNPC::CheckNodeRoute( const Vector& startPosition, const Vector& endPos
 	if(startNode == NO_POSITION)
 		return false;
 
-	Int32 endNode = gNodeGraph.GetNearestNode(endPosition, this, pTargetEntity);
+	Int32 endNode = gNodeGraph.GetNearestNode(endPosition, this, pTargetEntity, -1.0f, nullptr, true);
 	if(endNode == NO_POSITION)
 		return false;
 
@@ -7421,12 +7501,12 @@ bool CBaseNPC::BuildNodeDetourRoute( const Vector& destination, CBaseEntity* pBl
 
 	// Get start node
 	Uint64 nodeTypeBits = Util::GetNodeTypeForNPC(this);
-	Int32 startNode = gNodeGraph.GetNearestNode(m_pState->origin, nodeTypeBits, this, pTargetEntity, -1.0f, &ignoreList);
+	Int32 startNode = gNodeGraph.GetNearestNode(m_pState->origin, nodeTypeBits, this, pTargetEntity, -1, &ignoreList);
 	if(startNode == NO_POSITION)
 		return false;
 
 	// Get end node
-	Int32 endNode = gNodeGraph.GetNearestNode(destination, nodeTypeBits, this, pTargetEntity, -1.0f, &ignoreList);
+	Int32 endNode = gNodeGraph.GetNearestNode(destination, nodeTypeBits, this, pTargetEntity, -1, &ignoreList, true);
 	if(endNode == NO_POSITION)
 		return false;
 
@@ -8053,7 +8133,7 @@ bool CBaseNPC::HandleBlockage( CBaseEntity* pBlocker, CBaseEntity* pTargetEntity
 			&& !pBlocker->HasSpawnFlag(CFuncDoor::FL_NO_NPCS)
 			&& !pBlocker->IsLockedByMaster())
 		{
-			if(pBlocker->GetToggleState() != TS_AT_TOP)
+			if(pBlocker->GetToggleState() != TSTATE_AT_TOP)
 			{
 				if(pBlocker->HasTargetName())
 				{
@@ -8708,7 +8788,9 @@ activity_t CBaseNPC::GetBlowbackDeathActivity( void )
 	Math::AngleVectors(m_pState->angles, &forward);
 
 	// Clear all angles but yaw
-	m_pState->angles[PITCH] = m_pState->angles[ROLL] = 0;
+	SetPitch(0);
+	SetRoll(0);
+
 	m_pState->effects |= EF_NOLERP;
 
 	if(m_deathFlags & NPC_DF_LANDED_AGAINST_WALL && (m_pState->flags & FL_ONGROUND))
@@ -9222,7 +9304,7 @@ void CBaseNPC::CorpseTouch( CBaseEntity* pOther )
 		flatDir.Normalize();
 
 		Vector angle = Math::VectorToAngles(flatDir);
-		m_pState->angles[YAW] = angle[YAW];
+		SetYaw(angle[YAW]);
 
 		// See if we're near ground
 		trace_t groundtr;

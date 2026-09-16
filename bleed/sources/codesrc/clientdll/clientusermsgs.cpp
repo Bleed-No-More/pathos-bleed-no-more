@@ -790,15 +790,13 @@ MSGFN MsgFunc_CreateTempEntity( const Char* pstrName, const byte* pdata, Uint32 
 			for(Uint32 i = 0; i < 3; i++)
 				origin[i] = reader.ReadFloat();
 
-			Int32 color = reader.ReadByte();
-			
 			if(reader.HasError())
 			{
 				cl_engfuncs.pfnCon_Printf("%s - Error reading message: %s.\n", __FUNCTION__, reader.GetError());
 				return false;
 			}
 
-			cl_efxapi.pfnRocketExplosion(origin, color);
+			cl_efxapi.pfnRocketExplosion(origin);
 		}
 		break;
 	case TE_PARTICLEEFFECT:
@@ -1739,13 +1737,13 @@ MSGFN MsgFunc_CreateGameUIWindow( const Char* pstrName, const byte* pdata, Uint3
 			CGameUIInventoryWindow* pWindow = reinterpret_cast<CGameUIInventoryWindow*>(gGameUIManager.SpawnWindow(type));
 			if(!pWindow)
 			{
-				cl_engfuncs.pfnCon_EPrintf("%s - Failed to create 'CGameUIDocumentsWindow'.\n", __FUNCTION__);
+				cl_engfuncs.pfnCon_EPrintf("%s - Failed to create 'CGameUIInventoryWindow'.\n", __FUNCTION__);
 				return true;
 			}
 
 			if(!pWindow->initData(nbHorizontalRows, nbVerticalRows))
 			{
-				cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUIDocumentsWindow'.\n", __FUNCTION__);
+				cl_engfuncs.pfnCon_EPrintf("%s - Failed to initialize 'CGameUIInventoryWindow'.\n", __FUNCTION__);
 				return true;
 			}
 		}

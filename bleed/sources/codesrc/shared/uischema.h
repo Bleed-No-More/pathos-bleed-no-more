@@ -357,7 +357,7 @@ public:
 	typedef const font_set_t*	(*pfnGetSchemaFontSet_t)( const Char* schemaFileName );
 
 public:
-	CUISchemaManager( const file_interface_t& fileInterface, pfnGetDummyTexture_t pfnGetDummyTexture, pfnLoadTexture_t pfnLoadTexture, pfnGetSchemaFontSet_t pfnGetSchemaFontSet, const font_set_t* pDefaultFontSet );
+	CUISchemaManager( const file_interface_t& fileInterface, pfnGetDummyTexture_t pfnGetDummyTexture, pfnLoadTexture_t pfnLoadTexture, pfnGetSchemaFontSet_t pfnGetSchemaFontSet, const font_set_t* pDefaultFontSet, const Char* pstrScriptDirectoryName );
 	~CUISchemaManager( void );
 
 public:
@@ -390,6 +390,8 @@ private:
 	CArray<CString> m_warningStringArray;
 	// Error string
 	CString m_errorString;
+	// Script directory name
+	CString m_scriptDirectoryName;
 
 	// Get dummy texture fn
 	pfnGetDummyTexture_t m_pfnGetDummyTexture;

@@ -48,7 +48,8 @@ brushmodel_t* PBSPV2_Load( const byte* pfile, const dpbspv2header_t* pheader, co
 		|| !PBSPV2_LoadFaces(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_FACES])
 		|| !PBSPV2_LoadMarksurfaces(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_MARKSURFACES])
 		|| !PBSPV2_LoadVisibility(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_VISIBILITY])
-		|| !PBSPV2_LoadLeafs(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_LEAFS])
+		|| !PBSPV2_LoadBrushData(pfile, (*pmodel), pheader)
+		|| !PBSPV2_LoadLeafs(pfile, (*pmodel), pheader)
 		|| !PBSPV2_LoadNodes(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_NODES])
 		|| !PBSPV2_LoadClipnodes(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_CLIPNODES])
 		|| !PBSPV2_LoadEntities(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_ENTITIES])
@@ -56,6 +57,28 @@ brushmodel_t* PBSPV2_Load( const byte* pfile, const dpbspv2header_t* pheader, co
 	{
 		delete pmodel;
 		return nullptr;
+	}
+
+	// If PBSPV2_FL_HAS_VERTEX_LIGHTING is set, then load in vertex lighting data
+	if(pheader->flags & PBSPV2_FL_HAS_VERTEX_LIGHTING)
+	{
+		if(!PBSPV2_LoadVertexLighting(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_VERTEX_LIGHTING_AMBIENT], VERTEX_LIGHTING_AMBIENT)
+			|| !PBSPV2_LoadVertexLighting(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_VERTEX_LIGHTING_DIFFUSE], VERTEX_LIGHTING_DIFFUSE)
+			|| !PBSPV2_LoadVertexLighting(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_VERTEX_LIGHTING_VECTORS], VERTEX_LIGHTING_VECTORS))
+		{
+			delete pmodel;
+			return nullptr;
+		}
+	}
+
+	// If PBSPV2_FL_HAS_LIGHTGRID_DATA is set, then load in vertex lighting data
+	if(pheader->flags & PBSPV2_FL_HAS_LIGHTGRID_DATA)
+	{
+		if(!PBSPV2_LoadLightGridData(pfile, (*pmodel), pheader->lumps[PBSPV2_LUMP_LIGHTGRID_DATA]))
+		{
+			delete pmodel;
+			return nullptr;
+		}
 	}
 
 	return pmodel;
@@ -326,36 +349,29 @@ bool PBSPV2_LoadTextures( const byte* pfile, brushmodel_t& model, const dpbspv2l
 // @brief
 //
 //=============================================
-bool PBSPV2_DecompressLightingData( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump, color24_t*& pdestptr, Uint32& destsize, byte*& poriginaldataptr, Uint32& originalsize, Int32& compression, Int32 compressionlevel )
+bool PBSPV2_DecompressLightingData( const byte* pfile, const dpbspv2lightingdata_t* plightdata, color24_t*& pdestptr, Uint32& destsize, byte*& poriginaldataptr, Uint32& originalsize, Int32& compression, Int32 compressionlevel )
 {
-	const dpbspv2lmapdata_t* plightmapdata = reinterpret_cast<const dpbspv2lmapdata_t*>(pfile + lump.offset);
-	if(plightmapdata->noncompressedsize % sizeof(color24_t))
-	{
-		Con_EPrintf("%s - Inconsistent decompressed data size in '%s'.\n", __FUNCTION__, model.name.c_str());
-		return false;
-	}
-
-	const byte* prawdatasrc = pfile + plightmapdata->dataoffset;
-	byte* poutputdataptr = new byte[plightmapdata->noncompressedsize];
-	memset(poutputdataptr, 0, sizeof(byte)*plightmapdata->noncompressedsize);
+	const byte* prawdatasrc = pfile + plightdata->dataoffset;
+	byte* poutputdataptr = new byte[plightdata->noncompressedsize];
+	memset(poutputdataptr, 0, sizeof(byte)*plightdata->noncompressedsize);
 
 	// Fill in original info
-	poriginaldataptr = new byte[plightmapdata->datasize];
-	memcpy(poriginaldataptr, prawdatasrc, plightmapdata->datasize);
-	originalsize = plightmapdata->datasize;
-	compression = plightmapdata->compression;
-	compressionlevel = plightmapdata->compressionlevel;
+	poriginaldataptr = new byte[plightdata->datasize];
+	memcpy(poriginaldataptr, prawdatasrc, plightdata->datasize);
+	originalsize = plightdata->datasize;
+	compression = plightdata->compression;
+	compressionlevel = plightdata->compressionlevel;
 
 	// Set final data
-	switch(plightmapdata->compression)
+	switch(plightdata->compression)
 	{
 	case BSP_LMAP_COMPRESSION_NONE:
-		memcpy(poutputdataptr, prawdatasrc, sizeof(byte)*plightmapdata->noncompressedsize);
+		memcpy(poutputdataptr, prawdatasrc, sizeof(byte)*plightdata->noncompressedsize);
 		break;
 	case BSP_LMAP_COMPRESSION_MINIZ:
 		{
-			mz_ulong destinationsize = plightmapdata->noncompressedsize;
-			Int32 status = uncompress(poutputdataptr, &destinationsize, prawdatasrc, plightmapdata->datasize);
+			mz_ulong destinationsize = plightdata->noncompressedsize;
+			Int32 status = uncompress(poutputdataptr, &destinationsize, prawdatasrc, plightdata->datasize);
 			if(status != MZ_OK)
 			{
 				Con_EPrintf("%s - Miniz uncompress failed with error code %d.\n", __FUNCTION__, status);
@@ -363,9 +379,9 @@ bool PBSPV2_DecompressLightingData( const byte* pfile, brushmodel_t& model, cons
 				return false;
 			}
 
-			if(plightmapdata->noncompressedsize != static_cast<Int32>(destinationsize))
+			if(plightdata->noncompressedsize != static_cast<Int32>(destinationsize))
 			{
-				Con_EPrintf("%s - Miniz uncompress produced inconsistent output size (expected %d, got %d instead).\n", __FUNCTION__, plightmapdata->noncompressedsize, destinationsize);
+				Con_EPrintf("%s - Miniz uncompress produced inconsistent output size (expected %d, got %d instead).\n", __FUNCTION__, plightdata->noncompressedsize, destinationsize);
 				delete[] poutputdataptr;
 				return false;
 			}
@@ -374,7 +390,7 @@ bool PBSPV2_DecompressLightingData( const byte* pfile, brushmodel_t& model, cons
 	}
 
 	pdestptr = reinterpret_cast<color24_t*>(poutputdataptr);
-	destsize = plightmapdata->noncompressedsize;
+	destsize = plightdata->noncompressedsize;
 
 	return true;
 }
@@ -389,13 +405,21 @@ bool PBSPV2_LoadDefaultLighting( const byte* pfile, brushmodel_t& model, const d
 		return true;
 
 	// Check if sizes are correct
-	if(lump.size != sizeof(dpbspv2lmapdata_t))
+	if(lump.size != sizeof(dpbspv2lightingdata_t))
 	{
 		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
 		return false;
 	}
 
-	return PBSPV2_DecompressLightingData(pfile, model, lump, model.plightdata[SURF_LIGHTMAP_DEFAULT], model.lightdatasize, 
+	// Get raw data and check that the sizes are correct
+	const dpbspv2lightingdata_t* plightdata = reinterpret_cast<const dpbspv2lightingdata_t*>(pfile + lump.offset);
+	if(plightdata->noncompressedsize % sizeof(color24_t))
+	{
+		Con_EPrintf("%s - Inconsistent decompressed data size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	return PBSPV2_DecompressLightingData(pfile, plightdata, model.plightdata[SURF_LIGHTMAP_DEFAULT], model.lightdatasize, 
 		model.plightdata_original[SURF_LIGHTMAP_DEFAULT], model.original_lightdatasizes[SURF_LIGHTMAP_DEFAULT],
 		model.original_compressiontype[SURF_LIGHTMAP_DEFAULT], model.original_compressionlevel[SURF_LIGHTMAP_DEFAULT]);
 }
@@ -410,14 +434,22 @@ bool PBSPV2_LoadLightingDataLayer( const byte* pfile, brushmodel_t& model, const
 		return true;
 
 	// Check if sizes are correct
-	if(lump.size != sizeof(dpbspv2lmapdata_t))
+	if(lump.size != sizeof(dpbspv2lightingdata_t))
 	{
 		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
 		return false;
 	}
 
+	// Get raw data and check that the sizes are correct
+	const dpbspv2lightingdata_t* plightdata = reinterpret_cast<const dpbspv2lightingdata_t*>(pfile + lump.offset);
+	if(plightdata->noncompressedsize % sizeof(color24_t))
+	{
+		Con_EPrintf("%s - Inconsistent decompressed data size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
 	Uint32 datasize = 0;
-	bool result = PBSPV2_DecompressLightingData(pfile, model, lump, model.plightdata[layer], datasize, 
+	bool result = PBSPV2_DecompressLightingData(pfile, plightdata, model.plightdata[layer], datasize, 
 		model.plightdata_original[layer], model.original_lightdatasizes[layer],
 		model.original_compressiontype[layer], model.original_compressionlevel[layer]);
 
@@ -425,7 +457,7 @@ bool PBSPV2_LoadLightingDataLayer( const byte* pfile, brushmodel_t& model, const
 	{
 		if(datasize != model.lightdatasize)
 		{
-			Con_EPrintf("%s - Inconsistent lump size %d in '%s' for light data layer %d, expected size was %d.\n", __FUNCTION__, lump.size, model.name.c_str(), layer, model.lightdatasize);
+			Con_EPrintf("%s - Inconsistent lump size %d in '%s' for light data layer %d, expected size was %d.\n", __FUNCTION__, datasize, model.name.c_str(), layer, model.lightdatasize);
 			return false;
 		}
 	}
@@ -673,7 +705,19 @@ bool PBSPV2_LoadVisibility( const byte* pfile, brushmodel_t& model, const dpbspv
 // @brief
 //
 //=============================================
-bool PBSPV2_LoadLeafs( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
+bool PBSPV2_LoadLeafs( const byte* pfile, brushmodel_t& model, const dpbspv2header_t* pheader )
+{
+	if(pheader->flags & PBSPV2_FL_HAS_BRUSH_COLLISION_DATA)
+		return PBSPV2_LoadLeafs_BrushData(pfile, model, pheader->lumps[PBSPV2_LUMP_LEAFS]);
+	else
+		return PBSPV2_LoadLeafs_NoBrushData(pfile, model, pheader->lumps[PBSPV2_LUMP_LEAFS]);
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadLeafs_NoBrushData( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
 {
 	// Safeguard against incorrectly compiled BSP
 	if(!lump.size)
@@ -683,15 +727,15 @@ bool PBSPV2_LoadLeafs( const byte* pfile, brushmodel_t& model, const dpbspv2lump
 	}
 
 	// Check if sizes are correct
-	if(lump.size % sizeof(dpbspv2leaf_t))
+	if(lump.size % sizeof(dpbspv2leaf_nobrush_t))
 	{
 		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
 		return false;
 	}
 
 	// Load the data in
-	Uint32 count = lump.size/sizeof(dpbspv2leaf_t);
-	const dpbspv2leaf_t* pinleafs = reinterpret_cast<const dpbspv2leaf_t*>(pfile + lump.offset);
+	Uint32 count = lump.size/sizeof(dpbspv2leaf_nobrush_t);
+	const dpbspv2leaf_nobrush_t* pinleafs = reinterpret_cast<const dpbspv2leaf_nobrush_t*>(pfile + lump.offset);
 	mleaf_t* poutleafs = new mleaf_t[count];
 
 	model.pleafs = poutleafs;
@@ -715,6 +759,61 @@ bool PBSPV2_LoadLeafs( const byte* pfile, brushmodel_t& model, const dpbspv2lump
 
 		if(pinleafs[i].visoffset != -1)
 			pout->pcompressedvis = model.pvisdata + pinleafs[i].visoffset;
+	}
+
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadLeafs_BrushData( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
+{
+	// Safeguard against incorrectly compiled BSP
+	if(!lump.size)
+	{
+		Con_EPrintf("%s - Empty lump in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Check if sizes are correct
+	if(lump.size % sizeof(dpbspv2leaf_brush_t))
+	{
+		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Load the data in
+	Uint32 count = lump.size/sizeof(dpbspv2leaf_brush_t);
+	const dpbspv2leaf_brush_t* pinleafs = reinterpret_cast<const dpbspv2leaf_brush_t*>(pfile + lump.offset);
+	mleaf_t* poutleafs = new mleaf_t[count];
+
+	model.pleafs = poutleafs;
+	model.numleafs = count;
+
+	for(Uint32 i = 0; i < count; i++)
+	{
+		mleaf_t* pout = &poutleafs[i];
+
+		for(Uint32 j = 0; j < 3; j++)
+		{
+			pout->mins[j] = Common::ByteToInt16(reinterpret_cast<const byte*>(&pinleafs[i].mins[j]));
+			pout->maxs[j] = Common::ByteToInt16(reinterpret_cast<const byte*>(&pinleafs[i].maxs[j]));
+		}
+
+		pout->contents = pinleafs[i].contents;
+
+		Uint32 marksurfindex = pinleafs[i].firstmarksurface;
+		pout->pfirstmarksurface = &model.pmarksurfaces[marksurfindex];
+		pout->nummarksurfaces = pinleafs[i].nummarksurfaces;
+
+		if(pinleafs[i].visoffset != -1)
+			pout->pcompressedvis = model.pvisdata + pinleafs[i].visoffset;
+
+		Uint32 leafbrushindex = pinleafs[i].firstleafbrush;
+		pout->pfirstleafbrush = &model.pleafbrushes[leafbrushindex];
+		pout->numleafbrushes = pinleafs[i].numleafbrushes;
 	}
 
 	return true;
@@ -774,8 +873,6 @@ bool PBSPV2_LoadNodes( const byte* pfile, brushmodel_t& model, const dpbspv2lump
 		}
 	}
 
-	// Set linkage info on nodes
-	BSP_SetNodeParent(model.pnodes, nullptr);
 	return true;
 }
 
@@ -925,6 +1022,371 @@ bool PBSPV2_LoadSubmodels( const byte* pfile, brushmodel_t& model, const dpbspv2
 		poutmodels[i].visleafs = pinmodels[i].visleafs;
 		poutmodels[i].firstface = pinmodels[i].firstface;
 		poutmodels[i].numfaces = pinmodels[i].numfaces;
+	}
+
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadVertexLighting(const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump, baked_vertexlight_layers_t layer)
+{
+	if (!lump.size)
+		return true;
+
+	// Check if sizes are correct
+	if (lump.size != sizeof(dpbspv2lightingdata_t))
+	{
+		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Get raw data and check that the sizes are correct
+	const dpbspv2lightingdata_t* plightdata = reinterpret_cast<const dpbspv2lightingdata_t*>(pfile + lump.offset);
+	if(plightdata->noncompressedsize % sizeof(color24_t))
+	{
+		Con_EPrintf("%s - Inconsistent decompressed data size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	Uint32 datasize = 0;
+	bool result = PBSPV2_DecompressLightingData(pfile, plightdata, model.pvertexlightdata[layer], datasize, 
+		model.pvertexlightdata_original[layer], model.original_vertexlightdatasizes[layer],
+		model.original_vertexlightcompressiontype[layer], model.original_vertexlightcompressionlevel[layer]);
+
+	if(!model.vertexlightdatasize)
+	{
+		// First lump loaded defines the expected size
+		model.vertexlightdatasize = datasize;
+	}
+	else if(result && datasize != model.vertexlightdatasize)
+	{
+		Con_EPrintf("%s - Inconsistent lump size %d in '%s' for baked vertex light data layer %d, expected size was %d.\n", __FUNCTION__, datasize, model.name.c_str(), layer, model.lightdatasize);
+		return false;
+	}
+
+	return result;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadLightGridData( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
+{
+	if (!lump.size)
+		return true;
+
+	// Get pointer to BSP data
+	const dpbspv2lightgridlumpheader_t* psrcgrid = reinterpret_cast<const dpbspv2lightgridlumpheader_t*>(pfile + lump.offset);
+	if(psrcgrid->totalsize != lump.size)
+	{
+		Con_EPrintf("%s - Inconsistent lump size %d in '%s' for light grid data, expected size was %d.\n", __FUNCTION__, lump.size, model.name.c_str(), psrcgrid->totalsize);
+		return false;
+	}
+
+	// Allocate grid object
+	lightgriddata_t* pdestgrid = new lightgriddata_t();
+
+	pdestgrid->rootnodeindex = psrcgrid->rootnodeindex;
+
+	for(Uint32 i = 0; i < 3; i++)
+		pdestgrid->gridmins[i] = psrcgrid->grid_mins[i];
+
+	pdestgrid->rawsampledatasize = psrcgrid->rawsampledatasize;
+
+	for(Uint32 i = 0; i < 3; i++)
+		pdestgrid->gridscale[i] = 1.0f / static_cast<Float>(psrcgrid->grid_distance[i]);
+	
+	for(Uint32 i = 0; i < 3; i++)
+		pdestgrid->gridsize[i] = psrcgrid->grid_size[i];
+
+	// Copy over raw light sample data
+	for(Uint32 i = 0; i < NB_LIGHTGRID_DATA_LAYERS; i++)
+	{
+		dpbspv2lightingdata_t tmp;
+		switch(i)
+		{
+		case LIGHTGRID_LAYER_VECTORS:
+			tmp.compression = psrcgrid->vectorscompressiontype;
+			tmp.compressionlevel = psrcgrid->vectorscompressionlevel;
+			tmp.noncompressedsize = psrcgrid->rawsampledatasize;
+			tmp.datasize = psrcgrid->vectorscompressedsize;
+			tmp.dataoffset = psrcgrid->vectorsdataoffset;
+			break;
+		case LIGHTGRID_LAYER_AMBIENT:
+			tmp.compression = psrcgrid->ambientcompressiontype;
+			tmp.compressionlevel = psrcgrid->ambientcompressionlevel;
+			tmp.noncompressedsize = psrcgrid->rawsampledatasize;
+			tmp.datasize = psrcgrid->ambientcompressedsize;
+			tmp.dataoffset = psrcgrid->ambientdataoffset;
+			break;
+		case LIGHTGRID_LAYER_DIFFUSE:
+			tmp.compression = psrcgrid->diffusecompressiontype;
+			tmp.compressionlevel = psrcgrid->diffusecompressionlevel;
+			tmp.noncompressedsize = psrcgrid->rawsampledatasize;
+			tmp.datasize = psrcgrid->diffusecompressedsize;
+			tmp.dataoffset = psrcgrid->diffusedataoffset;
+			break;
+		}
+
+		assert(tmp.datasize != 0);
+
+		Uint32 datasize = 0;
+		bool result = PBSPV2_DecompressLightingData(reinterpret_cast<const byte*>(psrcgrid), &tmp, pdestgrid->prawsampledata[i], datasize, 
+			pdestgrid->psampledata_original[i], pdestgrid->sampledatasize_original[i],
+			pdestgrid->original_compressiontypes[i], pdestgrid->original_compressionlevels[i]);
+
+		if(!result)
+			return false;
+	}
+
+	// Copy nodes
+	const dpbspv2lightgridnode_t* psrcnodes = reinterpret_cast<const dpbspv2lightgridnode_t*>(reinterpret_cast<const byte*>(psrcgrid) + psrcgrid->nodesoffset);
+	pdestgrid->nodes.resize(psrcgrid->numnodes);
+
+	for(Uint32 i = 0; i < psrcgrid->numnodes; i++)
+	{
+		const dpbspv2lightgridnode_t* psrcnode = &psrcnodes[i];
+		lightgridnode_t& destnode = pdestgrid->nodes[i];
+
+		for(Uint32 j = 0; j < 3; j++)
+			destnode.divisionpoint[j] = psrcnode->divisionpoint[j];
+
+		for(Uint32 j = 0; j < 8; j++)
+			destnode.children[j] = psrcnode->children[j];
+	}
+
+	// Copy leaves
+	const dpbspv2lightgridleaf_t* psrcleaves = reinterpret_cast<const dpbspv2lightgridleaf_t*>(reinterpret_cast<const byte*>(psrcgrid) + psrcgrid->leafsoffset);
+	pdestgrid->leaves.resize(psrcgrid->numleafs);
+
+	for(Uint32 i = 0; i < psrcgrid->numleafs; i++)
+	{
+		const dpbspv2lightgridleaf_t* psrcleaf = &psrcleaves[i];
+		lightgridleaf_t& destleaf = pdestgrid->leaves[i];
+
+		destleaf.firstsample = psrcleaf->firstsample;
+		destleaf.numsamples = psrcleaf->numsamples;
+		
+		for(Uint32 j = 0; j < 3; j++)
+			destleaf.mins[j] = psrcleaf->mins[j];
+
+		for(Uint32 j = 0; j < 3; j++)
+			destleaf.size[j] = psrcleaf->size[j];
+	}
+
+	// Copy samples
+	const dpbspv2lightgridsample_t* psrcsamples = reinterpret_cast<const dpbspv2lightgridsample_t*>(reinterpret_cast<const byte*>(psrcgrid) + psrcgrid->sampleoffset);
+	pdestgrid->samples.resize(psrcgrid->numsamples);
+
+	for(Uint32 i = 0; i < psrcgrid->numsamples; i++)
+	{
+		const dpbspv2lightgridsample_t* psrcsample = &psrcsamples[i];
+		lightgridsample_t& destsample = pdestgrid->samples[i];
+
+		for(Uint32 j = 0; j < PBSPV2_MAX_LIGHTMAPS; j++)
+			destsample.styles[j] = psrcsample->styles[j];
+
+		// We need this for ALD
+		destsample.rawsampleoffset = psrcsample->rawsampleoffset;
+		if(destsample.rawsampleoffset != NO_POSITION && (destsample.rawsampleoffset+3) > pdestgrid->rawsampledatasize)
+		{
+			Con_EPrintf("%s - Raw sample offset %d in sample %d is out of bounds for raw sample data size(%d bytes).\n", __FUNCTION__, destsample.rawsampleoffset, i, pdestgrid->rawsampledatasize);
+			delete pdestgrid;
+			return false;
+		}
+
+		// Set pointers for ease of access
+		if(destsample.rawsampleoffset != -1)
+		{
+			for(Uint32 j = 0; j < NB_LIGHTGRID_DATA_LAYERS; j++)
+				destsample.plightdata[j] = reinterpret_cast<byte*>(pdestgrid->prawsampledata[j]) + destsample.rawsampleoffset;
+		}
+	}
+	
+	model.plightgrid = pdestgrid;
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadBrushData( const byte* pfile, brushmodel_t& model, const dpbspv2header_t* pheader )
+{
+	if(!(pheader->flags & PBSPV2_FL_HAS_BRUSH_COLLISION_DATA))
+		return true;
+
+	if(!PBSPV2_LoadBrushSides(pfile, model, pheader->lumps[PBSPV2_LUMP_BRUSHSIDES])
+		|| !PBSPV2_LoadBrushes(pfile, model, pheader->lumps[PBSPV2_LUMP_BRUSHES])
+		|| !PBSPV2_LoadLeafBrushes(pfile, model, pheader->lumps[PBSPV2_LUMP_LEAFBRUSHES]))
+		return false;
+	else
+		return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadBrushes( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
+{
+	if (!lump.size)
+	{
+		Con_EPrintf("%s - Empty lump in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Check if sizes are correct
+	if (lump.size % sizeof(dpbspv2brush_t))
+	{
+		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Load the data in
+	Uint32 count = lump.size/sizeof(dpbspv2brush_t);
+	const dpbspv2brush_t* pinbrushes = reinterpret_cast<const dpbspv2brush_t*>(pfile + lump.offset);
+	mbrush_t* poutbrushes = new mbrush_t[count];
+
+	model.pbrushes = poutbrushes;
+	model.numbrushes = count;
+
+	for(Uint32 i = 0; i < count; i++)
+	{
+		const dpbspv2brush_t* pinbrush = &pinbrushes[i];
+
+		// Sanity check on index
+		if(pinbrush->firstside >= model.numbrushsides || (pinbrush->firstside+pinbrush->numsides) > model.numbrushsides)
+		{
+			Con_EPrintf("%s - Brush %d brush side index '%d' out of range in '%s'.\n", __FUNCTION__, i, pinbrush->firstside, model.name.c_str());
+			return false;
+		}
+
+		mbrush_t* poutbrush = &model.pbrushes[i];
+		poutbrush->contents = pinbrush->contents;
+		poutbrush->firstbrushside = pinbrush->firstside;
+		poutbrush->numbrushsides = pinbrush->numsides;
+		poutbrush->noclip = pinbrush->noclip ? true : false;
+
+		for(Uint32 j = 0; j < 3; j++)
+		{
+			poutbrush->mins[j] = pinbrush->mins[j];
+			poutbrush->maxs[j] = pinbrush->maxs[j];
+		}
+
+		// Calculate centroid
+		Vector tmp;
+		Math::VectorAdd(poutbrush->mins, poutbrush->maxs, tmp);
+		Math::VectorScale(tmp, 0.5, poutbrush->centroid);
+
+		// Set type
+		BSP_SetBrushType( model, poutbrush, i );
+	}
+
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadBrushSides( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
+{
+	if (!lump.size)
+	{
+		Con_EPrintf("%s - Empty lump in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Check if sizes are correct
+	if (lump.size % sizeof(dpbspv2brushside_t))
+	{
+		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Load the data in
+	Uint32 count = lump.size/sizeof(dpbspv2brushside_t);
+	const dpbspv2brushside_t* pinbrushsides = reinterpret_cast<const dpbspv2brushside_t*>(pfile + lump.offset);
+	mbrushside_t* poutbrushsides = new mbrushside_t[count];
+
+	model.pbrushsides = poutbrushsides;
+	model.numbrushsides = count;
+
+	for(Uint32 i = 0; i < count; i++)
+	{
+		const dpbspv2brushside_t* pinside = &pinbrushsides[i];
+
+		// Sanity check on plane index
+		if(pinside->planenum >= model.numplanes)
+		{
+			Con_EPrintf("%s - Brush side %d plane index '%d' out of range in '%s'.\n", __FUNCTION__, i, pinside->planenum, model.name.c_str());
+			return false;
+		}
+
+		// Sanity check on texinfo index
+		if(pinside->texinfo >= model.numtexinfos)
+		{
+			Con_EPrintf("%s - Brush side %d texinfo index '%d' out of range in '%s'.\n", __FUNCTION__, i, pinside->texinfo, model.name.c_str());
+			return false;
+		}
+
+		mbrushside_t* poutside = &model.pbrushsides[i];
+		poutside->pplane = &model.pplanes[pinside->planenum];
+		poutside->ptexinfo = &model.ptexinfos[pinside->texinfo];
+
+		if(pinside->flags & PBSPV2_BSIDE_FL_PLANEBACK)
+			poutside->planeback = true;
+
+		if(pinside->flags & PBSPV2_BSIDE_FL_BEVEL)
+			poutside->isbevel = true;
+	}
+
+	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+bool PBSPV2_LoadLeafBrushes( const byte* pfile, brushmodel_t& model, const dpbspv2lump_t& lump )
+{
+	if (!lump.size)
+	{
+		Con_EPrintf("%s - Empty lump in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Check if sizes are correct
+	if (lump.size % sizeof(unsigned int))
+	{
+		Con_EPrintf("%s - Inconsistent lump size in '%s'.\n", __FUNCTION__, model.name.c_str());
+		return false;
+	}
+
+	// Load the data in
+	Uint32 count = lump.size/sizeof(unsigned int);
+	const unsigned int* pinleafbrushes = reinterpret_cast<const unsigned int*>(pfile + lump.offset);
+	mbrush_t** poutleafbrushes = new mbrush_t*[count];
+
+	model.pleafbrushes = poutleafbrushes;
+	model.numleafbrushes = count;
+
+	for(Uint32 i = 0; i < count; i++)
+	{
+		// Sanity check on index
+		Uint32 brushindex = pinleafbrushes[i];
+		if(brushindex >= model.numbrushes)
+		{
+			Con_EPrintf("%s - Leaf brush %d index '%d' out of range in '%s'.\n", __FUNCTION__, i, brushindex, model.name.c_str());
+			return false;
+		}
+
+		model.pleafbrushes[i] = &model.pbrushes[brushindex];
 	}
 
 	return true;

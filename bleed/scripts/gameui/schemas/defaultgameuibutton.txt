@@ -1,0 +1,72 @@
+Bottom
+{
+	$default		"gameUIBtnBottom.tga"
+	$clicked		"gameUIBtnClickedBottom.tga"
+	$disabled		"gameUIBtnDisabledBottom.tga"
+	$highlighted	"gameUIBtnHighlightBottom.tga"
+	$newitem		"gameUIBtnNewBottom.tga"
+}
+BottomLeft
+{
+	$default		"gameUIBtnBottomLeft.tga"
+	$clicked		"gameUIBtnClickedBottomLeft.tga"
+	$disabled		"gameUIBtnDisabledBottomLeft.tga"
+	$highlighted	"gameUIBtnHighlightBottomLeft.tga"
+	$newitem		"gameUIBtnNewBottomLeft.tga"
+}	
+BottomRight	
+{	
+	$default		"gameUIBtnBottomRight.tga"
+	$clicked		"gameUIBtnClickedBottomRight.tga"
+	$disabled		"gameUIBtnDisabledBottomRight.tga"
+	$highlighted	"gameUIBtnHighlightBottomRight.tga"
+	$newitem		"gameUIBtnNewBottomRight.tga"
+}	
+Left	
+{	
+	$default		"gameUIBtnLeft.tga"
+	$clicked		"gameUIBtnClickedLeft.tga"
+	$disabled		"gameUIBtnDisabledLeft.tga"
+	$highlighted	"gameUIBtnHighlightLeft.tga"
+	$newitem		"gameUIBtnNewLeft.tga"
+}	
+Right	
+{	
+	$default		"gameUIBtnRight.tga"
+	$clicked		"gameUIBtnClickedRight.tga"
+	$disabled		"gameUIBtnDisabledRight.tga"
+	$highlighted	"gameUIBtnHighlightRight.tga"
+	$newitem		"gameUIBtnNewRight.tga"
+}	
+Top	
+{	
+	$default		"gameUIBtnTop.tga"
+	$clicked		"gameUIBtnClickedTop.tga"
+	$disabled		"gameUIBtnDisabledTop.tga"
+	$highlighted	"gameUIBtnHighlightTop.tga"
+	$newitem		"gameUIBtnNewTop.tga"
+}	
+TopLeft	
+{	
+	$default		"gameUIBtnTopLeft.tga"
+	$clicked		"gameUIBtnClickedTopLeft.tga"
+	$disabled		"gameUIBtnDisabledTopLeft.tga"
+	$highlighted	"gameUIBtnHighlightTopLeft.tga"
+	$newitem		"gameUIBtnNewTopLeft.tga"
+}	
+TopRight	
+{	
+	$default		"gameUIBtnTopRight.tga"
+	$clicked		"gameUIBtnClickedTopRight.tga"
+	$disabled		"gameUIBtnDisabledTopRight.tga"
+	$highlighted	"gameUIBtnHighlightTopRight.tga"
+	$newitem		"gameUIBtnNewTopRight.tga"
+}	
+Body	
+{	
+	$default		"gameUIBtnBody.tga"
+	$clicked		"gameUIBtnClickedBody.tga"
+	$disabled		"gameUIBtnDisabledBody.tga"
+	$highlighted	"gameUIBtnHighlightBody.tga"
+	$newitem		"gameUIBtnNewBody.tga"
+}

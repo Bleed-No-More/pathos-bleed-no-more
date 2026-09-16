@@ -30,6 +30,8 @@ public:
 public:
 	virtual bool Spawn( void ) override;
 	virtual void DeclareSaveFields( void ) override;
+	virtual bool CanEntityBeParent( void ) const override { return true; }
+	virtual void InitEntity( void ) override;
 
 public:
 	virtual void GoUp( void ) override;

@@ -44,12 +44,13 @@ public:
 	static const Char INVENTORYWINDOW_OBJ_NAME[];
 	// Title text object name
 	static const Char INVENTORYWINDOW_TITLE_TEXT_OBJ_NAME[];
-	// Upper separator object name
-	static const Char INVENTORYWINDOW_UPPER_SEPARATOR_OBJ_NAME[];
-	// Lower separator object name
-	static const Char INVENTORYWINDOW_LOWER_SEPARATOR_OBJ_NAME[];
 	// Exit window button object name
 	static const Char INVENTORYWINDOW_EXIT_BUTTON_OBJ_NAME[];
+
+	// Inventory background surface object name
+	static const Char INVENTORYWINDOW_BG_SURFACE_OBJ_NAME[];
+	// Inventory cell object name
+	static const Char INVENTORYWINDOW_CELL_OBJ_NAME[];
 
 public:
 	CGameUIInventoryWindow( Int32 flags, Int32 originX, Int32 originY, Uint32 width, Uint32 height );
@@ -62,7 +63,7 @@ public:
 	// Initializes the data
 	bool initData( Uint32 horizontalRowCount, Uint32 verticalRowCount );
 	// Returns the current window information
-	void getInformation( void ) const;
+	void getInformation( Uint32& horizontalRowCount, Uint32& verticalRowCount ) const;
 
 	// Returns the type of the window
 	virtual gameui_windows_t getWindowType( void ) const override { return GAMEUI_INVENTORYWINDOW; }
@@ -77,9 +78,24 @@ public:
 private:
 	// Exit button
 	CGameUIButton* m_pExitButton;
+	// Horizontal row count
+	Uint32 m_horizontalRowCount;
+	// Vertical row count
+	Uint32 m_verticalRowCount;
 
 	// Title text object
 	CGameUIText* m_pTitleText;
+
+	// Window description data
+	const ui_windowdescription_t* m_pWindowDescription;
+	// Window object data
+	const ui_objectinfo_t* m_pWindowObjectInfo;
+
+private:
+	// Individual cells
+	CArray<CGameUISurface*> m_pCellsArray;
+	// Cell background surface
+	CGameUISurface* m_pCellBackgroundSurface;
 };
 
 /*

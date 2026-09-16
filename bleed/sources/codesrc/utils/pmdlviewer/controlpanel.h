@@ -169,6 +169,7 @@ public:
 		TAB_INDEX_SEQUENCE,
 		TAB_INDEX_BODY,
 		TAB_INDEX_TEXTURE,
+		TAB_INDEX_COMPILE,
 		TAB_INDEX_FLEXES,
 		TAB_INDEX_FLEX_SCRIPTING
 	};
@@ -404,6 +405,7 @@ private:
 	mxLabel*		m_pLabelWAVLengthLabel;
 	mxLineEdit*		m_pLineEditLength;
 	mxLabel*		m_pLabelLength;
+	mxLabel*		m_pLabelWAVName;
 
 	mxCheckBox*		m_pCheckBoxFlexStay;
 	mxCheckBox*		m_pCheckBoxFlexLoop;

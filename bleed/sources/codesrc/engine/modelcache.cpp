@@ -202,7 +202,6 @@ cache_model_t* CModelCache::LoadSpriteModel( const Char* pstrFilename, const byt
 	pnew->cacheindex = modelindex+1;
 	pnew->mins = Vector(-psprite->radius, -psprite->radius, -psprite->radius);
 	pnew->maxs = Vector(psprite->radius, psprite->radius, psprite->radius);
-	pnew->radius = psprite->radius;
 	pnew->pcachedata = psprite;
 	pnew->type = MOD_SPRITE;
 	pnew->name = pstrFilename;
@@ -303,7 +302,7 @@ cache_model_t* CModelCache::LoadVBMModel( const Char* pstrFilename, const byte* 
 		}
 
 		pvbmheader = reinterpret_cast<const vbmheader_t*>(pvbmdata);
-		if(pmcdheader->numbodyparts != pvbmheader->numbodyparts)
+		if(static_cast<Int32>(pmcdheader->numbodyparts) != pvbmheader->numbodyparts)
 		{
 			Con_EPrintf("%s - Mismatch in bodyparts between MCD file and VBM. MCD file '%s' has %d bodyparts, while VBM file '%s' has %d.\n", __FUNCTION__, mcdfilepath.c_str(), pmcdheader->numbodyparts, vbmfilepath.c_str(), pvbmheader->numbodyparts);
 			FL_FreeFile(pmcdfile);
@@ -311,12 +310,12 @@ cache_model_t* CModelCache::LoadVBMModel( const Char* pstrFilename, const byte* 
 			return nullptr;
 		}
 
-		for(Uint32 i = 0; i < pmcdheader->numbodyparts; i++)
+		for(Int32 i = 0; i < pmcdheader->numbodyparts; i++)
 		{
 			const vbmbodypart_t* pvbmbodypart = pvbmheader->getBodyPart(i);
 			const mcdbodypart_t* pmcdbodypart = pmcdheader->getBodyPart(i);
 
-			if(pvbmbodypart->numsubmodels != pmcdbodypart->numsubmodels)
+			if(pvbmbodypart->numsubmodels != static_cast<Int32>(pmcdbodypart->numsubmodels))
 			{
 				Con_EPrintf("%s - Mismatch in submodel counts in MCD file and VBM. MCD file '%s' body part at index %d has %d submodels, VBM body part has '%d'.\n", __FUNCTION__, mcdfilepath.c_str(), i, pmcdbodypart->numsubmodels, pvbmbodypart->numsubmodels);
 				FL_FreeFile(pmcdfile);
@@ -376,16 +375,11 @@ cache_model_t* CModelCache::LoadVBMModel( const Char* pstrFilename, const byte* 
 	// needs to be loaded to gpu
 	pnew->isloaded = false;
 
-	// Determine radius
-	pnew->radius = 0;
-	for(Uint32 i = 0; i < 3; i++)
-	{
-		if(SDL_fabs(pstudiohdr->bbmin[i]) > pnew->radius)
-			pnew->radius = pstudiohdr->bbmin[i];
-
-		if(SDL_fabs(pstudiohdr->bbmax[i]) > pnew->radius)
-			pnew->radius = pstudiohdr->bbmax[i];
-	}
+	// Create hash of vertex data
+	const vbmvertex_t* pvertexdata = pcache->pvbmhdr->getVertexes();
+	Uint32 vertexdatasize = pcache->pvbmhdr->numverts*sizeof(vbmvertex_t);
+	CMD5 hash(reinterpret_cast<const byte*>(pvertexdata),  vertexdatasize);
+	pcache->vertexhash = hash.HexDigest();
 
 	return pnew;
 }
@@ -438,8 +432,14 @@ cache_model_t* CModelCache::LoadBSPModel( const Char* pstrFilename, const byte* 
 	if(!pmodel)
 		return nullptr;
 
+	// Set linkage info on nodes
+	BSP_SetNodeParent(pmodel->pnodes, nullptr);
+
 	// Set up everything else
 	BSP_MakeHullZero((*pmodel));
+
+	// Set up BVHs for leaf brushes
+	BSP_SetupLeafBrushBVHs((*pmodel));
 
 	// Setup the submodels too
 	SetupBSPSubmodels(*pmodel, pstrFilename);
@@ -491,8 +491,10 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 		pnewmodel->visdatasize = model.visdatasize;
 		pnewmodel->ppasdata = model.ppasdata;
 		pnewmodel->pasdatasize = model.pasdatasize;
+		pnewmodel->plightgrid = model.plightgrid;
 		pnewmodel->lightdatasize = model.lightdatasize;
 		pnewmodel->lightmaplayercount = model.lightmaplayercount;
+		pnewmodel->vertexlightdatasize = model.vertexlightdatasize;
 		pnewmodel->pclipnodes = model.pclipnodes;
 		pnewmodel->numclipnodes = model.numclipnodes;
 		pnewmodel->pedges = model.pedges;
@@ -515,6 +517,12 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 		pnewmodel->nummarksurfaces = model.nummarksurfaces;
 		pnewmodel->pentdata = model.pentdata;
 		pnewmodel->entdatasize = model.entdatasize;
+		pnewmodel->pbrushes = model.pbrushes;
+		pnewmodel->numbrushes = model.numbrushes;
+		pnewmodel->pbrushsides = model.pbrushsides;
+		pnewmodel->numbrushsides = model.numbrushsides;
+		pnewmodel->pleafbrushes = model.pleafbrushes;
+		pnewmodel->numleafbrushes = model.numleafbrushes;
 
 		memcpy(pnewmodel->hulls, model.hulls, sizeof(hull_t)*MAX_MAP_HULLS);
 		pnewmodel->freedata = (i == 0) ? true : false;
@@ -528,6 +536,16 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 			pnewmodel->original_compressionlevel[j] = model.original_compressionlevel[j];
 		}
 
+		for(Uint32 j = 0 ; j < NB_BAKED_VERTEXLIGHT_LAYERS; j++)
+		{
+			pnewmodel->pvertexlightdata[j] = model.pvertexlightdata[j];
+			pnewmodel->pvertexlightdata_original[j] = model.pvertexlightdata_original[j];
+			pnewmodel->original_vertexlightdatasizes[j] = model.original_vertexlightdatasizes[j];
+			pnewmodel->original_vertexlightcompressiontype[j] = model.original_vertexlightcompressiontype[j];
+			pnewmodel->original_vertexlightcompressionlevel[j] = model.original_vertexlightcompressionlevel[j];
+		}
+
+		pnewmodel->headnodeindex = psubmodel->headnode[0];
 		pnewmodel->hulls[0].firstclipnode = psubmodel->headnode[0];
 		for(Uint32 j = 1; j < MAX_MAP_HULLS; j++)
 		{
@@ -575,8 +593,11 @@ void CModelCache::SetupBSPSubmodels( brushmodel_t& model, const Char* loadName )
 		pnew->cacheindex = modelindex+1;
 		pnew->mins = pnewmodel->mins;
 		pnew->maxs = pnewmodel->maxs;
-		pnew->radius = pnewmodel->radius;
 		pnew->isloaded = true;
+
+		// Mark if we have brush collisions
+		if(pnewmodel->numbrushes > 0 && pnewmodel->numbrushsides > 0 && pnewmodel->numleafbrushes > 0)
+			pnew->flags |= CACHE_FL_HAS_BRUSH_COLLISIONS;
 	}
 }
 

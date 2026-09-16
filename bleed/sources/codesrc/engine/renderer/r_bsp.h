@@ -81,7 +81,7 @@ struct light_attribs_t
 		u_light_matrix(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_light_cone_size(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_light_spotdirection(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_light_shadowmap(CGLSLShader::PROPERTY_UNAVAILABLE)
+		u_d_light_shadowmap(CGLSLShader::PROPERTY_UNAVAILABLE)
 	{}
 
 	Int32 u_light_color;
@@ -93,22 +93,22 @@ struct light_attribs_t
 	Int32 u_light_matrix;
 	Int32 u_light_cone_size;
 	Int32 u_light_spotdirection;
-	Int32 d_light_shadowmap;
+	Int32 u_d_light_shadowmap;
 };
 
 struct bsp_shader_attribs
 {
 	bsp_shader_attribs():
 		d_shadertype(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_fogtype(CGLSLShader::PROPERTY_UNAVAILABLE),
 		d_alphatest(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_bumpmapping(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_cubemaps(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_luminance(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_ao(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_numlights(CGLSLShader::PROPERTY_UNAVAILABLE),
-		d_blendmultipass(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_fogtype(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_bumpmapping(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_cubemaps(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_luminance(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_numlights(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_blendmultipass(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_d_lightmap_bicubic(CGLSLShader::PROPERTY_UNAVAILABLE),
 		a_position(CGLSLShader::PROPERTY_UNAVAILABLE),
 		a_tangent(CGLSLShader::PROPERTY_UNAVAILABLE),
 		a_binormal(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -134,14 +134,19 @@ struct bsp_shader_attribs
 		u_decalalpha(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_decalscale(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_cubemap(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_cube_min(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_cube_max(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_cube_origin(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_cubemap_prev(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_cube_prev_min(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_cube_prev_max(CGLSLShader::PROPERTY_UNAVAILABLE),
+		u_cube_prev_origin(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_baselightmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_maintexture(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_detailtex(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_chrometex(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_normalmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_luminance(CGLSLShader::PROPERTY_UNAVAILABLE),
-		u_aomap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_difflightmap(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_lightvecstex(CGLSLShader::PROPERTY_UNAVAILABLE),
 		u_specular(CGLSLShader::PROPERTY_UNAVAILABLE),
@@ -152,15 +157,16 @@ struct bsp_shader_attribs
 	{}
 
 	Int32 d_shadertype;
-	Int32 d_fogtype;
 	Int32 d_alphatest;
-	Int32 d_bumpmapping;
-	Int32 d_specular;
-	Int32 d_cubemaps;
-	Int32 d_luminance;
-	Int32 d_ao;
-	Int32 d_numlights;
-	Int32 d_blendmultipass;
+
+	Int32 u_d_fogtype;
+	Int32 u_d_bumpmapping;
+	Int32 u_d_specular;
+	Int32 u_d_cubemaps;
+	Int32 u_d_luminance;
+	Int32 u_d_numlights;
+	Int32 u_d_blendmultipass;
+	Int32 u_d_lightmap_bicubic;
 
 	// vertex attribs
 	Int32 a_position;
@@ -198,14 +204,21 @@ struct bsp_shader_attribs
 
 	// fragment shader uniforms
 	Int32 u_cubemap;
+	Int32 u_cube_min;
+	Int32 u_cube_max;
+	Int32 u_cube_origin;
+
 	Int32 u_cubemap_prev;
+	Int32 u_cube_prev_min;
+	Int32 u_cube_prev_max;
+	Int32 u_cube_prev_origin;
+
 	Int32 u_baselightmap;
 	Int32 u_maintexture;
 	Int32 u_detailtex;
 	Int32 u_chrometex;
 	Int32 u_normalmap;
 	Int32 u_luminance;
-	Int32 u_aomap;
 	Int32 u_difflightmap;
 	Int32 u_lightvecstex;
 	Int32 u_specular;
@@ -638,7 +651,7 @@ private:
 	CArray<bsp_vertex_t> m_tempDecalVertsArray;
 
 	// Pointer to lightstyle values array
-	CArray<Float>* m_pLightStyleValuesArray;
+	const CArray<Float>* m_pLightStyleValuesArray;
 
 private:
 	CCVar* m_pCvarDetailTextures;
@@ -657,8 +670,6 @@ private:
 
 	// Shader attrib info
 	bsp_shader_attribs m_attribs;
-	// TRUE if cubemapping is supported
-	bool m_isCubemappingSupported;
 };
 extern CBSPRenderer gBSPRenderer;
 #endif

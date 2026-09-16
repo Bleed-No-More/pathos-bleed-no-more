@@ -27,6 +27,10 @@ const Char CGameUITextWindow::TEXTWINDOW_TITLE_TEXT_OBJ_NAME[] = "GameUITextWind
 const Char CGameUITextWindow::TEXTWINDOW__TEXT_TAB_OBJ_NAME[] = "GameUITextWindowTextTab";
 // Window exit button object name
 const Char CGameUITextWindow::TEXTWINDOW_EXIT_BUTTON_OBJ_NAME[] = "GameUITextWindowExitButton";
+// Upper separator object name
+const Char CGameUITextWindow::TEXTWINDOW_UPPER_SEPARATOR_OBJ_NAME[] = "GameUITextWindowUpperSeparator";
+// Lower separator object name
+const Char CGameUITextWindow::TEXTWINDOW_LOWER_SEPARATOR_OBJ_NAME[] = "GameUITextWindowLowerSeparator";
 
 //====================================
 //
@@ -89,6 +93,30 @@ bool CGameUITextWindow::init( const ui_windowdescription_t* pWindowDesc, const u
 	m_pTitleText->setText(pTitleTextObject->getText().c_str());
 
 	//
+	// Create upper separator
+	//
+	const ui_objectinfo_t* pUpperSeparatorObject = pWindowDesc->getObject(UI_OBJECT_SEPARATOR_H, TEXTWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+	if(!pUpperSeparatorObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", TEXTWINDOW_DESC_FILE, TEXTWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
+
+	CGameUIHorizontalSeparator* pUpperSeparator = new CGameUIHorizontalSeparator(
+		pUpperSeparatorObject->getFlags(), 
+		pUpperSeparatorObject->getWidth(), 
+		pUpperSeparatorObject->getHeight(), 
+		pWindowObject->getXInset() + pUpperSeparatorObject->getXOrigin(), 
+		pWindowObject->getYInset() + pUpperSeparatorObject->getYOrigin());
+	pUpperSeparator->setParent(this);
+
+	if(!pUpperSeparator->initSchema(pUpperSeparatorObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", TEXTWINDOW_UPPER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
+
+	//
 	// Create the text tab object
 	//
 	const ui_objectinfo_t* pTextTabObject = pWindowDesc->getObject(UI_OBJECT_TEXT_TAB, TEXTWINDOW__TEXT_TAB_OBJ_NAME);
@@ -113,6 +141,30 @@ bool CGameUITextWindow::init( const ui_windowdescription_t* pWindowDesc, const u
 	if(!m_pTextTab->initSchema(pTextTabObject->getSchema().c_str(), pTextTabObject->getButtonSchema().c_str()))
 	{
 		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUITextTab'.\n");
+		return false;
+	}
+
+	//
+	// Create lower separator
+	//
+	const ui_objectinfo_t* pLowerSeparatorObject = pWindowDesc->getObject(UI_OBJECT_SEPARATOR_H, TEXTWINDOW_LOWER_SEPARATOR_OBJ_NAME);
+	if(!pLowerSeparatorObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", TEXTWINDOW_DESC_FILE, TEXTWINDOW_LOWER_SEPARATOR_OBJ_NAME);
+		return false;
+	}
+
+	CGameUIHorizontalSeparator* pLowerSeparator = new CGameUIHorizontalSeparator(
+		pLowerSeparatorObject->getFlags(), 
+		pLowerSeparatorObject->getWidth(), 
+		pLowerSeparatorObject->getHeight(), 
+		pWindowObject->getXInset() + pLowerSeparatorObject->getXOrigin(), 
+		pWindowObject->getYInset() + pLowerSeparatorObject->getYOrigin());
+	pLowerSeparator->setParent(this);
+
+	if(!pLowerSeparator->initSchema(pUpperSeparatorObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", TEXTWINDOW_LOWER_SEPARATOR_OBJ_NAME);
 		return false;
 	}
 

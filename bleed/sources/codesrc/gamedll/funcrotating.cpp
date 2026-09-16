@@ -182,12 +182,19 @@ bool CFuncRotating::KeyValue( const keyvalue_t& kv )
 		Vector origin;
 		Common::StringToVector(kv.value, origin);
 		if(!origin.IsZero())
-			m_pState->origin = origin;
+			SetOrigin(origin);
+
 		return true;
 	}
 	else if(!qstrcmp(kv.keyname, "fanfriction"))
 	{
 		m_sounds = SDL_atoi(kv.value);
+		return true;
+	}
+	else if(!qstrcmp(kv.keyname, "zhlt_noclip"))
+	{
+		if(SDL_atoi(kv.value) == 1)
+			m_pState->flags |= FL_POINTHULL_ONLY;
 		return true;
 	}
 	else

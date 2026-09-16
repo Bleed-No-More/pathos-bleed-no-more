@@ -16,7 +16,7 @@ All Rights Reserved.
 #include "vbm_shared.h"
 #include "system.h"
 #include "trace.h"
-#include "trace_shared.h"
+#include "trace_core.h"
 
 //
 // Some of the code here was written while referencing Quake 1 and ReHLDS. I want to thank Id Software
@@ -28,15 +28,13 @@ All Rights Reserved.
 // Quaternion and vector arrays used for bone transforms
 CArray<Vector>	g_bonePositions1;
 CArray<vec4_t>	g_boneQuaternions1;
-// Quaternion and vector arrays used for bone transforms
 CArray<Vector>	g_bonePositions2;
 CArray<vec4_t>	g_boneQuaternions2;
-// Quaternion and vector arrays used for bone transforms
 CArray<Vector>	g_bonePositions3;
 CArray<vec4_t>	g_boneQuaternions3;
-// Quaternion and vector arrays used for bone transforms
 CArray<Vector>	g_bonePositions4;
 CArray<vec4_t>	g_boneQuaternions4;
+
 // Used for bone transform calculations
 Float	g_boneMatrix[3][4];
 
@@ -489,7 +487,7 @@ void TR_VBMHullCheck( const CArray<vbmhitboxhull_t>* phulls, const Vector& start
 		const hull_t* phull = &hbhull.hull;
 
 		// Perform trace
-		TR_RecursiveHullCheck(phull, phull->firstclipnode, 0.0f, 1.0f, start, end, hbtr);
+		TR_RecursiveHullCheck_ClipNode(phull, phull->firstclipnode, 0.0f, 1.0f, start, end, hbtr);
 
 		// Assign as best trace if it's closer, or starts in a solid
 		if(i == 0 || tr.flags & (FL_TR_ALLSOLID|FL_TR_STARTSOLID) || hbtr.fraction < tr.fraction)

@@ -160,6 +160,12 @@ bool CFuncTrackTrain::KeyValue( const keyvalue_t& kv )
 		m_stopSound = gd_engfuncs.pfnAllocString(kv.value);
 		return true;
 	}
+	else if(!qstrcmp(kv.keyname, "zhlt_noclip"))
+	{
+		if(SDL_atoi(kv.value) == 1)
+			m_pState->flags |= FL_POINTHULL_ONLY;
+		return true;
+	}
 	else
 		return CBaseEntity::KeyValue(kv);
 }
@@ -378,6 +384,7 @@ void CFuncTrackTrain::Next( void )
 
 	Vector delta = nextFront-m_pState->origin;
 	Vector angles = Math::VectorToAngles(delta.Normalize());
+	Math::VectorAdd(angles, m_pPath->GetAngles(), angles);
 
 	// Correct the angles
 	angles.y += 180;
@@ -493,17 +500,19 @@ void CFuncTrackTrain::Find( void )
 	lookPosition.z += m_height;
 
 	Vector vecdir = (lookPosition-nextPosition).Normalize();
-	m_pState->angles = Math::VectorToAngles(vecdir);
+	Vector angles = Math::VectorToAngles(vecdir);
+	Math::VectorAdd(angles, m_pPath->GetAngles(), angles);
+	SetAngles(angles);
 
 	// Fix angle
-	m_pState->angles.y += 180;
+	SetYaw(m_pState->angles.y + 180);
 
 	// Clear pitch if set to
 	if(HasSpawnFlag(FL_NO_PITCH))
-		m_pState->angles.x = 0;
+		SetPitch(0);
 
 	// Set origin and link us up
-	gd_engfuncs.pfnSetOrigin(m_pEdict, nextPosition);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, nextPosition, false);
 
 	SetNextThink(m_pState->ltime + 0.1, false);
 	SetThink(&CFuncTrackTrain::Next);

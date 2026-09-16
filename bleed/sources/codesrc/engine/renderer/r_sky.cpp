@@ -45,6 +45,7 @@ CSkyRenderer::CSkyRenderer( void ):
 	m_skyIndexBase(0),
 	m_screenQuadBase(0),
 	m_pCvarDrawSky(nullptr),
+	m_pCvarSkyBicubic(nullptr),
 	m_currentSkySet(NO_POSITION),
 	m_skyBoxSkySet(NO_POSITION),
 	m_skySetUsed(NO_POSITION),
@@ -69,6 +70,7 @@ CSkyRenderer::~CSkyRenderer( void )
 bool CSkyRenderer::Init( void )
 {
 	m_pCvarDrawSky = gConsole.CreateCVar( CVAR_FLOAT, FL_CV_CLIENT, "r_drawsky", "1", "Toggle sky rendering." );
+	m_pCvarSkyBicubic = gConsole.CreateCVar( CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_sky_bicubic", "1", "Toggle bicubic sampling for 2d sky." );
 
 	return true;
 }
@@ -110,7 +112,7 @@ bool CSkyRenderer::InitGL( void )
 		m_attribs.u_color = m_pShader->InitUniform("color", CGLSLShader::UNIFORM_FLOAT4);
 		m_attribs.u_modelview = m_pShader->InitUniform("modelview", CGLSLShader::UNIFORM_MATRIX4);
 		m_attribs.u_projection = m_pShader->InitUniform("projection", CGLSLShader::UNIFORM_MATRIX4);
-		m_attribs.u_texture = m_pShader->InitUniform("texture0", CGLSLShader::UNIFORM_INT1);
+		m_attribs.u_texture = m_pShader->InitUniform("texture0", CGLSLShader::UNIFORM_SAMPLER2D);
 
 		if(!R_CheckShaderUniform(m_attribs.u_color, "color", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderUniform(m_attribs.u_modelview, "modelview", m_pShader, Sys_ErrorPopup)
@@ -398,7 +400,6 @@ bool CSkyRenderer::DrawSky( void )
 		&& (!rns.fog.blend1.affectsky || !rns.fog.blend2.affectsky))
 		&& (!rns.sky.fog.active || !rns.sky.fog.affectsky))
 	{
-		m_pVBO->Bind();
 		if(!m_pShader->EnableShader())
 		{
 			Sys_ErrorPopup("Shader error: %s.\n", m_pShader->GetError());
@@ -426,7 +427,8 @@ bool CSkyRenderer::DrawSky( void )
 		m_pShader->EnableAttribute(m_attribs.a_texcoord);
 		m_pShader->SetUniform4f(m_attribs.u_color, 1.0, 1.0, 1.0, 1.0);
 
-		if(!m_pShader->SetDeterminator(m_attribs.d_mode, SHADER_TEXTURE))
+		Int32 mode = (m_pCvarSkyBicubic->GetValue() >= 1) ? SHADER_TEXTURE_BICUBIC : SHADER_TEXTURE;
+		if(!m_pShader->SetDeterminator(m_attribs.d_mode, mode))
 		{
 			Sys_ErrorPopup("Rendering error: %s.", m_pShader->GetError());
 			return false;
@@ -453,7 +455,7 @@ bool CSkyRenderer::DrawSky( void )
 		for (Uint32 i = 0; i < 6; i++)
 		{
 			R_Bind2DTexture(GL_TEXTURE0, pTexturesArray[i]->palloc->gl_index);
-			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(m_skyIndexBase+i*6));
+			m_pShader->DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(m_skyIndexBase+i*6));
 		}
 		glDepthMask(GL_TRUE);
 
@@ -470,7 +472,6 @@ bool CSkyRenderer::DrawSky( void )
 
 		// Disable shader and VBO
 		m_pShader->DisableShader();
-		m_pVBO->UnBind();
 	}
 
 	if(drawskybox && !rns.water_skydraw && !rns.portalpass)
@@ -547,7 +548,6 @@ bool CSkyRenderer::DrawSky( void )
 		if(flFrac > 1.0) 
 			flFrac = 1.0;
 
-		m_pVBO->Bind();
 		if(!m_pShader->EnableShader())
 		{
 			Sys_ErrorPopup("Shader error: %s.\n", m_pShader->GetError());
@@ -583,7 +583,7 @@ bool CSkyRenderer::DrawSky( void )
 
 		R_ValidateShader(m_pShader);
 
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(m_screenQuadBase));
+		m_pShader->DrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, BUFFER_OFFSET(m_screenQuadBase));
 
 		glDepthMask(GL_TRUE);
 		glEnable(GL_DEPTH_TEST);
@@ -597,7 +597,6 @@ bool CSkyRenderer::DrawSky( void )
 
 		// Disable shader and VBO
 		m_pShader->DisableShader();
-		m_pVBO->UnBind();
 	}
 
 	return true;
@@ -640,7 +639,7 @@ void CSkyRenderer::LoadSkyTextures( const Char* pstrName, en_texture_t** pArray 
 		CString path;
 		path << SKYBOX_TEXTURE_DIR << pstrName << SKY_TEXTURE_POSTFIXES[i] << ".dds";
 
-		en_texture_t* ptexture = pTextureManager->LoadTexture(path.c_str(), RS_GAME_LEVEL, (TX_FL_CLAMP_S|TX_FL_CLAMP_T));
+		en_texture_t* ptexture = pTextureManager->LoadTexture(path.c_str(), RS_GAME_LEVEL, (TX_FL_CLAMP_S|TX_FL_CLAMP_T|TX_FL_NOMIPMAPS));
 		if(!ptexture)
 		{
 			rns.sky.drawsky = false;

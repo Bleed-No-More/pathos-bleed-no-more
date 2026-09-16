@@ -22,6 +22,7 @@ All Rights Reserved.
 #include "gameuisubwaywindow.h"
 #include "gameuiobjectiveswindow.h"
 #include "gameuidocumentswindow.h"
+#include "gameuiinventorywindow.h"
 #include "huddraw.h"
 #include "gameuiwindows_shared.h"
 #include "gameui_shared.h"
@@ -164,7 +165,7 @@ bool CGameUIManager::InitGL( void )
 	if(m_pSchemaManager)
 		delete m_pSchemaManager;
 
-	m_pSchemaManager = new CUISchemaManager(cl_filefuncs, cl_renderfuncs.pfnGetDummyTexture, cl_renderfuncs.pfnLoadTexture, cl_engfuncs.pfnGetSchemaFontSet, m_pFontSet);
+	m_pSchemaManager = new CUISchemaManager(cl_filefuncs, cl_renderfuncs.pfnGetDummyTexture, cl_renderfuncs.pfnLoadTexture, cl_engfuncs.pfnGetSchemaFontSet, m_pFontSet, "gameui");
 	m_pSchemaManager->SetScreenResolution(screenWidth, screenHeight);
 
 	// Destroy any active windows, because if we resize the screen,
@@ -209,6 +210,9 @@ CGameUIWindow* CGameUIManager::SpawnWindow( gameui_windows_t windowtype )
 		break;
 	case GAMEUI_DOCUMENTSWINDOW:
 			pWindow = CGameUIDocumentsWindow::CreateInstance();
+		break;
+	case GAMEUI_INVENTORYWINDOW:
+			pWindow = CGameUIInventoryWindow::CreateInstance();
 		break;
 	};
 
@@ -374,7 +378,6 @@ void CGameUIManager::RespawnWindow( void )
 			pActiveWindow->initData(username.c_str(), password.c_str(), usernameinput.c_str(), passwordinput.c_str(), stayTillNext);
 		}
 		break;
-#if 0
 	case GAMEUI_SUBWAYWINDOW:
 		{
 			// Get the current window state
@@ -396,7 +399,6 @@ void CGameUIManager::RespawnWindow( void )
 			pActiveWindow->initData(scriptfile.c_str(), flags, subwayLineIndex);
 		}
 		break;
-#endif
 	case GAMEUI_OBJECTIVESWINDOW:
 		{
 			// Get the current window state
@@ -436,6 +438,28 @@ void CGameUIManager::RespawnWindow( void )
 				return;
 
 			pActiveWindow->initData(documentFilesArray, selectedDocument.c_str());
+		}
+		break;
+	case GAMEUI_INVENTORYWINDOW:
+		{
+			// Get the current window state
+			CString selectedDocument;
+			CArray<CString> documentFilesArray;
+
+			CGameUIInventoryWindow* pActiveWindow = reinterpret_cast<CGameUIInventoryWindow*>(m_pActiveWindow);
+
+			Uint32 verticalRowCount, horizontalRowcount;
+			pActiveWindow->getInformation(verticalRowCount, horizontalRowcount);
+
+			// Destroy it
+			DestroyActiveWindow();
+
+			// Create a new one
+			pActiveWindow = reinterpret_cast<CGameUIInventoryWindow*>(SpawnWindow(type));
+			if(!pActiveWindow)
+				return;
+
+			pActiveWindow->initData(verticalRowCount, horizontalRowcount);
 		}
 		break;
 	}

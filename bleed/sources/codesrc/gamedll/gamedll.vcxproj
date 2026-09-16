@@ -97,6 +97,7 @@
       <AdditionalIncludeDirectories>..\common;..\libs\sdl2.0\include\;..\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4305;4244;4127;4100;4481;4512;4018;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -123,6 +124,7 @@
       <AdditionalIncludeDirectories>..\common;..\libs\sdl2.0\include\;..\shared;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4996;4305;4244;4127;4100;4481;4512;4018;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -178,6 +180,7 @@
       <DisableSpecificWarnings>4996;4305;4244;4127;4100;4481;4512;4018;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -216,7 +219,6 @@
     <ClCompile Include="aisettriggercondition.cpp" />
     <ClCompile Include="aiflagtoggler.cpp" />
     <ClCompile Include="aiwandercontroller.cpp" />
-    <ClCompile Include="ai_common.cpp" />
     <ClCompile Include="ai_militianpc.cpp" />
     <ClCompile Include="ai_nodegraph.cpp" />
     <ClCompile Include="ai_patrolnpc.cpp" />
@@ -242,6 +244,7 @@
     <ClCompile Include="envblackhole.cpp" />
     <ClCompile Include="envblackandwhite.cpp" />
     <ClCompile Include="envchromatic.cpp" />
+    <ClCompile Include="envcubemapobb.cpp" />
     <ClCompile Include="envdlighttrain.cpp" />
     <ClCompile Include="envearthquake.cpp" />
     <ClCompile Include="envelighttrain.cpp" />
@@ -267,6 +270,7 @@
     <ClCompile Include="envtracereffect.cpp" />
     <ClCompile Include="envvignette.cpp" />
     <ClCompile Include="funcbreakable.cpp" />
+    <ClCompile Include="funcbrushcopy.cpp" />
     <ClCompile Include="funcbutton.cpp" />
     <ClCompile Include="funcdoor.cpp" />
     <ClCompile Include="ehandle.cpp" />
@@ -547,6 +551,7 @@
     <ClInclude Include="envsyncanimation.h" />
     <ClInclude Include="envtracereffect.h" />
     <ClInclude Include="envvignette.h" />
+    <ClInclude Include="funcbrushcopy.h" />
     <ClInclude Include="funcparticleblocker.h" />
     <ClInclude Include="funcportalsurface.h" />
     <ClInclude Include="funcslippery.h" />

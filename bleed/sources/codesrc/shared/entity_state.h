@@ -14,6 +14,8 @@ All Rights Reserved.
 
 // Used for custom rendermode types
 static constexpr Uint32 RENDERMODE_BITMASK = 255;
+// Max lightstyles affecting an entity
+static constexpr Uint32 MAX_ENTITY_STYLES = 4;
 
 enum movetype_t
 {
@@ -131,6 +133,7 @@ static constexpr Uint64 FL_GRAPH_ENTITY		= (1ULL<<30);
 static constexpr Uint64 FL_PARALYZED		= (1ULL<<31);
 static constexpr Uint64 FL_NO_HITBOX_TRACE	= (1ULL<<32);
 static constexpr Uint64 FL_PARTICLE_BLOCKER	= (1ULL<<33);
+static constexpr Uint64 FL_POINTHULL_ONLY	= (1ULL<<34);
 
 enum entstate_bits_t
 {
@@ -181,6 +184,7 @@ struct entity_state_t
 		speed(0),
 		stamina(0),
 		modelindex(0),
+		vlight_vbo_index(NO_POSITION),
 		ltime(0),
 		nextthink(0),
 		movetype(MOVETYPE_NONE),
@@ -253,6 +257,10 @@ struct entity_state_t
 	{
 		memset(controllers, 0, sizeof(controllers));
 		memset(blending, 0, sizeof(blending));
+		
+		vlight_styles[0] = 0;
+		for(Uint32 i = 1; i < MAX_ENTITY_STYLES; i++)
+			vlight_styles[i] = 255;
 	}
 
 	entindex_t entindex;
@@ -290,6 +298,9 @@ struct entity_state_t
 	Float stamina;
 
 	Int32 modelindex;
+
+	Int32 vlight_vbo_index;
+	byte vlight_styles[MAX_ENTITY_STYLES];
 
 	Vector absmin;
 	Vector absmax;
@@ -397,8 +408,10 @@ struct entity_state_t
 	Vector vuser3;
 	Vector vuser4;
 
+	// Parenting related
 	Int32 parent;
 	Vector parentoffset;
+	CArray<entindex_t> children;
 };
 
 #endif //ENTITY_STATE_H

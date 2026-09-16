@@ -115,6 +115,29 @@ CCVar* g_pCvarFPSGraphHeight = nullptr;
 CCVar* g_pCvarFPSGraphWidth = nullptr;
 CCVar* g_pCvarFPSGraph = nullptr;
 CCVar* g_pCvarLightmapPadding = nullptr;
+CCVar* g_pCvarBicubicLightmaps = nullptr;
+CCVar* g_pCvarDrawMinsMaxs = nullptr;
+
+// Array of random colors
+const Float RANDOM_COLOR_ARRAY[NUM_RANDOM_COLORS][3] = 
+{
+	{ 1.0, 0.0, 0.0 },
+	{ 0.0, 1.0, 0.0 },
+	{ 0.0, 0.0, 1.0 },
+	{ 1.0, 1.0, 0.0 },
+	{ 0.0, 1.0, 1.0 },
+	{ 0.5, 1.0, 0.5 },
+	{ 0.0, 1.0, 0.5 },
+	{ 0.5, 1.0, 0.0 },
+	{ 0.1, 0.6, 0.9 },
+	{ 0.5, 0.2, 0.5 },
+	{ 0.3, 0.8, 0.1 },
+	{ 0.5, 0.0, 0.4 },
+	{ 0.8, 0.1, 0.2 },
+	{ 0.8, 0.8, 0.3 },
+	{ 0.9, 0.5, 0.1 },
+	{ 0.2, 0.5, 0.5 }
+};
 
 // Caustics texture list file path
 static const Char CAUSTICS_TEXTURE_FILE_PATH[] = "textures/general/caustics_textures.txt";
@@ -215,6 +238,8 @@ bool R_Init( void )
 	g_pCvarFPSGraphHeight = gConsole.CreateCVar( CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_fpsgraphheight", "60", "Height of the FPS graph." );
 	g_pCvarFPSGraphWidth = gConsole.CreateCVar( CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_fpsgraphwidth", "256", "Width of the FPS graph." );
 	g_pCvarLightmapPadding = gConsole.CreateCVar( CVAR_FLOAT, (FL_CV_CLIENT|FL_CV_SAVE), "r_lightmap_padding", "2", "Controls padding of lightmap data to avoid edge aliasing.", R_LightmapPaddingCvarCallBack);
+	g_pCvarBicubicLightmaps = gConsole.CreateCVar(CVAR_FLOAT, (FL_CV_CLIENT | FL_CV_SAVE), "r_lightmap_bicubic", "1", "Toggle bicubic lightmap filtering.");
+	g_pCvarDrawMinsMaxs = gConsole.CreateCVar( CVAR_FLOAT, FL_CV_CLIENT, "r_drawminsmaxs", "0", "Toggle rendering of entity abs mins/maxs." );
 
 	g_pCvarFPSGraph = gConsole.CreateCVar( CVAR_FLOAT, FL_CV_CLIENT, "r_fpsgraph", "0", "Show render FPS timegraph." );
 
@@ -522,8 +547,11 @@ bool R_InitGL( void )
 		else
 			loadstage = DAYSTAGE_NORMAL_RESTORE;
 
-		byte* pdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
-		if(ALD_Load(loadstage, pdatapointers))
+		byte* plmapdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
+		byte* pvertexlightdatapointers[NB_BAKED_VERTEXLIGHT_LAYERS] = {nullptr};
+		byte* plightgriddatapointers[NB_BAKED_VERTEXLIGHT_LAYERS] = {nullptr};
+
+		if(ALD_Load(loadstage, plmapdatapointers, pvertexlightdatapointers, plightgriddatapointers))
 		{
 			for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
 			{
@@ -531,8 +559,20 @@ bool R_InitGL( void )
 				if (ens.pworld->plightdata[i])
 					delete[] ens.pworld->plightdata[i];
 
-				ens.pworld->plightdata[i] = reinterpret_cast<color24_t*>(pdatapointers[i]);
+				ens.pworld->plightdata[i] = reinterpret_cast<color24_t*>(plmapdatapointers[i]);
 			}
+
+			for(Uint32 i = 0; i < NB_BAKED_VERTEXLIGHT_LAYERS; i++)
+			{
+				// All data was successfully set, so release original data
+				if (ens.pworld->pvertexlightdata[i])
+					delete[] ens.pworld->pvertexlightdata[i];
+
+				ens.pworld->pvertexlightdata[i] = reinterpret_cast<color24_t*>(pvertexlightdatapointers[i]);
+			}
+
+			// Set the sampling data also
+			BSP_SetLightGridSampleData(*ens.pworld, plightgriddatapointers);
 		}
 		else
 		{
@@ -1339,6 +1379,7 @@ void R_Ent_ModelLight( cl_entity_t *pentity )
 	mlight->color.z	= static_cast<Float>(pentity->curstate.rendercolor.z)/255;
 	mlight->radius = pentity->curstate.renderamt*ENV_ELIGHT_RADIUS_MULTIPLIER*g_pCvarModelLightMultiplier->GetValue();
 	mlight->noblend = pentity->curstate.velocity.IsZero() ? false : true;
+	mlight->staticentity = (pentity->curstate.effects & EF_STATICENTITY) ? true : false;
 
 	Math::VectorCopy(pentity->curstate.origin, mlight->origin);
 	for(Uint32 i = 0; i < 3; i++)
@@ -1365,6 +1406,7 @@ void R_Ent_DynamicLight( cl_entity_t *pentity )
 	pdlight->lightstyle = static_cast<Uint32>(pentity->curstate.frame);
 	pdlight->lastframe = rns.framecount_main;
 	pdlight->die = -1;
+	pdlight->isskydlight = pentity->curstate.renderfx == RenderFx_SkyEnt ? true : false;
 
 	// Do not cull against main view if in portal/sky
 	if(pentity->curstate.renderfx == RenderFx_InPortalEntity
@@ -1398,6 +1440,7 @@ void R_Ent_Spotlight( cl_entity_t *pentity )
 	pdlight->lightstyle = static_cast<Uint32>(pentity->curstate.frame);
 	pdlight->lastframe = rns.framecount_main;
 	pdlight->die = -1;
+	pdlight->isskydlight = pentity->curstate.renderfx == RenderFx_SkyEnt ? true : false;
 
 	// Do not cull against main view if in portal/sky
 	if(pentity->curstate.renderfx == RenderFx_InPortalEntity
@@ -1908,7 +1951,7 @@ bool R_DrawLogo( en_texture_t* ptexture, Int32 basewidth, Int32 baseheight )
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	if(!pDraw->EnableTexture())
+	if(!pDraw->DisableRectangleTexture() || !pDraw->EnableTexture())
 	{
 		Sys_ErrorPopup("Shader error: %s.\n", pDraw->GetShaderError());
 		return false;
@@ -2075,6 +2118,10 @@ bool R_DrawNormal( void )
 			// Draw any ladders on client
 			if(!cls.dllfuncs.pfnDrawLadders())
 				return false;
+
+			// Draw VBM decals
+			if(!gVBMRenderer.DrawDecals(false))
+				return false;
 		}
 
 		// Draw mirrors
@@ -2158,6 +2205,10 @@ bool R_DrawTransparent( void )
 			// Draw transparent VBM entities
 			if(!gVBMRenderer.DrawTransparent())
 				return false;
+
+			// Draw VBM decals
+			if(!gVBMRenderer.DrawDecals(true))
+				return false;
 		}
 
 		// Draw transparent world entities
@@ -2220,6 +2271,9 @@ bool R_DrawTransparent( void )
 	if(!cls.dllfuncs.pfnDrawTransparent())
 		return false;
 		
+	if(rns.mainframe)
+		R_DrawEntityMinsMaxs();
+
 	return true;
 }
 
@@ -2770,7 +2824,7 @@ bool R_DrawInterface( void )
 
 		return false;
 	}
-
+	
 	// Draw shown texture if set
 	if(!R_DrawShownMaterial())
 	{
@@ -2799,7 +2853,7 @@ bool R_DrawInterface( void )
 
 		return false;
 	}
-
+	
 	pDraw->Disable();
 
 	glEnable(GL_DEPTH_TEST);
@@ -2922,7 +2976,7 @@ bool R_DrawPausedLogo( void )
 
 	// All UI elements use the simple draw interface
 	CBasicDraw* pDraw = CBasicDraw::GetInstance();
-	if(!pDraw->Enable())
+	if(!pDraw->Enable() || !pDraw->DisableTexture() || !pDraw->DisableRectangleTexture())
 	{
 		Sys_ErrorPopup("Shader error: %s.\n", pDraw->GetShaderError());
 		return false;
@@ -2936,6 +2990,200 @@ bool R_DrawPausedLogo( void )
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
+
+	return true;
+}
+
+//====================================
+//
+//====================================
+bool R_DrawEntityMinsMaxs( void )
+{
+	if(g_pCvarDrawMinsMaxs->GetValue() < 1)
+		return true;
+
+	// All UI elements use the simple draw interface
+	CBasicDraw* pDraw = CBasicDraw::GetInstance();
+	if(!pDraw->Enable() || !pDraw->DisableFog() || !pDraw->DisableTexture() || !pDraw->DisableRectangleTexture())
+	{
+		Sys_ErrorPopup("Shader error: %s.\n", pDraw->GetShaderError());
+		return false;
+	}
+
+	glDepthMask(GL_FALSE);
+	glDisable(GL_CULL_FACE);
+	glLineWidth(2.0);
+
+	pDraw->SetModelview(rns.view.modelview.GetMatrix());
+	pDraw->SetProjection(rns.view.projection.GetMatrix());
+
+	Vector bboxpoints[8];
+	for(Uint32 i = 0; i < rns.objects.numvisents; i++)
+	{
+		cl_entity_t* pentity = rns.objects.pvisents[i];
+		if(!pentity->pmodel)
+			continue;
+
+		Vector entitymins, entitymaxs;
+		const cache_model_t* pcachemodel = pentity->pmodel;
+		if(pcachemodel->type == MOD_BRUSH && !pentity->curstate.angles.IsZero())
+		{
+			Vector rotatedmins, rotatedmaxs;
+			Math::RotateMinsMaxsByAngle(pcachemodel->mins, pcachemodel->maxs, pentity->curstate.angles, rotatedmins, rotatedmaxs);
+
+			Math::VectorSubtract(rotatedmins, Vector(1, 1, 1), rotatedmins);
+			Math::VectorAdd(rotatedmaxs, Vector(1, 1, 1), rotatedmaxs);
+
+			Math::VectorAdd(rotatedmins, pentity->curstate.origin, entitymins);
+			Math::VectorAdd(rotatedmaxs, pentity->curstate.origin, entitymaxs);
+		}
+		else
+		{
+			Math::VectorCopy(pentity->curstate.absmin, entitymins);
+			Math::VectorCopy(pentity->curstate.absmax, entitymaxs);
+		}
+
+		Int32 colorindex = pentity->entindex % NUM_RANDOM_COLORS;
+		const Float* pcolorvalue = RANDOM_COLOR_ARRAY[colorindex];
+
+		bool isLocalPlayer = pentity == CL_GetLocalPlayer() ? true : false;
+
+		Vector triverts[3];
+		bboxpoints[0][0] = entitymins[0];
+		bboxpoints[0][1] = entitymaxs[1];
+		bboxpoints[0][2] = entitymins[2];
+
+		bboxpoints[1][0] = entitymins[0];
+		bboxpoints[1][1] = entitymins[1];
+		bboxpoints[1][2] = entitymins[2];
+
+		bboxpoints[2][0] = entitymaxs[0];
+		bboxpoints[2][1] = entitymaxs[1];
+		bboxpoints[2][2] = entitymins[2];
+
+		bboxpoints[3][0] = entitymaxs[0];
+		bboxpoints[3][1] = entitymins[1];
+		bboxpoints[3][2] = entitymins[2];
+
+		bboxpoints[4][0] = entitymaxs[0];
+		bboxpoints[4][1] = entitymaxs[1];
+		bboxpoints[4][2] = entitymaxs[2];
+
+		bboxpoints[5][0] = entitymaxs[0];
+		bboxpoints[5][1] = entitymins[1];
+		bboxpoints[5][2] = entitymaxs[2];
+
+		bboxpoints[6][0] = entitymins[0];
+		bboxpoints[6][1] = entitymaxs[1];
+		bboxpoints[6][2] = entitymaxs[2];
+
+		bboxpoints[7][0] = entitymins[0];
+		bboxpoints[7][1] = entitymins[1];
+		bboxpoints[7][2] = entitymaxs[2];
+
+		if(!isLocalPlayer)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		else
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
+
+		pDraw->Begin(CBasicDraw::DRAW_TRIANGLES);
+		pDraw->Color4f(pcolorvalue[0], pcolorvalue[1], pcolorvalue[2], 0.5);
+
+		for(Uint32 j = 0; j < 3; j++)
+		{
+			// Remember triverts
+			triverts[j] = bboxpoints[j&7];
+
+			// Add to the draw list
+			pDraw->Vertex3fv(bboxpoints[j]);
+		}
+
+		for(Uint32 j = 3; j < 10; j++)
+		{
+			triverts[0] = triverts[1];
+			triverts[1] = triverts[2];
+			triverts[2] = bboxpoints[j&7];
+
+			for(Uint32 k = 0; k < 3; k++)
+				pDraw->Vertex3fv(triverts[k]);
+		}
+
+		pDraw->Vertex3fv(bboxpoints[6]);
+		pDraw->Vertex3fv(bboxpoints[0]);
+		pDraw->Vertex3fv(bboxpoints[4]);
+		pDraw->Vertex3fv(bboxpoints[0]);
+		pDraw->Vertex3fv(bboxpoints[4]);
+		pDraw->Vertex3fv(bboxpoints[2]);
+		pDraw->Vertex3fv(bboxpoints[1]);
+		pDraw->Vertex3fv(bboxpoints[7]);
+		pDraw->Vertex3fv(bboxpoints[3]);
+		pDraw->Vertex3fv(bboxpoints[7]);
+		pDraw->Vertex3fv(bboxpoints[3]);
+		pDraw->Vertex3fv(bboxpoints[5]);
+		pDraw->End();
+
+		if(!isLocalPlayer)
+		{
+			glDisable(GL_BLEND);
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		}
+
+		// Draw wireframe outline
+		Vector vTemp;
+		Vector bboxCorners[8];
+		for (Uint32 j = 0; j < 8; j++)
+		{
+			if ( j & 1 ) 
+				vTemp[0] = entitymins[0];
+			else 
+				vTemp[0] = entitymaxs[0];
+
+			if ( j & 2 ) 
+				vTemp[1] = entitymins[1];
+			else 
+				vTemp[1] = entitymaxs[1];
+
+			if ( j & 4 ) 
+				vTemp[2] = entitymins[2];
+			else 
+				vTemp[2] = entitymaxs[2];
+
+			Math::VectorCopy( vTemp, bboxCorners[j] );
+		}
+
+		pDraw->Begin(CBasicDraw::DRAW_TRIANGLES);
+		pDraw->Color4f(pcolorvalue[0], pcolorvalue[1], pcolorvalue[2], 1.0);
+
+		Uint32 j = 0;
+		for(; j < 3; j++)
+		{
+			triverts[j] = bboxCorners[j];
+			pDraw->Vertex3fv(triverts[j]);
+		}
+
+		for(; j < 8; j++)
+		{
+			triverts[0] = triverts[1];
+			triverts[1] = triverts[2];
+			triverts[2] = bboxCorners[j];
+
+			for(Uint32 k = 0; k < 3; k++)
+				pDraw->Vertex3fv(triverts[k]);
+		}
+
+		pDraw->End();
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	pDraw->Disable();
+	glDepthMask(GL_TRUE);
+	glEnable(GL_CULL_FACE);
 
 	return true;
 }
@@ -3073,7 +3321,6 @@ void R_ResetFrameStates( void )
 
 	rns.objects.numvisents = 0;
 	rns.objects.nummodellights = 0;
-	rns.objects.numvisents = 0;
 
 	gSkyRenderer.PreFrame();
 }
@@ -3447,6 +3694,8 @@ void R_LoadSprite( cache_model_t* pmodel )
 
 	Uint32 frameindex = 0;
 	const msprite_t* psprite = pmodel->getSprite();
+	Int32 flags = (psprite->format == SPR_ALPHTEST) ? TX_FL_ALPHATEST : TX_FL_NONE;
+
 	for(Uint32 i = 0; i < psprite->frames.size(); i++)
 	{
 		mspriteframedesc_t* pframedesc = &psprite->frames[i];
@@ -3460,7 +3709,7 @@ void R_LoadSprite( cache_model_t* pmodel )
 			frameindex++;
 
 			const color24_t* ppalette = reinterpret_cast<const color24_t*>(psprite->palette);
-			pframe->ptexture = pTextureManager->LoadPallettedTexture(name.c_str(), RS_GAME_LEVEL, pframe->pdata, ppalette, pframe->width, pframe->height, TX_FL_NONE);
+			pframe->ptexture = pTextureManager->LoadPallettedTexture(name.c_str(), RS_GAME_LEVEL, pframe->pdata, ppalette, pframe->width, pframe->height, flags);
 			if(!pframe->ptexture)
 			{
 				Con_Printf("%s - Failed to load frame %d for sprite %s.\n", __FUNCTION__, frameindex, pmodel->name.c_str());
@@ -3480,7 +3729,7 @@ void R_LoadSprite( cache_model_t* pmodel )
 				frameindex++;
 
 				const color24_t* ppalette = reinterpret_cast<const color24_t*>(psprite->palette);
-				pframe->ptexture = pTextureManager->LoadPallettedTexture(name.c_str(), RS_GAME_LEVEL, pframe->pdata, ppalette, pframe->width, pframe->height, TX_FL_NONE);
+				pframe->ptexture = pTextureManager->LoadPallettedTexture(name.c_str(), RS_GAME_LEVEL, pframe->pdata, ppalette, pframe->width, pframe->height, flags);
 				if(!pframe->ptexture)
 				{
 					Con_Printf("%s - Failed to load frame %d for sprite %s.\n", __FUNCTION__, frameindex, pmodel->name.c_str());
@@ -3751,14 +4000,40 @@ Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultco
 {
 	// For retaining lightcolors set by Mod_RecursiveLightPoint
 	Vector lightcolors[MAX_SURFACE_STYLES];
+	Vector difflightcolors[MAX_SURFACE_STYLES];
 	byte lightstyles[MAX_SURFACE_STYLES];
 
 	Vector end = position - Vector(0, 0, 8192);
 
-	// Get lightstyle values array
-	CArray<Float>* pStyleValuesArray = nullptr;
+	// Get overdarken treshold
+	Float overdarken = g_pCvarOverdarkenTreshold->GetValue();
+	if(overdarken < 0)
+		overdarken = 0;
 
-	if(Mod_RecursiveLightPoint(ens.pworld, ens.pworld->pnodes, position, end, lightcolors, lightstyles))
+	// Get lightstyle values array
+	const CArray<Float>* pStyleValuesArray = nullptr;
+
+	if(ens.pworld->plightgrid && Mod_GetLightGridLighting(ens.pworld->plightgrid, position, lightcolors, difflightcolors, nullptr, lightstyles, overdarken))
+	{
+		Vector lcolor = lightcolors[BASE_LIGHTMAP_INDEX] + difflightcolors[BASE_LIGHTMAP_INDEX];
+		for(Uint32 j = 1; j < MAX_SURFACE_STYLES; j++)
+		{
+			if(lightstyles[j] == NULL_LIGHTSTYLE_INDEX)
+				break;
+
+			if(!pStyleValuesArray)
+				pStyleValuesArray = gLightStyles.GetLightStyleValuesArray();
+
+			Float value = (*pStyleValuesArray)[lightstyles[j]];
+
+			Vector fullcolor = lightcolors[j] + difflightcolors[j];
+			Math::VectorMA(lcolor, value, fullcolor, lcolor);
+		}
+
+		// Return final combined color
+		return lcolor;
+	}
+	else if(Mod_RecursiveLightPoint(ens.pworld, ens.pworld->pnodes, position, end, lightcolors, lightstyles, overdarken))
 	{
 		Vector lcolor = lightcolors[BASE_LIGHTMAP_INDEX];
 		for(Uint32 j = 1; j < MAX_SURFACE_STYLES; j++)
@@ -3780,6 +4055,56 @@ Vector R_GetLightingForPosition( const Vector& position, const Vector& defaultco
 	{
 		// Not a valid result
 		return defaultcolor;
+	}
+}
+
+//====================================
+//
+//====================================
+void R_GetLightingForPosition( const Vector& position, const Vector& defaultcolor, Vector* pdiffusecolors, Vector* pambientcolors, Vector* plightdirs, byte* plightstyles )
+{
+	Vector end = position - Vector(0, 0, 8192);
+
+	// Get overdarken treshold
+	Float overdarken = g_pCvarOverdarkenTreshold->GetValue();
+	if(overdarken < 0)
+		overdarken = 0;
+
+	// Reset this to base
+	plightstyles[SURF_LIGHTMAP_DEFAULT] = 0;
+
+	bool gridResult;
+	if(ens.pworld->plightgrid)
+		gridResult = Mod_GetLightGridLighting(ens.pworld->plightgrid, position, pambientcolors, pdiffusecolors, plightdirs, plightstyles, overdarken);
+	else
+		gridResult = false;
+
+	if(!gridResult)
+	{
+		Vector lightcolors[MAX_SURFACE_STYLES];
+		if(Mod_RecursiveLightPoint(ens.pworld, ens.pworld->pnodes, position, end, lightcolors, plightstyles, overdarken))
+		{
+			const Float lightDivisor = 0.5;
+
+			for(Uint32 i = 0; i < MAX_SURFACE_STYLES; i++)
+			{
+				if(plightstyles[i] == NULL_LIGHTSTYLE_INDEX)
+				{
+					plightstyles[i] = 0;
+					continue;
+				}
+
+				Math::VectorScale(lightcolors[i], lightDivisor, pdiffusecolors[i]);
+				Math::VectorScale(lightcolors[i], (1.0-lightDivisor), pambientcolors[i]);
+				plightdirs[i] = Vector(0, 0, -1);
+			}
+		}
+		else
+		{
+			// Use default on unit 0
+			pdiffusecolors[SURF_LIGHTMAP_DEFAULT] = defaultcolor;
+			plightdirs[SURF_LIGHTMAP_DEFAULT] = Vector(0, 0, -1);
+		}
 	}
 }
 
@@ -4396,7 +4721,7 @@ void Cmd_EFX_CreateRocketExplosion( void )
 	if(tr.flags & (FL_TR_STARTSOLID|FL_TR_ALLSOLID) || tr.fraction == 1.0)
 		return;
 
-	gLegacyParticles.CreateRocketExplosion(tr.endpos+tr.plane.normal*4, 128);
+	gLegacyParticles.CreateRocketExplosion(tr.endpos+tr.plane.normal*4);
 }
 
 //====================================
@@ -5395,12 +5720,21 @@ void Cmd_BSPToSMD_Lightmap( void )
 	else
 		loadstage = DAYSTAGE_NORMAL_RESTORE;
 
-	byte* pdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
-	if(!ALD_Load(loadstage, pdatapointers))
+	byte* plmapdatapointers[NB_SURF_LIGHTMAP_LAYERS] = {nullptr};
+	byte* pvertexlightdatapointers[NB_BAKED_VERTEXLIGHT_LAYERS] = {nullptr};
+	byte* plightgriddatapointers[NB_BAKED_VERTEXLIGHT_LAYERS] = {nullptr};
+
+	if(!ALD_Load(loadstage, plmapdatapointers, pvertexlightdatapointers, plightgriddatapointers))
 	{
 		Con_EPrintf("%s - Failed to restore lightmap data from backup.\n", __FUNCTION__);
 		return;
 	}
+
+	for(Uint32 i = 0; i < NB_BAKED_VERTEXLIGHT_LAYERS; i++)
+		delete[] pvertexlightdatapointers[i];
+
+	for(Uint32 i = 0; i < NB_LIGHTGRID_DATA_LAYERS; i++)
+		delete[] plightgriddatapointers[i];
 
 	// alloc lightmap data ptrs
 	Uint32 lightmapdatasize = 0;
@@ -5445,24 +5779,24 @@ void Cmd_BSPToSMD_Lightmap( void )
 		Uint32 paddingAmount = clamp(g_pCvarLightmapPadding->GetValue(), 0, MAX_LIGHTMAP_PADDING);
 
 		// Build the base lightmap
-		color24_t* psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_DEFAULT] + psurface->lightoffset);
+		color24_t* psrc = reinterpret_cast<color24_t*>(plmapdatapointers[SURF_LIGHTMAP_DEFAULT] + psurface->lightoffset);
 		R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, plightmap, styleIndex, lightmapWidth, 0, paddingAmount, false, false);
 		lightmapdatasize += size*sizeof(color32_t);
 
-		if(pdatapointers[SURF_LIGHTMAP_AMBIENT] && pdatapointers[SURF_LIGHTMAP_DIFFUSE] && pdatapointers[SURF_LIGHTMAP_VECTORS])
+		if(plmapdatapointers[SURF_LIGHTMAP_AMBIENT] && plmapdatapointers[SURF_LIGHTMAP_DIFFUSE] && plmapdatapointers[SURF_LIGHTMAP_VECTORS])
 		{
 			// Ambient lightmap
-			psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_AMBIENT] + psurface->lightoffset);
+			psrc = reinterpret_cast<color24_t*>(plmapdatapointers[SURF_LIGHTMAP_AMBIENT] + psurface->lightoffset);
 			R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, pambientlightmap, styleIndex, lightmapWidth, 0, paddingAmount);
 			amblightdatasize += size*sizeof(color32_t);
 
 			// Diffuse lightmap
-			psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_DIFFUSE] + psurface->lightoffset);
+			psrc = reinterpret_cast<color24_t*>(plmapdatapointers[SURF_LIGHTMAP_DIFFUSE] + psurface->lightoffset);
 			R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, pdiffuselightmap, styleIndex, lightmapWidth, 0, paddingAmount);
 			diffuselightdatasize += size*sizeof(color32_t);
 
 			// Light vectors lightmap
-			psrc = reinterpret_cast<color24_t*>(pdatapointers[SURF_LIGHTMAP_VECTORS] + psurface->lightoffset);
+			psrc = reinterpret_cast<color24_t*>(plmapdatapointers[SURF_LIGHTMAP_VECTORS] + psurface->lightoffset);
 			R_BuildLightmap(psurface->light_s[styleIndex], psurface->light_t[styleIndex], psrc, psurface, plightvecslightmap, styleIndex, lightmapWidth, 0, paddingAmount, true);
 			lightvecsdatasize += size*sizeof(color32_t);
 		}
@@ -5510,7 +5844,7 @@ void Cmd_BSPToSMD_Lightmap( void )
 	}
 
 	for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
-		delete[] pdatapointers[i];
+		delete[] plmapdatapointers[i];
 
 	delete[] plightmap;
 	delete[] pambientlightmap;
@@ -5528,17 +5862,20 @@ void Cmd_TimeRefresh( void )
 
 	Double beginTime = Sys_FloatTime();
 
+	Float prevAngle = rns.view.params.v_angles[YAW];
+
 	for(Uint32 i = 0; i < 128; i++)
 	{
 		glViewport(0, 0, rns.screenwidth, rns.screenheight);
 		glClearColor(GL_ZERO, GL_ZERO, GL_ZERO, GL_ZERO);
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-		rns.view.v_angles[YAW] = (static_cast<Float>(i)/128.0f) * 360.0f;
-		R_DrawScene();
+		rns.view.params.v_angles[YAW] = (static_cast<Float>(i)/128.0f) * 360.0f;
+		R_Draw(rns.view.params);
 
 		// Increment frame counter
 		rns.framecount++;
+		gWindow.SwapWindow();
 	}
 
 	glFinish();
@@ -5546,6 +5883,8 @@ void Cmd_TimeRefresh( void )
 	Double endTime = Sys_FloatTime();
 	Double duration = endTime - beginTime;
 	Float fps = 128.0f / duration;
+
+	rns.view.params.v_angles[YAW] = prevAngle;
 
 	Con_Printf("%f seconds(%f fps)\n", static_cast<Float>(duration), fps);
 
@@ -5610,6 +5949,7 @@ void Cmd_DetailAuto( void )
 		{
 			CString folderPath = WAD_GetWADFolderPath(wadList[j].c_str(), WORLD_TEXTURES_PATH_BASE);
 			CString materialPath = WAD_GetWADTexturePath(folderPath.c_str(), texname.c_str());
+			materialPath.tolower();
 
 			pmaterial = pTextureManager->FindMaterialScript(materialPath.c_str(), RS_GAME_LEVEL);
 			if(pmaterial)
@@ -5650,23 +5990,26 @@ void Cmd_DetailAuto( void )
 		delete detailTextureAssociationArray[i];
 
 	// Write list of textures missing detail textures
-	CString str;
-	str << "World textures missign detail textures: " << NEWLINE;
+	if(!missingList.empty())
+	{
+		CString str;
+		str << "World textures missing detail textures: " << NEWLINE;
 
-	for(Uint32 i = 0; i < missingList.size(); i++)
-		str << missingList[i] << NEWLINE;
+		for(Uint32 i = 0; i < missingList.size(); i++)
+			str << missingList[i] << NEWLINE;
 
-	// Write to file
-	CString mapname;
-	Common::Basename(ens.pworld->name.c_str(), mapname);
+		// Write to file
+		CString mapname;
+		Common::Basename(ens.pworld->name.c_str(), mapname);
 
-	CString filepath;
-	filepath << "logs/" << mapname << "_detail_missing.log";
+		CString filepath;
+		filepath << "logs/" << mapname << "_detail_missing.log";
 
-	const byte* pwritedata = reinterpret_cast<const byte*>(str.c_str());
-	FL_WriteFile(pwritedata, str.length(), filepath.c_str());
+		const byte* pwritedata = reinterpret_cast<const byte*>(str.c_str());
+		FL_WriteFile(pwritedata, str.length(), filepath.c_str());
 
-	Con_Printf("Wrote list of textures without detail texture associations to '%s'.\n", filepath.c_str());
+		Con_Printf("Wrote list of textures without detail texture associations to '%s'.\n", filepath.c_str());
+	}
 }
 
 //====================================

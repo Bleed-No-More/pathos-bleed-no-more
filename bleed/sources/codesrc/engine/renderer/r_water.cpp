@@ -167,13 +167,15 @@ bool CWaterShader::InitGL( void )
 		m_attribs.d_specular = m_pShader->GetDeterminatorIndex("specular");
 		m_attribs.d_flowmap = m_pShader->GetDeterminatorIndex("flowmap");
 		m_attribs.d_lightonly = m_pShader->GetDeterminatorIndex("lightonly");
+		m_attribs.d_lightmap_bicubic = m_pShader->GetDeterminatorIndex("lightmap_bicubic");
 
 		if(!R_CheckShaderDeterminator(m_attribs.d_fog, "fog", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_side, "side", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_rectrefract, "rectrefract", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_specular, "specular", m_pShader, Sys_ErrorPopup)
 			|| !R_CheckShaderDeterminator(m_attribs.d_flowmap, "flowmap", m_pShader, Sys_ErrorPopup)
-			|| !R_CheckShaderDeterminator(m_attribs.d_lightonly, "lightonly", m_pShader, Sys_ErrorPopup))
+			|| !R_CheckShaderDeterminator(m_attribs.d_lightonly, "lightonly", m_pShader, Sys_ErrorPopup)
+			|| !R_CheckShaderDeterminator(m_attribs.d_lightmap_bicubic, "lightmap_bicubic", m_pShader, Sys_ErrorPopup))
 			return false;
 
 		m_attribs.u_fogcolor = m_pShader->InitUniform("fogcolor", CGLSLShader::UNIFORM_FLOAT3);
@@ -191,14 +193,14 @@ bool CWaterShader::InitGL( void )
 		m_attribs.u_phongexponent = m_pShader->InitUniform("phongexponent", CGLSLShader::UNIFORM_FLOAT1);
 		m_attribs.u_normalmatrix = m_pShader->InitUniform("normalmatrix", CGLSLShader::UNIFORM_MATRIX4);
 		m_attribs.u_normalmatrix_v = m_pShader->InitUniform("normalmatrix_v", CGLSLShader::UNIFORM_MATRIX4);
-		m_attribs.u_normalmap = m_pShader->InitUniform("normalMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_flowmap = m_pShader->InitUniform("flowMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_lightmap = m_pShader->InitUniform("lightMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_refract = m_pShader->InitUniform("refractMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_reflect = m_pShader->InitUniform("reflectMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_rectrefract = m_pShader->InitUniform("rectangleRefractMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_diffusemap = m_pShader->InitUniform("diffuseMap", CGLSLShader::UNIFORM_INT1);
-		m_attribs.u_lightvecsmap = m_pShader->InitUniform("lightvecsMap", CGLSLShader::UNIFORM_INT1);
+		m_attribs.u_normalmap = m_pShader->InitUniform("normalMap", CGLSLShader::UNIFORM_SAMPLER2D);
+		m_attribs.u_flowmap = m_pShader->InitUniform("flowMap", CGLSLShader::UNIFORM_SAMPLER2D);
+		m_attribs.u_lightmap = m_pShader->InitUniform("lightMap", CGLSLShader::UNIFORM_SAMPLER2D);
+		m_attribs.u_refract = m_pShader->InitUniform("refractMap", CGLSLShader::UNIFORM_SAMPLER2D);
+		m_attribs.u_reflect = m_pShader->InitUniform("reflectMap", CGLSLShader::UNIFORM_SAMPLER2D);
+		m_attribs.u_rectrefract = m_pShader->InitUniform("rectangleRefractMap", CGLSLShader::UNIFORM_SAMPLERRECT);
+		m_attribs.u_diffusemap = m_pShader->InitUniform("diffuseMap", CGLSLShader::UNIFORM_SAMPLER2D);
+		m_attribs.u_lightvecsmap = m_pShader->InitUniform("lightvecsMap", CGLSLShader::UNIFORM_SAMPLER2D);
 		m_attribs.u_modelview = m_pShader->InitUniform("modelview", CGLSLShader::UNIFORM_MATRIX4);
 		m_attribs.u_projection = m_pShader->InitUniform("projection", CGLSLShader::UNIFORM_MATRIX4);
 		m_attribs.u_stylestrength = m_pShader->InitUniform("stylestrength", CGLSLShader::UNIFORM_FLOAT1);
@@ -1155,6 +1157,8 @@ void CWaterShader::AddEntity( cl_entity_t *pentity )
 				break;
 
 			Int32 styleindex = psurf->styles[j];
+			if(styleindex == 0)
+				continue;
 
 			cl_water_style_batches_t* pstylebatch = nullptr;
 			for(Uint32 k = 0; k < pwater->stylebatches.size(); k++)
@@ -1804,8 +1808,6 @@ bool CWaterShader::DrawWater( bool skybox )
 	if(rns.mirroring)
 		return true;
 
-	m_pVBO->Bind();
-
 	if(!m_pShader->EnableShader())
 	{
 		Sys_ErrorPopup("Shader error: %s.", m_pShader->GetError());
@@ -1831,11 +1833,15 @@ bool CWaterShader::DrawWater( bool skybox )
 		result = m_pShader->SetDeterminator(m_attribs.d_fog, FALSE, false);
 	}
 
+	if (result)
+	{
+		result = m_pShader->SetDeterminator(m_attribs.d_lightmap_bicubic, g_pCvarBicubicLightmaps->GetValue() > 0 ? 1 : 0, false);
+	}
+
 	if(!result)
 	{
 		Sys_ErrorPopup("Shader error: %s.", m_pShader->GetError());
 		m_pShader->DisableShader();
-		m_pVBO->UnBind();
 		return false;
 	}
 
@@ -2051,7 +2057,7 @@ bool CWaterShader::DrawWater( bool skybox )
 		
 		R_ValidateShader(m_pShader);
 
-		glDrawElements(GL_TRIANGLES, m_pCurrentWater->num_indexes, GL_UNSIGNED_INT, BUFFER_OFFSET(m_pCurrentWater->start_index));
+		m_pShader->DrawElements(GL_TRIANGLES, m_pCurrentWater->num_indexes, GL_UNSIGNED_INT, BUFFER_OFFSET(m_pCurrentWater->start_index));
 
 		if(rectangleUnit != NO_POSITION)
 			R_BindRectangleTexture(GL_TEXTURE0+rectangleUnit, 0);
@@ -2073,7 +2079,7 @@ bool CWaterShader::DrawWater( bool skybox )
 				m_pShader->SetUniform3f(m_attribs.u_fogcolor, 0, 0, 0);
 
 			// Set ptr to lightstyles array
-			CArray<Float>* pLightStyleValuesArray = gLightStyles.GetLightStyleValuesArray();
+			const CArray<Float>* pLightStyleValuesArray = gLightStyles.GetLightStyleValuesArray();
 			for(Uint32 j = 0; j < m_pCurrentWater->stylebatches.size(); j++)
 			{
 				cl_water_style_batches_t& stylebatches = m_pCurrentWater->stylebatches[j];
@@ -2125,10 +2131,12 @@ bool CWaterShader::DrawWater( bool skybox )
 					for(Uint32 l = 0; l < stylebatches.batches[k].size(); l++)
 					{
 						cl_water_style_batch_t& batch = stylebatches.batches[k][l];
-						glDrawElements(GL_TRIANGLES, batch.num_indexes, GL_UNSIGNED_INT, BUFFER_OFFSET(batch.start_index));
+						m_pShader->DrawElements(GL_TRIANGLES, batch.num_indexes, GL_UNSIGNED_INT, BUFFER_OFFSET(batch.start_index));
 					}
 				}
 			}
+
+			glDisable(GL_BLEND);
 
 			if(rns.fog.settings.active)
 				m_pShader->SetUniform3f(m_attribs.u_fogcolor, rns.fog.settings.color[0], rns.fog.settings.color[1], rns.fog.settings.color[2]);
@@ -2140,7 +2148,6 @@ bool CWaterShader::DrawWater( bool skybox )
 	}
 
 	m_pShader->DisableShader();
-	m_pVBO->UnBind();
 
 	if(pRTT)
 		gRTTCache.Free(pRTT);

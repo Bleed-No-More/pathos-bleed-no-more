@@ -56,7 +56,10 @@ bool CEnvSprite::Spawn( void )
 {
 	// Remove immediately if it has no targetname
 	// Means it's completely static
-	if(!HasSpawnFlag(FL_KEEP_SERVER) && m_pFields->targetname == NO_STRING_VALUE)
+	if(!HasSpawnFlag(FL_KEEP_SERVER) 
+		&& m_pFields->targetname == NO_STRING_VALUE
+		&& m_pFields->parent == NO_STRING_VALUE
+		&& m_pState->parent == NO_ENTITY_INDEX)
 	{
 		Util::RemoveEntity(this);
 		return true;
@@ -90,8 +93,11 @@ bool CEnvSprite::Spawn( void )
 	{
 		if(m_pState->angles[1] != m_pState->angles[2])
 		{
-			m_pState->angles[2] = m_pState->angles[1];
-			m_pState->angles[1] = 0;
+			Vector angles = m_pState->angles;
+			angles[2] = m_pState->angles[1];
+			angles[1] = 0;
+
+			SetAngles(angles);
 		}
 	}
 
@@ -313,6 +319,7 @@ void CEnvSprite::AnimateAndDie( Float framerate )
 	m_pState->framerate = framerate;
 	m_dieTime = g_pGameVars->time + (m_maxFrame / framerate);
 	m_pState->nextthink = g_pGameVars->time + 0.1;
+	m_lastAnimTime = g_pGameVars->time;
 }
 
 //=============================================
@@ -336,8 +343,9 @@ void CEnvSprite::Expand( Float scalespeed, Float fadespeed )
 void CEnvSprite::SpriteInit( const Char* pstrSpriteName, const Vector& origin )
 {
 	m_pFields->modelname = gd_engfuncs.pfnAllocString(pstrSpriteName);
-	m_pState->origin = origin;
 	m_pState->spawnflags |= FL_KEEP_SERVER;
+
+	SetOrigin(origin);
 
 	// Call spawn function
 	Spawn();

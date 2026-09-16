@@ -53,8 +53,18 @@ bool CFuncPlatRot::Spawn( void )
 	if(!CFuncPlat::Spawn())
 		return false;
 
-	SetupRotation();
+	
 	return true;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void CFuncPlatRot::InitEntity( void )
+{
+	CFuncPlat::InitEntity();
+	SetupRotation();
 }
 
 //=============================================
@@ -85,7 +95,7 @@ void CFuncPlatRot::HitTop( void )
 {
 	CFuncPlat::HitTop();
 	m_pState->avelocity.Clear();
-	m_pState->angles = m_endAngles;
+	SetAngles(m_endAngles);
 }
 
 //=============================================
@@ -96,7 +106,7 @@ void CFuncPlatRot::HitBottom( void )
 {
 	CFuncPlat::HitBottom();
 	m_pState->avelocity.Clear();
-	m_pState->angles = m_startAngles;
+	SetAngles(m_startAngles);
 }
 
 //=============================================
@@ -137,5 +147,5 @@ void CFuncPlatRot::SetupRotation( void )
 
 	// Start at top if we have a targetname
 	if(m_pFields->targetname != NO_STRING_VALUE)
-		m_pState->angles = m_endAngles;
+		SetAngles(m_endAngles);
 }

@@ -33,7 +33,7 @@ All Rights Reserved.
 #include "modelcache.h"
 #include "networking.h"
 #include "vid.h"
-#include "trace_shared.h"
+#include "trace_core.h"
 #include "cl_snd.h"
 #include "file_interface.h"
 #include "file.h"
@@ -162,15 +162,15 @@ static cldll_engfuncs_t CLIENTDLL_ENGINE_FUNCTION_TABLE =
 //
 trace_interface_t CLIENTDLL_TRACE_FUNCTIONS =
 {
-	CL_TestPlayerPosition,		//pfnTestPlayerPosition
-	CL_PointContents,			//pfnPointContents
-	CL_TruePointContents,		//pfnTruePointContents
-	TR_HullPointContents,		//pfnHullPointContents
-	CL_PlayerTrace,				//pfnPlayerTrace
-	CL_TraceLine,				//pfnTraceLine
-	CL_HullForBSP,				//pfnHullForBSP
-	CL_TraceModel,				//pfnTraceModel
-	CL_TraceTexture				//pfnTraceTexture
+	CL_TestPlayerPosition,			//pfnTestPlayerPosition
+	CL_PointContents,				//pfnPointContents
+	CL_TruePointContents,			//pfnTruePointContents
+	CL_HullPointContents,			//pfnHullPointContents
+	CL_PlayerTrace,					//pfnPlayerTrace
+	CL_TraceLine,					//pfnTraceLine
+	CL_HullForBSP,					//pfnHullForBSP
+	CL_TraceModel,					//pfnTraceModel
+	CL_TraceTexture					//pfnTraceTexture
 };
 
 //=============================================
@@ -201,7 +201,7 @@ bool CL_Init( void )
 	trace_interface_t traceFuncs;
 	traceFuncs.pfnTestPlayerPosition = CL_TestPlayerPosition;
 	traceFuncs.pfnHullForBSP = CL_HullForBSP;
-	traceFuncs.pfnHullPointContents = TR_HullPointContents;
+	traceFuncs.pfnHullPointContents = CL_HullPointContents;
 	traceFuncs.pfnPointContents = CL_PointContents;
 	traceFuncs.pfnTraceModel = CL_TraceModel;
 	traceFuncs.pfnPlayerTrace = CL_PlayerTrace;
@@ -1009,7 +1009,7 @@ void CL_SetEntityTypeData( cl_entity_t* pentity, entity_extrainfo_t* pinfo, enti
 			pinfo->pflexstate = new flexstate_t();
 			const vbmcache_t* pcache = pentity->pmodel->getVBMCache();
 
-			if(pcache->pvbmhdr && pcache->pvbmhdr && pcache->pvbmhdr->flags & VBM_HAS_FLEXES)
+			if(pcache->pvbmhdr && pcache->pvbmhdr->flags & VBM_HAS_FLEXES)
 			{
 				CFlexManager* pFlexManager = gVBMRenderer.GetFlexManager();
 				if(pFlexManager)
@@ -1385,43 +1385,6 @@ Uint32 CL_GetMaxClients( void )
 //=============================================
 void CL_UpdateParentedEntities( void )
 {
-	cl_entity_t* pplayer = CL_GetLocalPlayer();
-	if(!pplayer)
-		return;
-
-	for(Int32 i = 0; i < cls.numentities; i++)
-	{
-		cl_entity_t* pentity = CL_GetEntityByIndex(i);
-		if(!pentity)
-			continue;
-
-		if(pentity->curstate.msg_num != pplayer->curstate.msg_num)
-			continue;
-
-		if(!pentity->pmodel)
-			continue;
-
-		if(pentity->curstate.effects & EF_NODRAW)
-			continue;
-
-		if(!(pentity->curstate.flags & FL_PARENTED)
-			|| pentity->curstate.parent == NO_ENTITY_INDEX)
-			continue;
-
-		cl_entity_t* pparent = CL_GetEntityByIndex(pentity->curstate.parent);
-		if(!pparent)
-			continue;
-
-		if(pparent->curstate.msg_num != pplayer->curstate.msg_num)
-			continue;
-
-		// Set origin always
-		pentity->curstate.origin = pparent->curstate.origin;
-		Math::VectorAdd(pentity->curstate.origin, pentity->curstate.parentoffset, pentity->curstate.origin);
-		
-		if(pentity->curstate.effects & EF_TRACKANGLES)
-			pentity->curstate.angles = pparent->curstate.angles;
-	}
 }
 
 //=============================================

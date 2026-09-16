@@ -79,13 +79,14 @@ bool CEnvLadder::Spawn( void )
 		m_pState->body = 1;
 
 	// Round down origin
+	Vector adjustOrigin = m_pState->origin;
 	for(Uint32 i = 0; i < 3; i++)
 	{
-		float flfrac = m_pState->origin[i] - floor(m_pState->origin[i]);
-		m_pState->origin[i] = (flfrac > 0.5) ? ceil(m_pState->origin[i]) : floor(m_pState->origin[i]);
+		float flfrac = adjustOrigin[i] - SDL_floor(adjustOrigin[i]);
+		adjustOrigin[i] = (flfrac > 0.5) ? SDL_ceil(adjustOrigin[i]) : SDL_floor(adjustOrigin[i]);
 	}
 
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	SetOrigin(adjustOrigin);
 	return true;
 }
 
@@ -176,7 +177,7 @@ void CEnvLadder::CallUse( CBaseEntity* pActivator, CBaseEntity* pCaller, usemode
 
 	// make non-solid and relink
 	m_pState->solid = SOLID_NOT;
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 
 	if(!VerifyMove(vOrigin, pActivator, 1) && !VerifyMove(vOrigin, pActivator, -1)
 		|| (HasSpawnFlag(FL_TOP_ACCESS) 
@@ -184,7 +185,7 @@ void CEnvLadder::CallUse( CBaseEntity* pActivator, CBaseEntity* pCaller, usemode
 	{
 		// Make solid and relink
 		m_pState->solid = SOLID_BBOX;
-		gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+		gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 
 		// Ladder is stuck in a solid or similar, can't move
 		Util::EntityConPrintf(m_pEdict, "Ladder is stuck in a solid!\n");
@@ -214,7 +215,7 @@ void CEnvLadder::ExitLadder( void )
 	m_pState->solid = SOLID_BBOX;
 
 	// Relink
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 }
 
 //=============================================
@@ -335,56 +336,53 @@ bool CEnvLadder::GetExitVectors( ladder_exitpoints_t exit, Vector* porigin, Vect
 	Vector finalOrigin;
 	bool result = false;
 
-	for(Uint32 i = 0; i < 3; i++)
+	Float maxdist1 = LADDER_PIECE_HEIGHT;
+	Float maxdist2 = LADDER_PIECE_HEIGHT + 16;
+	for(Float dist1 = 0; dist1 < maxdist1; dist1 += 4.0f)
 	{
-		// Determine if the player can fit there
-		Vector vStart = vExitOrigin;
-		Vector vEnd = vExitOrigin;
-
-		if(i == 0)
-			vStart = vExitOrigin + Vector(0, 0, LADDER_PIECE_HEIGHT+16);
-		else if(i == 1)
-			vEnd = vExitOrigin - Vector(0, 0, LADDER_PIECE_HEIGHT+8);
-		else
-			vEnd = vExitOrigin - Vector(0, 0, LADDER_PIECE_HEIGHT+16);
-
-		trace_t tr;
-		Util::TraceHull(vStart, vEnd, false, false, HULL_HUMAN, m_pPlayer->GetEdict(), tr);
-
-		if(tr.fraction < 1 && !tr.startSolid())
+		for(Float dist2 = 0; dist2 < maxdist2; dist2 += 4.0f)
 		{
-			finalOrigin = tr.endpos;
-			finalAngles = vAngles;
-			diff = tr.endpos.z-vExitOrigin.z;
-			result = true;
-		}
-		else if(m_pPlayer->GetWaterLevel() > WATERLEVEL_NONE && !tr.allSolid())
-		{
-			finalOrigin = vExitOrigin;
-			finalAngles = vAngles;
-			diff = 0;
-			result = true;
-		}
+			for(Uint32 i = 0; i < 2; i++)
+			{
+				// Determine if the player can fit there
+				Vector vStart, vEnd;
+				if(i == 0)
+				{
+					vStart = vExitOrigin + Vector(0, 0, dist2);
+					vEnd = vExitOrigin - Vector(0, 0, dist1);
+				}
+				else
+				{
+					vStart = vExitOrigin - Vector(0, 0, dist2);
+					vEnd = vExitOrigin - Vector(0, 0, (dist1+dist2));
+				}
 
-		if(result)
-			break;
+				trace_t tr;
+				Util::TraceHull(vStart, vEnd, false, false, HULL_HUMAN, m_pPlayer->GetEdict(), tr);
+
+				if(tr.fraction < 1 && !tr.startSolid())
+				{
+					finalOrigin = tr.endpos;
+					finalAngles = vAngles;
+					diff = tr.endpos.z-vExitOrigin.z;
+					result = true;
+				}
+				else if(m_pPlayer->GetWaterLevel() > WATERLEVEL_NONE && !tr.allSolid())
+				{
+					finalOrigin = vExitOrigin;
+					finalAngles = vAngles;
+					diff = 0;
+					result = true;
+				}
+
+				if(result)
+					break;
+			}
+		}
 	}
 
 	if(result)
 	{
-		/*
-		Vector testPosition(m_pState->origin.x,
-			m_pState->origin.y,
-			playerOrigin.z + LADDER_PIECE_HEIGHT);
-
-		trace_t tr;
-		Util::TraceLine(testPosition, finalOrigin, false, false, m_pPlayer->GetEdict(), tr);
-		if(tr.allSolid() || tr.startSolid() || !tr.noHit())
-		{
-			// Hit a solid
-			return false;
-		}*/
-
 		if(porigin) 
 			(*porigin) = finalOrigin;
 

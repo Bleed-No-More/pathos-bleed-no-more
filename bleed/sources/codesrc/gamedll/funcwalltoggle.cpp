@@ -35,11 +35,28 @@ CFuncWallToggle::~CFuncWallToggle( void )
 // @brief
 //
 //=============================================
+bool CFuncWallToggle::KeyValue( const keyvalue_t& kv )
+{
+	if(!qstrcmp(kv.keyname, "zhlt_noclip"))
+	{
+		if(SDL_atoi(kv.value) == 1)
+			m_pState->flags |= FL_POINTHULL_ONLY;
+		return true;
+	}
+	else
+		return CBaseEntity::KeyValue(kv);
+}
+
+//=============================================
+// @brief
+//
+//=============================================
 bool CFuncWallToggle::Spawn( void )
 {
 	m_pState->movetype = MOVETYPE_PUSH;
 
-	if(m_pFields->targetname == NO_STRING_VALUE)
+	if(m_pFields->targetname == NO_STRING_VALUE
+		&& m_pFields->parent == NO_STRING_VALUE)
 		m_pState->effects |= EF_STATICENTITY;
 
 	if(m_pState->renderamt == 0 
@@ -78,7 +95,7 @@ void CFuncWallToggle::TurnOff( void )
 	if(!HasSpawnFlag(FL_ALWAYS_INVISIBLE))
 		m_pState->effects |= EF_NODRAW;
 
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 }
 
 //=============================================
@@ -93,7 +110,7 @@ void CFuncWallToggle::TurnOn( void )
 	if(!HasSpawnFlag(FL_ALWAYS_INVISIBLE))
 		m_pState->effects &= ~EF_NODRAW;
 
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 }
 
 //=============================================

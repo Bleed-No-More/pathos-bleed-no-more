@@ -34,6 +34,8 @@ public:
 	virtual Int32 GetEntityFlags( void ) override { return CBaseEntity::GetEntityFlags() & ~FL_ENTITY_TRANSITION; }	
 	virtual void CallUse( CBaseEntity* pActivator, CBaseEntity* pCaller, usemode_t useMode, Float value ) override;
 	virtual bool IsFuncWallToggleEntity( void ) const override { return true; }
+	virtual bool CanEntityBeParented( void ) const override { return true; }
+	virtual bool KeyValue( const keyvalue_t& kv ) override;
 
 	void TurnOff( void );
 	void TurnOn( void );

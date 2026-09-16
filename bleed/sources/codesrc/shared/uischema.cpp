@@ -17,7 +17,8 @@ All Rights Reserved.
 // @brief Constructor
 //
 //=============================================
-CUISchemaManager::CUISchemaManager( const file_interface_t& fileInterface, pfnGetDummyTexture_t pfnGetDummyTexture, pfnLoadTexture_t pfnLoadTexture, pfnGetSchemaFontSet_t pfnGetSchemaFontSet, const font_set_t* pDefaultFontSet ):
+CUISchemaManager::CUISchemaManager( const file_interface_t& fileInterface, pfnGetDummyTexture_t pfnGetDummyTexture, pfnLoadTexture_t pfnLoadTexture, pfnGetSchemaFontSet_t pfnGetSchemaFontSet, const font_set_t* pDefaultFontSet, const Char* pstrScriptDirectoryName ):
+	m_scriptDirectoryName( pstrScriptDirectoryName ),
 	m_fileInterface( fileInterface ),
 	m_pfnGetDummyTexture(pfnGetDummyTexture),
 	m_pfnLoadTexture(pfnLoadTexture),
@@ -75,7 +76,7 @@ ui_schemeinfo_t* CUISchemaManager::LoadSchemaFile( const Char* pstrFilename )
 
 	// Load in the file
 	CString scriptPath;
-	scriptPath << "scripts/ui/schemas/" << pstrFilename;
+	scriptPath << "scripts/" << m_scriptDirectoryName << "/schemas/" << pstrFilename;
 
 	Uint32 fileSize = 0;
 	const Char* pfile = reinterpret_cast<const Char*>(m_fileInterface.pfnLoadFile(scriptPath.c_str(), &fileSize));
@@ -253,7 +254,7 @@ ui_windowdescription_t* CUISchemaManager::LoadWindowDescriptionFile( const Char*
 
 	// Load in the file
 	CString scriptPath;
-	scriptPath << "scripts/ui/windows/" << pstrFilename;
+	scriptPath << "scripts/" << m_scriptDirectoryName << "/windows/" << pstrFilename;
 
 	Uint32 fileSize = 0;
 	const Char* pfile = reinterpret_cast<const Char*>(m_fileInterface.pfnLoadFile(scriptPath.c_str(), &fileSize));

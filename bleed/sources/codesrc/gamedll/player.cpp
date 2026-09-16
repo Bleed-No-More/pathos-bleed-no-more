@@ -757,7 +757,7 @@ bool CPlayerEntity::Spawn( void )
 	m_pState->deadstate = DEADSTATE_NONE;
 	m_pState->friction = 1.0;
 
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin, false);
 
 	if(m_pState->flags & FL_DUCKING)
 		gd_engfuncs.pfnSetMinsMaxs(m_pEdict, VEC_DUCK_HULL_MIN, VEC_DUCK_HULL_MAX);
@@ -883,7 +883,7 @@ bool CPlayerEntity::Restore( void )
 		if(m_ladderState == LADDER_STATE_LEAVING)
 		{
 			// Position player approximately
-			gd_engfuncs.pfnSetOrigin(m_pEdict, m_ladderDestOrigin);
+			gd_engfuncs.pfnSetOrigin(m_pEdict, m_ladderDestOrigin, false);
 			m_pState->viewangles = m_pState->angles = m_ladderDestAngles;
 			m_pState->fixangles = true;
 		}
@@ -915,7 +915,7 @@ bool CPlayerEntity::Restore( void )
 
 			if(m_bikeState == BIKE_SV_ENTERING_LERP)
 			{
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pBikeEntity->GetOrigin()+Vector(0, 0, VEC_HULL_MAX[2]));
+				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pBikeEntity->GetOrigin()+Vector(0, 0, VEC_HULL_MAX[2]), false);
 				SetAngles(m_pBikeEntity->GetAngles());
 				SetViewAngles(m_pBikeEntity->GetAngles());
 
@@ -934,7 +934,7 @@ bool CPlayerEntity::Restore( void )
 			m_pBikeEntity->PlayerLeave();
 			m_pBikeEntity = nullptr;
 
-			gd_engfuncs.pfnSetOrigin(m_pEdict, m_dropOrigin);
+			gd_engfuncs.pfnSetOrigin(m_pEdict, m_dropOrigin, false);
 			SetAngles(m_dropAngles);
 			SetViewAngles(m_dropAngles);
 		}
@@ -1453,8 +1453,8 @@ void CPlayerEntity::Killed( CBaseEntity* pAttacker, gibbing_t gibbing, deathmode
 	}
 	
 	// Set angles to neutral except yaw
-	m_pState->angles[PITCH] = 0;
-	m_pState->angles[ROLL] = 0;
+	SetPitch(0);
+	SetRoll(0);
 
 	// Set death time and flag
 	m_pState->flags |= FL_DEAD;
@@ -4084,28 +4084,28 @@ void CPlayerEntity::ManageCheatImpulseCommands( Int32 impulse )
 		break;
 	case PLAYER_CHEATCODE_SHOW_SMALL_HULL_NODE_PATHS:
 		{
-			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_small", m_pState->origin, m_pState->angles, nullptr);
+			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_small", m_pState->origin, m_pState->angles, this);
 			if(pEntity)
 				pEntity->Spawn();
 		}
 		break;
 	case PLAYER_CHEATCODE_SHOW_FLY_HULL_NODE_PATHS:
 		{
-			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_fly", m_pState->origin, m_pState->angles, nullptr);
+			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_fly", m_pState->origin, m_pState->angles, this);
 			if(pEntity)
 				pEntity->Spawn();
 		}
 		break;
 	case PLAYER_CHEATCODE_SHOW_LARGE_HULL_NODE_PATHS:
 		{
-			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_large", m_pState->origin, m_pState->angles, nullptr);
+			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_large", m_pState->origin, m_pState->angles, this);
 			if(pEntity)
 				pEntity->Spawn();
 		}
 		break;
 	case PLAYER_CHEATCODE_SHOW_HUMAN_HULL_NODE_PATHS:
 		{
-			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_human", m_pState->origin, m_pState->angles, nullptr);
+			CBaseEntity* pEntity = CBaseEntity::CreateEntity("node_viewer_human", m_pState->origin, m_pState->angles, this);
 			if(pEntity)
 				pEntity->Spawn();
 		}
@@ -5402,8 +5402,10 @@ void CPlayerEntity::LadderThink( void )
 			if(m_ladderState == LADDER_STATE_ENTERING)
 			{
 				// Position player approximately
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_ladderDestOrigin);
-				m_pState->viewangles = m_pState->angles = m_ladderDestAngles;
+				SetOrigin(m_ladderDestOrigin);
+				SetAngles(m_ladderDestAngles);
+
+				m_pState->viewangles = m_ladderDestAngles;
 				m_pState->fixangles = true;
 
 				m_pState->flags &= ~FL_FROZEN;
@@ -5419,8 +5421,9 @@ void CPlayerEntity::LadderThink( void )
 			}
 			else if(m_ladderState == LADDER_STATE_LEAVING)
 			{
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_ladderDestOrigin);
-				m_pState->viewangles = m_pState->angles = m_ladderDestAngles;
+				SetOrigin(m_ladderDestOrigin);
+				SetAngles(m_ladderDestAngles);
+				m_pState->viewangles = m_ladderDestAngles;
 				m_pState->fixangles = true;
 
 				ClearLadder();
@@ -5461,8 +5464,7 @@ void CPlayerEntity::LadderThink( void )
 				else
 					vResult = vOrigin - Vector(0, 0, LADDER_STEP_SIZE);
 
-				m_pState->origin = vResult;
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+				SetOrigin(vResult);
 
 				m_ladderMoveDirection = LADDER_RESTING;
 				m_clientLadderMoveDirection = LADDER_RESET;
@@ -6017,7 +6019,7 @@ void CPlayerEntity::BikeThink( void )
 				m_bikeState = BIKE_SV_ENTERING;
 
 				// Move player to the bike entity
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pBikeEntity->GetOrigin()+Vector(0, 0, VEC_HULL_MAX[2]));
+				gd_engfuncs.pfnSetOrigin(m_pEdict, m_pBikeEntity->GetOrigin()+Vector(0, 0, VEC_HULL_MAX[2]), false);
 				SetAngles(m_pBikeEntity->GetAngles());
 				SetViewAngles(m_pBikeEntity->GetAngles());
 
@@ -6063,7 +6065,7 @@ void CPlayerEntity::BikeThink( void )
 				m_bikeUpdateTime = g_pGameVars->time + 0.2;
 				m_pBikeEntity->PlayerLeave();
 
-				gd_engfuncs.pfnSetOrigin(m_pEdict, m_dropOrigin);
+				gd_engfuncs.pfnSetOrigin(m_pEdict, m_dropOrigin, false);
 				SetAngles(m_dropAngles);
 				SetViewAngles(m_dropAngles);
 
@@ -6331,9 +6333,10 @@ void CPlayerEntity::UnDuckPlayer( void )
 	m_pState->view_offset = VEC_VIEW;
 
 	Float offsetZ = SDL_fabs(VEC_HULL_MIN[2]) - SDL_fabs(VEC_DUCK_HULL_MIN[2]);
-	m_pState->origin.z += offsetZ;
+	Vector offsetOrigin = m_pState->origin;
+	offsetOrigin.z += offsetZ;
 
-	gd_engfuncs.pfnSetOrigin(m_pEdict, m_pState->origin);
+	SetOrigin(offsetOrigin);
 	m_pState->flags &= ~FL_DUCKING;
 }
 

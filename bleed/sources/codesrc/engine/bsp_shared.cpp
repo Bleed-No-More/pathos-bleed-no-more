@@ -451,6 +451,32 @@ void BSP_Model_ReserveWaterLighting( brushmodel_t& model, color24_t* psrclightda
 // @brief
 //
 //=============================================
+void BSP_SetLightGridSampleData( brushmodel_t& model, byte* psrclightdataptrs[] )
+{
+	if(!model.plightgrid)
+		return;
+
+	for(Uint32 i = 0; i < NB_LIGHTGRID_DATA_LAYERS; i++)
+	{
+		if(model.plightgrid->prawsampledata[i])
+			delete[] model.plightgrid->prawsampledata[i];
+
+		model.plightgrid->prawsampledata[i] = reinterpret_cast<color24_t*>(psrclightdataptrs[i]);
+	}
+
+	for(Uint32 i = 0; i < model.plightgrid->samples.size(); i++)
+	{
+		lightgridsample_t& sample = model.plightgrid->samples[i];
+		
+		for(Uint32 j = 0; j < NB_LIGHTGRID_DATA_LAYERS; j++)
+			sample.plightdata[j] = reinterpret_cast<byte*>(model.plightgrid->prawsampledata[j]) + sample.rawsampleoffset;
+	}
+}
+
+//=============================================
+// @brief
+//
+//=============================================
 void BSP_ReleaseLightmapData( brushmodel_t& model )
 {
 	for(Uint32 i = 0; i < NB_SURF_LIGHTMAP_LAYERS; i++)
@@ -469,5 +495,145 @@ void BSP_ReleaseLightmapData( brushmodel_t& model )
 			delete[] model.plightdata[i];
 			model.plightdata[i] = nullptr;
 		}
+	}
+
+	for(Uint32 i = 0; i < NB_BAKED_VERTEXLIGHT_LAYERS; i++)
+	{
+		if(model.pvertexlightdata_original[i] && reinterpret_cast<byte*>(model.pvertexlightdata[i]) != model.pvertexlightdata_original[i])
+			delete[] model.plightdata_original[i];
+
+		model.plightdata_original[i] = nullptr;
+
+		model.original_vertexlightdatasizes[i] = 0;
+		model.original_vertexlightcompressiontype[i] = 0;
+		model.original_vertexlightcompressionlevel[i] = 0;
+
+		if (model.pvertexlightdata[i])
+		{
+			delete[](byte*)model.pvertexlightdata[i];
+			model.pvertexlightdata[i] = nullptr;
+		}
+	}
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+CString BSP_GetTypesString( const CBitSet& sideTypes )
+{
+	CString typesString;
+	for(Uint32 i = 0; i < sideTypes.size(); i++)
+	{
+		if(sideTypes.test(i))
+		{
+			if(!typesString.empty())
+				typesString << ", ";
+
+			switch(i)
+			{
+			case BRUSHTYPE_NORMAL:
+				typesString << "BRUSHTYPE_NORMAL";
+				break;
+			case BRUSHTYPE_EDITOR_SPECIAL:
+				typesString << "BRUSHTYPE_EDITOR_SPECIAL";
+				break;
+			case BRUSHTYPE_CLIP_BRUSH:
+				typesString << "BRUSHTYPE_CLIP_BRUSH";
+				break;
+			case BRUSHTYPE_SKY:
+				typesString << "BRUSHTYPE_SKY";
+				break;
+			}
+		}
+	}
+
+	return typesString;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void BSP_SetBrushType( brushmodel_t& model, mbrush_t* pbrush, Uint32 index )
+{
+	// Collect type bits
+	CBitSet sideTypes(NB_BRUSH_TYPES);
+	for(Uint32 i = 0; i < pbrush->numbrushsides; i++)
+	{
+		mbrushside_t* pside = &model.pbrushsides[pbrush->firstbrushside + i];
+		mtexinfo_t* ptexinfo = pside->ptexinfo;
+		mtexture_t* ptexture = ptexinfo->ptexture;
+
+		// Do not care about NULL, BEVEL or SOLIDHINT
+		if(!qstrcicmp(ptexture->name, "NULL") 
+			|| !qstrcicmp(ptexture->name, "BEVEL") 
+			|| !qstrcicmp(ptexture->name, "SOLIDHINT")
+			|| !qstrcicmp(ptexture->name, "SKIP"))
+			continue;
+
+		if(!qstrcicmp(ptexture->name, "CLIP"))
+			sideTypes.set(BRUSHTYPE_CLIP_BRUSH);
+		else if(!qstrcicmp(ptexture->name, "HINT") 
+			|| !qstrcicmp(ptexture->name, "ORIGIN"))
+			sideTypes.set(BRUSHTYPE_EDITOR_SPECIAL);
+		else if(!qstrcicmp(ptexture->name, "SKY"))
+			sideTypes.set(BRUSHTYPE_SKY);
+		else
+			sideTypes.set(BRUSHTYPE_NORMAL);
+	}
+
+	// This can only occur if the brush is completely 
+	// textured with null, bevel or solidhint
+	if(!sideTypes.any())
+		sideTypes.set(BRUSHTYPE_NORMAL);
+
+	// Check for mixed contents
+	if(sideTypes.test(BRUSHTYPE_EDITOR_SPECIAL) && sideTypes.test(BRUSHTYPE_NORMAL))
+	{
+		Con_Printf("%s - Mixed face contents on brush %d(%s).\n", __FUNCTION__, index, BSP_GetTypesString(sideTypes).c_str());
+		pbrush->type = BRUSHTYPE_NORMAL;
+		return;
+	}
+	else if(sideTypes.test(BRUSHTYPE_CLIP_BRUSH) && sideTypes.count() > 1)
+	{
+		Con_Printf("%s - Mixed face contents on CLIP brush %d(%s).\n", __FUNCTION__, index, BSP_GetTypesString(sideTypes).c_str());
+		pbrush->type = BRUSHTYPE_CLIP_BRUSH;
+		return;
+	}
+
+	if(sideTypes.test(BRUSHTYPE_SKY) && !sideTypes.test(BRUSHTYPE_NORMAL))
+		pbrush->type = BRUSHTYPE_SKY;
+	else if(sideTypes.test(BRUSHTYPE_EDITOR_SPECIAL))
+		pbrush->type = BRUSHTYPE_EDITOR_SPECIAL;
+	else if(sideTypes.test(BRUSHTYPE_CLIP_BRUSH))
+		pbrush->type = BRUSHTYPE_CLIP_BRUSH;
+	else
+		pbrush->type = BRUSHTYPE_NORMAL;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void BSP_SetupLeafBrushBVHs( brushmodel_t& model )
+{
+	for(Uint32 i = 0; i < model.numleafs; i++)
+	{
+		mleaf_t* pleaf = &model.pleafs[i];
+		if(!pleaf->numleafbrushes)
+			continue;
+
+		if(pleaf->numleafbrushes <= 1)
+			continue;
+
+		// Create BVH for leaf
+		CLeafBrushBVH* pnewbvh = new CLeafBrushBVH(pleaf);
+
+		// Only keep the BVH if there's more than one node
+		if(pnewbvh->GetNodeCount() > 1)
+			pleaf->pleafbrushbvh = pnewbvh;
+		else
+			delete pnewbvh;
 	}
 }

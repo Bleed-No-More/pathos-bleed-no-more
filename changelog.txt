@@ -900,3 +900,174 @@
  - Add support for binding mouse wheel events to input commands.
  - Fix bug in weapon pickup code that caused an invalid clip size to be calculated.
  - The Pathos Model Viewer compiler window was changed into another tab for better usability.
+
+2026 June 23rd:
+ - Massive shader optimization to reduce permutations spliced, reducing boot time enormously.
+ - Shader optimization reducing memory load enormously.
+ - Various optimizations to CGLSLShader class.
+ - Added new safeguards to shader code to prevent incompatible sampler types overlapping on the same texture unit.
+ - Fix timerefresh command not rotating the view as it is supposed to during testing.
+ - Fix for rare crash with VBM decals when clearing game instance.
+ - Minor changes to weapon code allowing for custom ammo capacity on weapons dropped by NPCs.
+ - Restore Half-Life-like jumping physics on player.
+ - Fix rn_detail_auto command not working due to upper/lowercase differences in CTextureManager class.
+
+Merge PR # 55:
+ - Merge changes from PR #55
+ - Apply required changes to VBM renderer to handle VBOs separately
+ - Rework shader code to support multiple VBOs
+ - Add CBuffer to CGLSLShader class to support resizing arrays during shader splicing
+ - Modify PBSPV2 header to support new additional lumps
+ - Expand ALD format to support storing vertex lighting data layers
+ - Remove PBSPV3 code, as a new BSP format is not needed
+ - Modify CGLSLShader class to handle VBO binds, etc itself
+ - Separate VBM decal VBO into itself
+
+2026 July 4th:
+ - Remove unused Pathos Model Viewer source files
+ - Modify VBM Compiler to use distance threshold for vertex merging instead of vertex mangling
+
+2026 July 11th:
+ - Fix crash due to unlit VBM texture types being used with baked vertex lighting
+ - Rename all toggle-state TS_ prefixes to TSTATE_ to avoid compiler errors
+ - Fix ALD export not setting vertex lighting data size
+ - Fix vertex lighting data sizes not being reset when releasing lighting data
+ - Rename CollisionShared::IntersectBVHNodePoint to more general CollisionShared::IntersectBBoxPoint
+ - Fix vertex lighting data layers not being counted propperly in model cache bSP loading function
+ - Fix single-frame blue screen bug in menu when booting up game
+ - Fix models disappearing randomly due to vertex attribs not being reset to enabled upon model change in VBM renderer
+ - Fix crash when deleting VBOs for vertex lighting data upon rebuilding VBM Renderer VBO data
+ - Fix for not calculating light fetch information for vertex lit models
+ - Fix for crash when rendering lightstyles for vertex lit VBM models combined with alpha testing
+ - Remove superflous comments on quaternion and bone position arrays in VBM traceline code
+ - Improve AI code when detecting min shooting and visibility distances in dark fog conditions
+ - Fix crash in Pathos Model Viewer when exiting the Load File popup window without specifying a target
+ - Fix for compile error due to missing EQUAL_EPSILON define in VBM Compiler
+ - Mark lamp prop textures with $noradshadows to avoid dark maps with missing lights
+ 
+2026 July 17th:
+ - Introduce new light grid feature related changes.
+ - Modify ALD format to also contain ALD file data.
+ - Add [] operators to color24_t and color32_t structs.
+ - Remove lightdata layer counting for baked vertex lighting.
+ - Move elight/model related light reduction to it's own variables.
+
+2026 July 18th:
+ - Fix error logging for ALD file referring to vertex lighting instead of light grid.
+ - Add support for compressing light grid raw sample data.
+ - Fix crash with sample data fetch if coordinates were outside the light grid bounds.
+ - Modify R_GetLightingForPosition to use light grid.
+ - Fix choppy NPC lighting updates due to not using interpolated origin.
+
+2026 July 19th:
+ - Apply numerous fixes to parallax corrected cubemap code
+ - Fix blinking issue with cubemaps due to the cubemap strength only being applied if the modelview matrix wasn't set yet for the first texture rendered
+ - Fix crash caused by cubemap builds when NPCs were used as static props with facial animations
+ - Simplify parallax cubemap code by relying on already present pointers instead of looking the cubemap entity up again
+ - Fix issue with VBM models being overly darkened by faulty light reduction code
+
+2026 July 26th:
+ - Recompiled all levels with light probes/light grid and baked vertex lighting.
+ - Modified levels to make use of new parenting system.
+ - Add "Parent" entry to relevant entities in FGD.
+ - Remove unused "precise" collision flag from particle scripts.
+ - Implement the new parenting system into server-side physics to allow entities to be parented to other entities.
+ - Modify light sampling functions to make use of the overdarken cvar instead of being hardcoded.
+ - Add safeguard to light grid to prevent overflow in case of bad buffer size.
+ - Modify cubemap code to prefer closest parallax cubemap whose bbox the view is inside of.
+ - Modify light grid and baked vertex lighting to consider the overdarken factor also.
+ - Modification to allow entity state fields to make use of CArray types support.
+ - Modify game dll code to exclusively set angles and origin through SV_SetOrigin and S_SetAngles for parenting.
+ - Redesign entity state tracking in server physics to support parenting.
+ - Get rid of last bits of "stupid Quake bug" type hacks.
+ - Expand some of the save-restore functionality to augment parenting code.
+ - Improve func_door and func_door_rotating code by getting rid of fixed-size arrays and make use of parenting.
+ - Fix bug with func_train going to wrong path_corner after being re-triggered to continue moving.
+ - Modify trigger_move to detach any parented target entities after moving them.
+ 
+2026 August 16th:
+ - Add Quake 2-style brush based collision support to replace clipnodes.
+ - Recompile all levels with brush based collisions added.
+ - Modify VBM renderer shaders to add separate light calculations for each lightstyle.
+ - Add END and HOME button support to text input tabs.
+ - Fix decal rendering on view models.
+ - Consolidate traceline code into a single function in trace_shared.cpp.
+ - Add support for storing multiple contents types in traceline results.
+ - Fix crash occurring on some maps due to a surface having a null light offset.
+ - Fix bug in CGLSLShader not detecting unused shader uniforms properly.
+ - Fix crash when creating VBM decals caused the decal to delete itself.
+ - Fix issue with transparent model parts not being lit properly in multipass mode.
+ - Fix bug with water not disabling blending after rendering additional lightmaps.
+ - Add code to remove entities and particles that fall outside the world(needs a proper fix like in Source).
+ - Fix NPC nudging code not checking far up enough to nudge NPCs out of solids.
+ - Fix parenting not properly setting positions on toggle entities when tying them to parent entities.
+ - Fix for parented entities not being kept as engine-side entities instead of client-only ones.
+ - Add code to manage zhlt_noclip setting for brush based collisions.
+ - Apply epsilon fix to alpha tested trace also in hlrad.
+
+2026 August 17th:
+ - Fix HullPointContents not working due to using local mins/maxs for testing instead of absmin/absmax.
+
+2026 September 16th:
+ - Modify PBSP V2 BSP format to include mins/maxs for brushes.
+ - Add bicubic filtering support to skyboxes.
+ - Expand env_cable entity to support lighting and textures for the cables, as well as wind.
+ - Remove unused color parameter for legacy particle rocket explosion effect.
+ - Fix ammo counts not using singular/plural message strings properly.
+ - Fix brushmodel bounding box checks being invalid due to wrong expansion of mins/maxs.
+ - Fix Pathos BSP V2 format using Vector in file header data.
+ - Add BVH generation support to leaf brush lists to speed up collision testing.
+ - Add sending basin/absmax to client to fix collision related issues.
+ - Fix corpses incorrectly colliding with player on the client due to deadstate not being sent from server.
+ - Fix HullPointContents not using the right mins/maxs and causing NPCs to incorrectly collide with triggers.
+ - Force use of Hull 0 clipnodes(generated from visible nodes/leaves at map load) to speed up particle and tempent collisions.
+ - Fix bug in CEdictManager::FreeEdict not releasing child entities properly when parent was killed/released.
+ - Rename trace_shared.cpp and .h to trace_core.cpp and .h.
+ - Fix for normal not being rotated for entities with angles when applying decal.
+ - Fix for view model being incorrectly rendered into the static shadow map also when blitting is enabled.
+ - Up color multiplier on legacy particles for brighter particle effects.
+ - Fix alpha tested sprites not being loaded properly and lacking an alpha channel on transparent parts.
+ - Add debug code for rendering the collision mins/maxs of entities in a level.
+ - Implement triple buffering for particle rendering.
+ - Optimize model rendering by reducing the number of trace tests against env_elight entities that are static.
+ - Fix shadow bug with some alpha tested models not having alpha testing properly applied.
+ - Fix bug in animation event code causing events at the end of a sequence to not play at all.
+ - Fix bug that caused the game to fail with a shader error when model debug render functions were enabled.
+ - Prevent "Velocity too high on entity" spam by turning it into a debug console print.
+ - Fix bug in traceline code causing certain static solid entities to be skipped during trace tests.
+ - Fix bug in traceline code that caused startsolid flag to be not set properly when testing against entities.
+ - Remove unused FL_TRACE_EXTRASIZE trace flag.
+ - Add build number tracking based on earliest Pathos repo from 2016 January 27th.
+ - Fix Sys_SetPaused not checking server state properly for host checks.
+ - Fix issue with tracelines becoming empty if the trace test did not touch any empty leaves. Now if the test touches only solid leaves, the trace result is marked properly as allsolid/startsolid.
+ - Fix origin nudges on NPCs failing due to insensitive nudge tests causing them to end up in solids.
+ - Fix UpdateRoute causing an invalid path to be created due to incorrect starting position being used.
+ - Fix SimplifyRoute not resetting the route point index, causing the route points to become invalid.
+ - Fix edge cases causing NPCs to become stuck in the floor due to incorrect de-stucking code.
+ - Fix NPC not testing target reachability in reverse, causing a false positive result to be generated without a proper reachability test being conducted.
+ - Modify NPC door/link entity code not managing related doors properly.
+ - Add check for zhlt_noclip to brush entities to ensure they're marked as FL_POINTHULL_ONLY.
+ - Ensure solid entities with EF_NODRAW are still sent to the client for proper player prediction.
+ - Add "old school" explosion effect to game.
+ - Fix ladder exit position tests being unreliable and causing exit tests to fail in certain locations.
+ - Fix env_sprite not playing animations properly due to the last animation time not being set properly when set to animate and die afterwards.
+ - Add func_brushcopy entity for copying non-moving brushmodels.
+ - Fix collision issues on levels due to func_clipeconomy not having FL_POINTHULL_ONLY set on it.
+ - Add related door name field to func_door/func_door_rotating to help sync certain doors.
+ - Fix brush entities with a parent still being marked as EF_STATICENTITY.
+ - Fix for func_train_copy not inheriting FL_POINTHULL_ONLY from copy target and causing collision issues.
+ - Force point size hull on grenade entities.
+ - Improve multi_manager entity by getting rid of fixed-size arrays and using CArray instead.
+ - Fix node_viewer entity always failing due to owner not being set as player that spawned it.
+ - Fix trigger_push being broken and not working properly with "Only once" flag.
+ - Fix env_dlight and env_spotlight not working properly when rendered in a skybox.
+ - Fix several issues in swept AABB/bounding box collision tests causing invalid checks.
+ - Fix for air acceleration code not calculating wish speed properly due to reproduction issues when referencing HL player movement code.
+ - Fix player footstep code not getting material properly for object player is on.
+ - Fix crash in VBM renderer code when no VBO is rendered during a draw pass.
+ - Add WAV file name to be displayed in the flex script editor tab in model viewer.
+ - In model viewer, fix issue that, when rotating the view with the mouse and going outside the window bounds, caused the offsets to become invalid and the arc ball position being "lost".
+ - Fix broken scope effect in model viewer.
+ - Fix broken transparency when rendering in non-textured and wireframe modes.
+ - Add cable sprites.
+ - Improve Game UI window visuals.

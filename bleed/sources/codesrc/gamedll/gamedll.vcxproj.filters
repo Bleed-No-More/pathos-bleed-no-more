@@ -756,9 +756,6 @@
     <ClCompile Include="npcsecurity.cpp">
       <Filter>Source Files\entities\npc</Filter>
     </ClCompile>
-    <ClCompile Include="ai_common.cpp">
-      <Filter>Source Files\ai</Filter>
-    </ClCompile>
     <ClCompile Include="npcsecuritydead.cpp">
       <Filter>Source Files\entities\npc</Filter>
     </ClCompile>
@@ -915,9 +912,6 @@
     <ClCompile Include="funcparticleblocker.cpp">
       <Filter>Source Files\entities\func</Filter>
     </ClCompile>
-    <ClCompile Include="..\shared\activitymappings.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="lightstyles.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -950,6 +944,15 @@
     </ClCompile>
     <ClCompile Include="ai_turretnpc.cpp">
       <Filter>Source Files\ai</Filter>
+    </ClCompile>
+    <ClCompile Include="envcubemapobb.cpp">
+      <Filter>Source Files\entities\env</Filter>
+    </ClCompile>
+    <ClCompile Include="..\shared\activitymappings.cpp">
+      <Filter>Source Files\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="funcbrushcopy.cpp">
+      <Filter>Source Files\entities\func</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1792,6 +1795,9 @@
     </ClInclude>
     <ClInclude Include="envtracereffect.h">
       <Filter>Header Files\entities\env</Filter>
+    </ClInclude>
+    <ClInclude Include="funcbrushcopy.h">
+      <Filter>Header Files\entities\func</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -51,6 +51,8 @@ CCVar* g_pCvarAutoAim = nullptr;
 CCVar* g_pCvarHoldToWalk = nullptr;
 // Old school blood effects cvar
 CCVar* g_pCvarOldSchoolBlood = nullptr;
+// Old school explosion effects
+CCVar* g_pCvarOldSchoolExplosions = nullptr;
 
 // Decal list object
 CDecalList gDecalList;
@@ -66,6 +68,11 @@ static const Uint32 MAX_NPC_FRAME_PENETRATIONS = 8;
 
 // Smoke sprite precache index
 Int32 g_smokeSpriteIndex = NO_PRECACHE;
+
+// Old-school explosion sprite
+const Char OLDSCHOOL_EXPLOSION_SPRITE_PATH[] = "sprites/qexplo1.spr";
+// Old-school explosion sound
+const Char OLDSCHOOL_EXPLOSION_SOUND_PATH[] = "weapons/explosion_oldschool.wav";
 
 // Counter for penetrations by NPCs
 Uint32 g_nbNPCPenetrations = 0;
@@ -90,6 +97,7 @@ bool InitGameObjects( void )
 	g_pCvarAutoAim = gd_engfuncs.pfnGetCVarPointer(AUTOAIM_CVAR_NAME);
 	g_pCvarHoldToWalk = gd_engfuncs.pfnCreateCVar(CVAR_FLOAT, (FL_CV_SV_ONLY|FL_CV_SAVE), "sv_holdtowalk", "0", "Make walking speed be applied only when holding the walk button");
 	g_pCvarOldSchoolBlood = gd_engfuncs.pfnCreateCVar(CVAR_FLOAT, (FL_CV_SV_ONLY|FL_CV_SAVE), "sv_oldschoolblood", "0", "Use classic Quake-like particles for blood effects");
+	g_pCvarOldSchoolExplosions = gd_engfuncs.pfnCreateCVar(CVAR_FLOAT, (FL_CV_SV_ONLY|FL_CV_SAVE), "sv_oldschoolexplosions", "0", "Use classic Quake-like particles for explosion effects");
 
 	// Create commands
 	gd_engfuncs.pfnCreateCommand("dumpcheats", DumpCheatCodes, "Dumps cheat codes");
@@ -429,6 +437,9 @@ void PrecacheGenericResources( void )
 	gd_engfuncs.pfnPrecacheDecal("bloodbigsplat2");
 
 	g_smokeSpriteIndex = gd_engfuncs.pfnPrecacheModel("sprites/smoke.spr");
+	gd_engfuncs.pfnPrecacheModel(OLDSCHOOL_EXPLOSION_SPRITE_PATH);
+
+	gd_engfuncs.pfnPrecacheSound(OLDSCHOOL_EXPLOSION_SOUND_PATH);
 
 	if(g_pCvarNPCDebug->GetValue() >= 1)
 	{
@@ -649,7 +660,7 @@ bool ShootTrace( const Vector& gunPosition, const Vector& endPos, const Vector& 
 	if(pTraceModel)
 		Util::TraceModel(pTraceModel, gunPosition, endPos, true, HULL_POINT, tr);
 	else
-		Util::TraceLine(gunPosition, endPos, false, true, false, true, isRicochetShot ? nullptr : pAttacker->GetEdict(), tr);
+		Util::TraceLine(gunPosition, endPos, false, true, false, true, true, isRicochetShot ? nullptr : pAttacker->GetEdict(), tr);
 		
 	// Don't bother if we hit nothing
 	if(tr.noHit())
@@ -660,7 +671,7 @@ bool ShootTrace( const Vector& gunPosition, const Vector& endPos, const Vector& 
 		pWeapon->OnWeaponShotImpact(gunPosition, tr, (isPenetrationShot || isRicochetShot) ? true : false);
 
 	// Don't bother if we hit the sky
-	if(gd_tracefuncs.pfnPointContents(tr.endpos, nullptr, false) == CONTENTS_SKY)
+	if(tr.hasContents(CONTENTS_SKY))
 		return false;
 
 	// Make sure it's valid
@@ -887,7 +898,15 @@ void FireBullets( Uint32 nbshots,
 		{
 			tracerCount++;
 			if((tracerCount % tracerFrequency) == 0)
-				SpawnTracer(gunTracePosition, tr.endpos, pAttacker, aimForward, aimRight, aimUp, true, mirrorTracer);
+			{
+				Vector tracerEndPos;
+				if(tr.hasContents(CONTENTS_SKY))
+					tracerEndPos = endPos;
+				else
+					tracerEndPos = tr.endpos;
+
+				SpawnTracer(gunTracePosition, tracerEndPos, pAttacker, aimForward, aimRight, aimUp, true, mirrorTracer);
+			}
 		}
 
 		if(shootResult)
@@ -1063,14 +1082,14 @@ void FireBullets( Uint32 nbshots,
 							break;
 
 						Vector startPosition;
-						Vector endPosition = tr.endpos;
+						Vector originalHitPosition = tr.endpos;
 						for (Float ldistance = 4.0f; ldistance <= pPenetrationInfo->penetrationdepth; ldistance += 4.0f)
 						{
-							startPosition = tr.endpos + shootDirection * ldistance;
+							startPosition = originalHitPosition + shootDirection * ldistance;
 							if (pHitEntity->IsBrushModel() || pHitEntity->IsWorldSpawn())
-								Util::TraceLine(startPosition, endPosition, true, true, false, true, pAttacker->GetEdict(), tr);
+								Util::TraceLine(startPosition, originalHitPosition, true, true, false, true, pAttacker->GetEdict(), tr);
 							else
-								Util::TraceLine(startPosition, endPosition, false, true, pAttacker->GetEdict(), tr);
+								Util::TraceLine(startPosition, originalHitPosition, false, true, pAttacker->GetEdict(), tr);
 
 							if (!tr.startSolid() && !tr.allSolid() && !tr.noHit())
 								break;

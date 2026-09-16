@@ -1,0 +1,49 @@
+Bottom
+{
+	$default	"gameUIDefaultBottom.tga"
+}
+BottomLeft
+{
+	$default	"gameUIDefaultBottomLeft.tga"
+}
+BottomRight
+{
+	$default	"gameUIDefaultBottomRight.tga"
+}
+Left
+{
+	$default	"gameUIDefaultRight.tga"
+}
+Right
+{
+	$default	"gameUIDefaultLeft.tga"
+}
+Top
+{
+	$default	"gameUIDefaultTop.tga"
+}
+TopLeft
+{
+	$default	"gameUIDefaultTopLeft.tga"
+}
+TopRight
+{
+	$default	"gameUIDefaultTopRight.tga"
+}
+Body
+{
+	$default	"gameUIDefaultBody.tga"
+}
+CloseIcon
+{
+	$default	"window_close_default.tga"
+	$focus		"window_close_hover.tga"
+}
+HorizontalSeparator
+{
+	$default	"gameUIDefaultSeparator.tga"
+}
+VerticalSeparator
+{
+	$default	"gameUIDefaultSeparator.tga"
+}

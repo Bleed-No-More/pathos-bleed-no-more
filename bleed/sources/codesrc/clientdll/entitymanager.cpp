@@ -20,6 +20,9 @@ All Rights Reserved.
 #include "view.h"
 #include "vbm_shared.h"
 
+// Default sprite for cables
+static const Char DEFAULT_CABLE_SPRITE[] = "sprites/cable/cable1.spr";
+
 // Class definition
 CEntityManager gEntityManager;
 
@@ -280,7 +283,50 @@ void CEntityManager::Entity_EnvCable( const entitydata_t& entity )
 		return;
 
 	Uint32 numsegments = atoi(pValue);
-	cl_efxapi.pfnCreateCableEntity(vorigin1, vorigin2, falldepth, flwidth, numsegments);
+
+	// Get x axis wind amount
+	Float windx = 0;
+	pValue = ValueForKey(entity, "windx");
+	if(pValue)
+	{
+		windx = SDL_atof(pValue);
+		if(windx == -1)
+			windx = 0;
+	}
+	else
+	{
+		// Apply a tiny amount of random wind
+		windx = Common::RandomFloat(4, 16);
+	}
+
+	// Get y axis wind amount
+	Float windy = 0;
+	pValue = ValueForKey(entity, "windy");
+	if(pValue)
+	{
+		windy = SDL_atof(pValue);
+		if(windy == -1)
+			windy = 0;
+	}
+	else
+	{
+		// Apply a tiny amount of random wind
+		windy = Common::RandomFloat(4, 8);
+	}
+
+	// Get model
+	pValue = ValueForKey(entity, "model");
+	if(!pValue || !qstrstr(pValue, ".spr"))
+		pValue = DEFAULT_CABLE_SPRITE;
+
+	const cache_model_t *pmodel = cl_engfuncs.pfnLoadModel(pValue);
+	if(!pmodel)
+	{
+		cl_engfuncs.pfnCon_Printf("[flags=onlyonce_game]%s - Failed to load '%s'.\n", __FUNCTION__, pValue);
+		return;
+	}
+
+	cl_efxapi.pfnCreateCableEntity(pmodel->cacheindex, vorigin1, vorigin2, falldepth, flwidth, numsegments, windx, windy);
 }
 
 //=============================================
@@ -417,6 +463,13 @@ void CEntityManager::Entity_EnvELight( const entitydata_t& entity, entindex_t& e
 		return;
 	}
 
+	pvalue = ValueForKey(entity, "parent");
+	if(pvalue)
+	{
+		// Entities with a parent are handled by the engine
+		return;
+	}
+
 	if(m_entitiesArray.size() == MAX_SERVER_ENTITIES)
 	{
 		cl_engfuncs.pfnCon_Printf("%s - Exceeded MAX_SERVER_ENTITIES.\n", __FUNCTION__);
@@ -432,6 +485,8 @@ void CEntityManager::Entity_EnvELight( const entitydata_t& entity, entindex_t& e
 
 	newEntity.identifier = m_lastIdentifierUsed;
 	m_lastIdentifierUsed++;
+
+	newEntity.curstate.effects = EF_STATICENTITY;
 
 	pvalue = ValueForKey(entity, "origin");
 	if (pvalue)
@@ -473,6 +528,13 @@ void CEntityManager::Entity_EnvModel( const entitydata_t& entity, entindex_t& en
 	if(pvalue)
 	{
 		// Entities with a targetname are handled by the engine
+		return;
+	}
+
+	pvalue = ValueForKey(entity, "parent");
+	if(pvalue)
+	{
+		// Entities with a parent are handled by the engine
 		return;
 	}
 
@@ -590,6 +652,24 @@ void CEntityManager::Entity_EnvModel( const entitydata_t& entity, entindex_t& en
 	const vbmcache_t* pstudiocache = newEntity.pmodel->getVBMCache();
 	const studiohdr_t* pstudiohdr = pstudiocache->pstudiohdr;
 
+	// Manage things for vertex baked stuff
+	pvalue = ValueForKey(entity, "vlight_hash");
+	if(pvalue)
+	{
+		// Extract hash value
+		CString vlight_hash(pvalue);
+		if(qstrcmp(pstudiocache->vertexhash, vlight_hash))
+		{
+			cl_engfuncs.pfnCon_Printf("[flags=onlyonce_game]%s - Vertex hash for model '%s' in BSP does not math with cache hash, model has been changed.\nBaked vertex lighting will be discarded for all entities using this model.\n", __FUNCTION__, pmodel->name.c_str());
+			newEntity.curstate.vlight_vbo_index = NO_POSITION;
+		}
+		else
+		{
+			// Set up vertex light data
+			SetupModelVertexLighting(entity, &newEntity, pmodel);
+		}
+	}
+
 	// seqname overrides sequence parameter
 	pvalue = ValueForKey(entity, "seqname");
 	if(pvalue && qstrlen(pvalue))
@@ -612,57 +692,10 @@ void CEntityManager::Entity_EnvModel( const entitydata_t& entity, entindex_t& en
 	if (newEntity.curstate.sequence >=  pstudiohdr->numseq) 
 		newEntity.curstate.sequence = 0;
 
-	Vector vtemp;
-	Vector vbounds[8];
 	const mstudioseqdesc_t *pseqdesc = pstudiohdr->getSequence(newEntity.curstate.sequence);
-	for (int i = 0; i < 8; i++)
-	{
-		if ( i & 1 ) 
-			vtemp[0] = pseqdesc->bbmin[0];
-		else 
-			vtemp[0] = pseqdesc->bbmax[0];
-		if ( i & 2 ) 
-			vtemp[1] = pseqdesc->bbmin[1];
-		else 
-			vtemp[1] = pseqdesc->bbmax[1];
-		if ( i & 4 ) 
-			vtemp[2] = pseqdesc->bbmin[2];
-		else 
-			vtemp[2] = pseqdesc->bbmax[2];
 
-		Math::VectorCopy( vtemp, vbounds[i] );
-	}
-		
-	Float anglemarix[3][4];
-	Math::AngleMatrix(newEntity.curstate.angles, anglemarix);
-
-	for (int i = 0; i < 8; i++ )
-	{
-		Math::VectorCopy(vbounds[i], vtemp);
-		Math::VectorRotate(vtemp, anglemarix, vbounds[i]);
-	}
-
-	// Set the bounding box
-	Vector vmins = NULL_MINS;
-	Vector vmaxs = NULL_MAXS;
-	for(Uint32 i = 0; i < 8; i++)
-	{
-		// Mins
-		if(vbounds[i][0] < vmins[0]) 
-			vmins[0] = vbounds[i][0];
-		if(vbounds[i][1] < vmins[1]) 
-			vmins[1] = vbounds[i][1];
-		if(vbounds[i][2] < vmins[2]) 
-			vmins[2] = vbounds[i][2];
-
-		// Maxs
-		if(vbounds[i][0] > vmaxs[0]) 
-			vmaxs[0] = vbounds[i][0];
-		if(vbounds[i][1] > vmaxs[1]) 
-			vmaxs[1] = vbounds[i][1];
-		if(vbounds[i][2] > vmaxs[2]) 
-			vmaxs[2] = vbounds[i][2];
-	}
+	Vector vmins, vmaxs;
+	Math::RotateMinsMaxsByAngle(pseqdesc->bbmin, pseqdesc->bbmax, newEntity.curstate.angles, vmins, vmaxs);
 
 	entity_extrainfo_t *pInfo = cl_engfuncs.pfnGetEntityExtraData(&newEntity);
 
@@ -721,6 +754,88 @@ const entitydata_t* CEntityManager::FindEntityByTargetName( const Char* pstrClas
 const CArray<entitydata_t>& CEntityManager::GetEntityList( void ) const
 {
 	return m_bspEntitiesArray;
+}
+
+//=============================================
+// @brief
+//
+//=============================================
+void CEntityManager::SetupModelVertexLighting( const entitydata_t& entity, cl_entity_t* pcliententity, const cache_model_t* pmodel )
+{
+	// Read the offset into data
+	const Char* pvalue = ValueForKey(entity, "vlight_offset");
+	if(!pvalue)
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Entity with model '%s' missing 'vlight_offset' field.\n", __FUNCTION__, pmodel->name.c_str());
+		return;
+	}
+
+	Int32 vlight_offset = SDL_atoi(pvalue);
+	if(vlight_offset < 0)
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Entity with model '%s' has an invalid value for 'vlight_offset' field.\n", __FUNCTION__, pmodel->name.c_str());
+		return;
+	}
+
+	// Read the vertex count
+	pvalue = ValueForKey(entity, "vlight_vertexcount");
+	if(!pvalue)
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Entity with model '%s' missing 'vlight_vertexcount' field.\n", __FUNCTION__, pmodel->name.c_str());
+		return;
+	}
+
+	Int32 vlight_vertexcount = SDL_atoi(pvalue);
+	if(vlight_vertexcount < 0)
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Entity with model '%s' has an invalid value for 'vlight_vertexcount' field.\n", __FUNCTION__, pmodel->name.c_str());
+		return;
+	}
+
+	// Retrieve any lightstyles
+	pvalue = ValueForKey(entity, "vlight_styles");
+	if(pvalue)
+	{
+		CString token;
+		Uint32 index = 0;
+
+		const Char* pstr = pvalue;
+		while(pstr)
+		{
+			if(index >= MAX_ENTITY_STYLES)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Too many lightstyles on env_model entity with model '%s'.\n", __FUNCTION__, token.c_str(), pmodel->name.c_str());
+				break;
+			}
+
+			pstr = Common::Parse(pstr, token, ";");
+			if(pstr && (*pstr) == ';')
+				pstr++;
+
+			if(!Common::IsNumber(token))
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Numerical value expected for 'vlight_styles', got '%d' instead.\n", __FUNCTION__, token.c_str());
+				continue;
+			}
+				
+			Int32 value = SDL_atoi(token.c_str());
+			if(value < 0 || value > 255)
+			{
+				cl_engfuncs.pfnCon_Printf("%s - Invalid value '%d' specified for 'vlight_styles'.\n", __FUNCTION__, token.c_str());
+				continue;
+			}
+
+			pcliententity->curstate.vlight_styles[index] = value;
+			index++;
+		}
+	}
+
+	// Call engine to set up this information
+	if(!cl_efxapi.pfnSetupEntityVertexLightVBO(pcliententity, vlight_offset, vlight_vertexcount, pcliententity->curstate.vlight_styles))
+	{
+		cl_engfuncs.pfnCon_Printf("%s - Failed to set up baked vertex lighting for entity with model '%s'.\n", __FUNCTION__, pmodel->name.c_str());
+		return;
+	}
 }
 
 //=============================================

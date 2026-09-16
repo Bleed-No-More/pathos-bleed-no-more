@@ -21,25 +21,28 @@ All Rights Reserved.
 #include "gameuitextwindow.h"
 
 // Window description file
-const Char CGameUIInventoryWindow::INVENTORYWINDOW_DESC_FILE[] = "gameuidocumentswindow.txt";
+const Char CGameUIInventoryWindow::INVENTORYWINDOW_DESC_FILE[] = "gameuiinventoryswindow.txt";
 // Window object name
 const Char CGameUIInventoryWindow::INVENTORYWINDOW_OBJ_NAME[] = "GameUIInventoryWindow";
 // Title text object name
 const Char CGameUIInventoryWindow::INVENTORYWINDOW_TITLE_TEXT_OBJ_NAME[] = "GameUIInventoryWindowTitleText";
-// Upper separator object name
-const Char CGameUIInventoryWindow::INVENTORYWINDOW_UPPER_SEPARATOR_OBJ_NAME[] = "GameUIInventoryWindowUpperSeparator";
-// Lower separator object name
-const Char CGameUIInventoryWindow::INVENTORYWINDOW_LOWER_SEPARATOR_OBJ_NAME[] = "GameUIInventoryWindowLowerSeparator";
 // Exit window button object name
-const Char CGameUIInventoryWindow::INVENTORYWINDOW_EXIT_BUTTON_OBJ_NAME[] = "GameUIInventoryWindowExitWindow";
+const Char CGameUIInventoryWindow::INVENTORYWINDOW_EXIT_BUTTON_OBJ_NAME[] = "GameUIInventoryWindowExitButton";
 
+// Inventory background surface object name
+const Char CGameUIInventoryWindow::INVENTORYWINDOW_BG_SURFACE_OBJ_NAME[] = "GameUIInventoryBackgroundSurface";
+// Inventory cell object name
+const Char CGameUIInventoryWindow::INVENTORYWINDOW_CELL_OBJ_NAME[] = "GameUIInventoryCell";
 
 //====================================
 //
 //====================================
 CGameUIInventoryWindow::CGameUIInventoryWindow( Int32 flags, Int32 originX, Int32 originY, Uint32 width, Uint32 height ):
 	CGameUIWindow(flags, originX, originY, width, height),
-	m_pExitButton(nullptr)
+	m_pExitButton(nullptr),
+	m_horizontalRowCount(0),
+	m_verticalRowCount(0),
+	m_pCellBackgroundSurface(nullptr)
 {
 }
 
@@ -59,10 +62,14 @@ bool CGameUIInventoryWindow::init( const ui_windowdescription_t* pWindowDesc, co
 	if(!CGameUISurface::initSchema(pWindowObject->getSchema().c_str()))
 		return false;
 
+	// We'll need this later for cells
+	m_pWindowDescription = pWindowDesc;
+	m_pWindowObjectInfo = pWindowObject;
+
 	//
 	// Create title text object
 	//
-	const ui_objectinfo_t* pTitleTextObject = pWindowDesc->getObject(UI_OBJECT_TEXT, INVENTORYWINDOW_TITLE_TEXT_OBJ_NAME);
+	const ui_objectinfo_t* pTitleTextObject = m_pWindowDescription->getObject(UI_OBJECT_TEXT, INVENTORYWINDOW_TITLE_TEXT_OBJ_NAME);
 	if(!pTitleTextObject)
 	{
 		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", INVENTORYWINDOW_DESC_FILE, INVENTORYWINDOW_TITLE_TEXT_OBJ_NAME);
@@ -75,65 +82,17 @@ bool CGameUIInventoryWindow::init( const ui_windowdescription_t* pWindowDesc, co
 		pTitleTextObject->getFlags(), 
 		pTitleTextObject->getTextColor(), 
 		pFontSet, 
-		pWindowObject->getXInset() + pTitleTextObject->getXOrigin(), 
-		pWindowObject->getYInset() + pTitleTextObject->getYOrigin());
+		m_pWindowObjectInfo->getXInset() + pTitleTextObject->getXOrigin(), 
+		m_pWindowObjectInfo->getYInset() + pTitleTextObject->getYOrigin());
 
 	pWindowTitleText->setParent(this);
 	pWindowTitleText->setText(pTitleTextObject->getText().c_str());
 
 	//
-	// Create upper separator
-	//
-	const ui_objectinfo_t* pUpperSeparatorObject = pWindowDesc->getObject(UI_OBJECT_SEPARATOR_H, INVENTORYWINDOW_UPPER_SEPARATOR_OBJ_NAME);
-	if(!pUpperSeparatorObject)
-	{
-		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", INVENTORYWINDOW_DESC_FILE, INVENTORYWINDOW_UPPER_SEPARATOR_OBJ_NAME);
-		return false;
-	}
-
-	CGameUIHorizontalSeparator* pUpperSeparator = new CGameUIHorizontalSeparator(
-		pUpperSeparatorObject->getFlags(), 
-		pUpperSeparatorObject->getWidth(), 
-		pUpperSeparatorObject->getHeight(), 
-		pWindowObject->getXInset() + pUpperSeparatorObject->getXOrigin(), 
-		pWindowObject->getYInset() + pUpperSeparatorObject->getYOrigin());
-	pUpperSeparator->setParent(this);
-
-	if(!pUpperSeparator->initSchema(pUpperSeparatorObject->getSchema().c_str()))
-	{
-		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", INVENTORYWINDOW_UPPER_SEPARATOR_OBJ_NAME);
-		return false;
-	}
-
-	//
-	// Create lower separator
-	//
-	const ui_objectinfo_t* pLowerSeparatorObject = pWindowDesc->getObject(UI_OBJECT_SEPARATOR_H, INVENTORYWINDOW_LOWER_SEPARATOR_OBJ_NAME);
-	if(!pLowerSeparatorObject)
-	{
-		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", INVENTORYWINDOW_DESC_FILE, INVENTORYWINDOW_LOWER_SEPARATOR_OBJ_NAME);
-		return false;
-	}
-
-	CGameUIHorizontalSeparator* pLowerSeparator = new CGameUIHorizontalSeparator(
-		pLowerSeparatorObject->getFlags(), 
-		pLowerSeparatorObject->getWidth(), 
-		pLowerSeparatorObject->getHeight(), 
-		pWindowObject->getXInset() + pLowerSeparatorObject->getXOrigin(), 
-		pWindowObject->getYInset() + pLowerSeparatorObject->getYOrigin());
-	pLowerSeparator->setParent(this);
-
-	if(!pLowerSeparator->initSchema(pUpperSeparatorObject->getSchema().c_str()))
-	{
-		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUIHorizontalSeparator' object named '%s'.\n", INVENTORYWINDOW_LOWER_SEPARATOR_OBJ_NAME);
-		return false;
-	}
-
-	//
 	// Create the exit button
 	//
 
-	const ui_objectinfo_t* pExitButtonObject = pWindowDesc->getObject(UI_OBJECT_BUTTON, INVENTORYWINDOW_EXIT_BUTTON_OBJ_NAME);
+	const ui_objectinfo_t* pExitButtonObject = m_pWindowDescription->getObject(UI_OBJECT_BUTTON, INVENTORYWINDOW_EXIT_BUTTON_OBJ_NAME);
 	if(!pExitButtonObject)
 	{
 		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", INVENTORYWINDOW_DESC_FILE, INVENTORYWINDOW_EXIT_BUTTON_OBJ_NAME);
@@ -145,8 +104,8 @@ bool CGameUIInventoryWindow::init( const ui_windowdescription_t* pWindowDesc, co
 	CGameUIButton* pExitButton = new CGameUIButton(pExitButtonObject->getFlags(), 
 		pExitEvent, 
 		SDLK_RETURN,
-		pWindowObject->getXInset() + pExitButtonObject->getXOrigin(),
-		pWindowObject->getYInset() + pExitButtonObject->getYOrigin(),
+		m_pWindowObjectInfo->getXInset() + pExitButtonObject->getXOrigin(),
+		m_pWindowObjectInfo->getYInset() + pExitButtonObject->getYOrigin(),
 		pExitButtonObject->getWidth(),
 		pExitButtonObject->getHeight());
 
@@ -167,14 +126,70 @@ bool CGameUIInventoryWindow::init( const ui_windowdescription_t* pWindowDesc, co
 //====================================
 bool CGameUIInventoryWindow::initData( Uint32 horizontalRowCount, Uint32 verticalRowCount )
 {
+	// Set basic data
+	m_horizontalRowCount = horizontalRowCount;
+	m_verticalRowCount = verticalRowCount;
+
+	//
+	// Get data for individual cells
+	//
+	const ui_objectinfo_t* pCellObject = m_pWindowDescription->getObject(UI_OBJECT_TAB, INVENTORYWINDOW_CELL_OBJ_NAME);
+	if(!pCellObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", INVENTORYWINDOW_DESC_FILE, INVENTORYWINDOW_CELL_OBJ_NAME);
+		return false;
+	}
+
+	//
+	// Get data for background
+	//
+	const ui_objectinfo_t* pCellBackgroundObject = m_pWindowDescription->getObject(UI_OBJECT_TAB, INVENTORYWINDOW_BG_SURFACE_OBJ_NAME);
+	if(!pCellObject)
+	{
+		cl_engfuncs.pfnCon_EPrintf("Window description file '%s' has no definition for '%s'.\n", INVENTORYWINDOW_DESC_FILE, INVENTORYWINDOW_BG_SURFACE_OBJ_NAME);
+		return false;
+	}
+
+	Uint32 backgroundWidth = (pCellObject->width * m_horizontalRowCount) + pCellBackgroundObject->insetx * 2;
+	Uint32 backgroundHeight = (pCellObject->height * m_verticalRowCount) + pCellBackgroundObject->insety * 2;
+
+	m_pCellBackgroundSurface = new CGameUISurface(pCellBackgroundObject->getFlags(), 
+		m_pWindowObjectInfo->getXInset() + pCellBackgroundObject->getXOrigin(),
+		m_pWindowObjectInfo->getYInset() + pCellBackgroundObject->getYOrigin(),
+		backgroundWidth,
+		backgroundHeight);
+	m_pCellBackgroundSurface->setParent(this);
+
+	if(!m_pCellBackgroundSurface->initSchema(pCellBackgroundObject->getSchema().c_str()))
+	{
+		cl_engfuncs.pfnCon_EPrintf("Failed to initialize 'CGameUITextTab'.\n");
+		return false;
+	}
+
+	Uint32 cellCount = m_horizontalRowCount * m_verticalRowCount;
+	m_pCellsArray.resize(cellCount);
+
+	for(Uint32 i = 0; i < cellCount; i++)
+	{
+		Uint32 xOrigin = pCellBackgroundObject->getXInset() + (i % m_verticalRowCount) * pCellObject->width;
+		Uint32 yOrigin = pCellBackgroundObject->getYInset() + (i / m_horizontalRowCount) * pCellObject->height;
+
+		CGameUISurface* pCell = new CGameUISurface(pCellObject->getFlags(), xOrigin, yOrigin, backgroundWidth, backgroundHeight);
+		m_pCellsArray[i] = pCell;
+
+		pCell->setParent(m_pCellBackgroundSurface);
+	}
+
 	return true;
 }
 
 //====================================
 //
 //====================================
-void CGameUIInventoryWindow::getInformation( void ) const
+void CGameUIInventoryWindow::getInformation( Uint32& horizontalRowCount, Uint32& verticalRowCount ) const
 {
+	horizontalRowCount = m_horizontalRowCount;
+	verticalRowCount = m_verticalRowCount;
 }
 
 //====================================
