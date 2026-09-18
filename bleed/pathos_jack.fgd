@@ -1152,7 +1152,7 @@
     3 : "Play Everywhere"
   ]
 ]
-@PointClass base(Angles, Targetname, RenderFields) size(-16 -16 0, 16 16 36) studio() = env_model : "Model" 
+@PointClass base(Targetname, Angles, RenderFields) size(-16 -16 0, 16 16 36) studio() = env_model : "Model" 
 [
   model(studio) : "Model"
   body(Integer) : "Body" : 0
